@@ -1,10 +1,25 @@
+//
+//  LoginView.swift
+//  HomeAssistantPro
+//
+//  Purpose: Displays the login screen for user authentication and anonymous access.
+//  Author: Michael
+//  Created: 2025-06-24
+//
+//  This file defines the LoginView SwiftUI screen, allowing users to sign in, create an account, or continue anonymously.
+//
+
 import SwiftUI
 
+/// The login screen for user authentication and anonymous access.
 struct LoginView: View {
+    /// The shared app view model for login state.
     @EnvironmentObject var appViewModel: AppViewModel
+    /// The user's email or phone input.
     @State private var email: String = ""
+    /// The user's password input.
     @State private var password: String = ""
-    
+    /// The body of the LoginView, containing the UI layout.
     var body: some View {
         VStack(spacing: 32) {
             Spacer()
@@ -15,12 +30,11 @@ struct LoginView: View {
                     colors: [.red, .orange, .yellow, .green, .blue, .purple],
                     startPoint: .topLeading, endPoint: .bottomTrailing))
                 .padding(.bottom, 8)
-            Text("AuraHome")
-                .font(.system(size: 40, weight: .bold))
-                .foregroundStyle(
+                (
                     Text("Aura").foregroundColor(.primary) +
                     Text("Home").foregroundColor(.blue)
                 )
+                .font(.system(size: 40, weight: .bold))
             VStack(spacing: 16) {
                 TextField("Email Address / Phone Number", text: $email)
                     .textFieldStyle(RoundedBorderTextFieldStyle())

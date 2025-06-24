@@ -1,7 +1,21 @@
+//
+//  TopicDetailView.swift
+//  HomeAssistantPro
+//
+//  Purpose: Displays the detail view for a selected forum topic, including replies.
+//  Author: Michael
+//  Created: 2025-06-24
+//
+//  This file defines the TopicDetailView SwiftUI screen, showing topic details and user replies.
+//
+
 import SwiftUI
 
+/// The detail view for a selected forum topic, including replies.
 struct TopicDetailView: View {
+    /// The topic to display details for.
     let topic: Topic
+    /// The body of the TopicDetailView, containing the UI layout.
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 20) {

@@ -1,6 +1,19 @@
+//
+//  HomeView.swift
+//  HomeAssistantPro
+//
+//  Purpose: Displays the Home tab with featured smart home cases and daily tips.
+//  Author: Michael
+//  Created: 2025-06-24
+//
+//  This file defines the HomeView SwiftUI screen, showing a featured case and daily tips for users.
+//
+
 import SwiftUI
 
+/// The main Home tab view displaying featured smart home cases and daily tips.
 struct HomeView: View {
+    /// The body of the HomeView, containing the UI layout.
     var body: some View {
         NavigationView {
             ScrollView {

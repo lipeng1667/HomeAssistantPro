@@ -1,5 +1,6 @@
 import SwiftUI
 
+@main
 struct HomeAssistantProApp: App {
     @StateObject private var appViewModel = AppViewModel()
     

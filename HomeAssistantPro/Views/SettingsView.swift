@@ -1,6 +1,19 @@
+//
+//  SettingsView.swift
+//  HomeAssistantPro
+//
+//  Purpose: Displays the Settings tab for managing account and app preferences.
+//  Author: Michael
+//  Created: 2025-06-24
+//
+//  This file defines the SettingsView SwiftUI screen, allowing users to view and edit their profile and settings.
+//
+
 import SwiftUI
 
+/// The Settings tab view for managing account and app preferences.
 struct SettingsView: View {
+    /// The body of the SettingsView, containing the UI layout.
     var body: some View {
         NavigationView {
             ScrollView {
