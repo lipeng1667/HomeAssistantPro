@@ -60,6 +60,7 @@ struct ModernLoginView: View {
             startGradientAnimation()
             UIScrollView.appearance().showsVerticalScrollIndicator = false
         }
+        .dismissKeyboardOnSwipeDown()
     }
     
     // MARK: - Background

@@ -39,24 +39,28 @@ struct ForumView: View {
     }
     
     var body: some View {
-        ZStack {
-            // Dynamic background
-            backgroundView
-            
-            VStack(spacing: 0) {
-                // Header section
-                headerSection
-                    .padding(.top, 60)
+        NavigationView {
+            ZStack {
+                // Dynamic background
+                backgroundView
                 
-                // Search bar
-                searchSection
-                    .padding(.horizontal, 24)
-                    .padding(.bottom, 16)
-                
-                // Topics list
-                topicsListSection
+                VStack(spacing: 0) {
+                    // Header section
+                    headerSection
+                        .padding(.top, 60)
+                    
+                    // Search bar
+                    searchSection
+                        .padding(.horizontal, 24)
+                        .padding(.bottom, 16)
+                    
+                    // Topics list
+                    topicsListSection
+                }
             }
+            .navigationBarHidden(true)
         }
+        .dismissKeyboardOnSwipeDown()
         .onAppear {
             startAnimations()
         }

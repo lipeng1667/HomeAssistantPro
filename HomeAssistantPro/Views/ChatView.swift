@@ -22,6 +22,9 @@ struct ChatView: View {
     @State private var isKeyboardVisible = false
     @FocusState private var isMessageFieldFocused: Bool
     
+    // Access the tab bar visibility manager from environment
+    @EnvironmentObject var tabBarVisibility: TabBarVisibilityManager
+    
     var body: some View {
         ZStack {
             // Animated background
@@ -36,7 +39,7 @@ struct ChatView: View {
                 
                 // Input area
                 inputView
-                    .padding(.bottom, isKeyboardVisible ? 0 : 100) // Adjust padding based on keyboard state
+                    .padding(.bottom, (!isKeyboardVisible && tabBarVisibility.isTabBarVisible) ? 100 : 0)
             }
         }
         .onAppear {
@@ -50,16 +53,20 @@ struct ChatView: View {
             isMessageFieldFocused = false
         }
         .onChange(of: isMessageFieldFocused) { focused in
-            // Additional handling when focus changes
-            if !focused {
-                // Small delay to ensure keyboard animation completes
+            if focused {
+                // Hide tab bar when text field is focused
+                tabBarVisibility.hideTabBar()
+            } else {
+                // Show tab bar when text field loses focus
+                // Add a small delay to ensure smooth transition
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
                     if !isKeyboardVisible {
-                        showTabBar()
+                        tabBarVisibility.showTabBar()
                     }
                 }
             }
         }
+        .dismissKeyboardOnSwipeDown()
     }
     
     // MARK: - Keyboard Handling
@@ -73,7 +80,8 @@ struct ChatView: View {
             withAnimation(.easeInOut(duration: 0.3)) {
                 isKeyboardVisible = true
             }
-            hideTabBar()
+            // Hide tab bar when keyboard appears
+            tabBarVisibility.hideTabBar()
         }
         
         NotificationCenter.default.addObserver(
@@ -84,35 +92,14 @@ struct ChatView: View {
             withAnimation(.easeInOut(duration: 0.3)) {
                 isKeyboardVisible = false
             }
-            showTabBar()
+            // Show tab bar when keyboard disappears
+            tabBarVisibility.showTabBar()
         }
     }
     
     private func removeKeyboardObservers() {
         NotificationCenter.default.removeObserver(self, name: UIResponder.keyboardWillShowNotification, object: nil)
         NotificationCenter.default.removeObserver(self, name: UIResponder.keyboardWillHideNotification, object: nil)
-    }
-    
-    private func hideTabBar() {
-        if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
-           let window = windowScene.windows.first {
-            if let tabBarController = window.rootViewController as? UITabBarController {
-                UIView.animate(withDuration: 0.3) {
-                    tabBarController.tabBar.transform = CGAffineTransform(translationX: 0, y: tabBarController.tabBar.frame.height)
-                }
-            }
-        }
-    }
-    
-    private func showTabBar() {
-        if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
-           let window = windowScene.windows.first {
-            if let tabBarController = window.rootViewController as? UITabBarController {
-                UIView.animate(withDuration: 0.3) {
-                    tabBarController.tabBar.transform = .identity
-                }
-            }
-        }
     }
     
     // MARK: - Background
@@ -274,6 +261,9 @@ struct ChatView: View {
                                         .stroke(Color.primary.opacity(0.1), lineWidth: 1)
                                 )
                         )
+                        .onSubmit {
+                            sendMessage()
+                        }
                     
                     // Emoji button
                     Button(action: { showEmojiPicker.toggle() }) {
@@ -310,7 +300,7 @@ struct ChatView: View {
             }
             .padding(.horizontal, 20)
             .padding(.top, 12)
-            .padding(.bottom, isKeyboardVisible ? 20 : 20) // Consistent bottom padding
+            .padding(.bottom, 20)
             .background(
                 Rectangle()
                     .fill(.ultraThinMaterial)
@@ -342,6 +332,9 @@ struct ChatView: View {
             messages.append(newMessage)
             message = ""
         }
+        
+        // Dismiss keyboard after sending
+        isMessageFieldFocused = false
         
         // Simulate typing response
         simulateTypingResponse()

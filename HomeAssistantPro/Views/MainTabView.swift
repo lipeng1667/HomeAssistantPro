@@ -2,18 +2,36 @@
 //  MainTabView.swift
 //  HomeAssistantPro
 //
-//  Purpose: Modern tab navigation with 2025 iOS design aesthetics
+//  Purpose: Modern tab navigation with 2025 iOS design aesthetics and keyboard-responsive behavior
 //  Author: Michael
 //  Updated: 2025-06-25
 //
 //  Features: Custom tab bar design, dynamic island-inspired styling,
-//  glassmorphism effects, and smooth animations.
+//  glassmorphism effects, smooth animations, and keyboard-responsive tab bar.
 //
 
 import SwiftUI
 
+// MARK: - Tab Bar Visibility Manager
+class TabBarVisibilityManager: ObservableObject {
+    @Published var isTabBarVisible: Bool = true
+    
+    func hideTabBar() {
+        withAnimation(.easeInOut(duration: 0.3)) {
+            isTabBarVisible = false
+        }
+    }
+    
+    func showTabBar() {
+        withAnimation(.easeInOut(duration: 0.3)) {
+            isTabBarVisible = true
+        }
+    }
+}
+
 /// Modern main tab view with contemporary design aesthetics
 struct MainTabView: View {
+    @StateObject private var tabBarVisibility = TabBarVisibilityManager()
     @State private var selectedTab: Tab = .home
     @State private var animateBackground = false
     @Namespace private var tabTransition
@@ -51,11 +69,15 @@ struct MainTabView: View {
             // Main content area
             contentView
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .environmentObject(tabBarVisibility)
             
-            // Custom tab bar
-            customTabBar
-                .padding(.horizontal, 20)
-                .padding(.bottom, 34) // Safe area padding
+            // Custom tab bar with keyboard-responsive behavior
+            if tabBarVisibility.isTabBarVisible {
+                customTabBar
+                    .padding(.horizontal, 20)
+                    .padding(.bottom, 34) // Safe area padding
+                    .transition(.move(edge: .bottom).combined(with: .opacity))
+            }
         }
         .onAppear {
             startBackgroundAnimation()
@@ -216,6 +238,7 @@ struct TabBarButtonStyle: ButtonStyle {
 // MARK: - Enhanced Tab Bar (Alternative Design)
 
 struct EnhancedMainTabView: View {
+    @StateObject private var tabBarVisibility = TabBarVisibilityManager()
     @State private var selectedTab: MainTabView.Tab = .home
     @State private var animateGradient = false
     @Namespace private var tabIndicator
@@ -227,11 +250,15 @@ struct EnhancedMainTabView: View {
             
             // Content
             contentArea
+                .environmentObject(tabBarVisibility)
             
-            // Floating tab bar
-            floatingTabBar
-                .padding(.horizontal, 24)
-                .padding(.bottom, 40)
+            // Floating tab bar with keyboard-responsive behavior
+            if tabBarVisibility.isTabBarVisible {
+                floatingTabBar
+                    .padding(.horizontal, 24)
+                    .padding(.bottom, 40)
+                    .transition(.move(edge: .bottom).combined(with: .opacity))
+            }
         }
         .onAppear {
             withAnimation(.easeInOut(duration: 3).repeatForever(autoreverses: true)) {
