@@ -53,10 +53,10 @@ struct MainTabView: View {
         
         var activeColor: Color {
             switch self {
-            case .home: return Color(hex: "#8B5CF6")
-            case .forum: return Color(hex: "#06B6D4")
-            case .chat: return Color(hex: "#10B981")
-            case .settings: return Color(hex: "#F59E0B")
+            case .home: return DesignTokens.Colors.primaryPurple
+            case .forum: return DesignTokens.Colors.primaryCyan
+            case .chat: return DesignTokens.Colors.primaryGreen
+            case .settings: return DesignTokens.Colors.primaryAmber
             }
         }
     }
@@ -74,7 +74,7 @@ struct MainTabView: View {
             // Custom tab bar with keyboard-responsive behavior
             if tabBarVisibility.isTabBarVisible {
                 customTabBar
-                    .padding(.horizontal, 20)
+                    .padding(.horizontal, DesignTokens.Spacing.xl)
                     .padding(.bottom, 34) // Safe area padding
                     .transition(.move(edge: .bottom).combined(with: .opacity))
             }
@@ -89,9 +89,9 @@ struct MainTabView: View {
     private var backgroundView: some View {
         LinearGradient(
             colors: [
-                Color(hex: "#F8FAFC"),
-                Color(hex: "#F1F5F9"),
-                Color(hex: "#E2E8F0")
+                DesignTokens.Colors.backgroundMediumLight,
+                DesignTokens.Colors.backgroundMediumDark,
+                DesignTokens.Colors.backgroundDark
             ],
             startPoint: animateBackground ? .topLeading : .bottomTrailing,
             endPoint: animateBackground ? .bottomTrailing : .topLeading
@@ -199,7 +199,7 @@ struct MainTabView: View {
             .frame(maxWidth: .infinity)
             .contentShape(Rectangle())
         }
-        .buttonStyle(TabBarButtonStyle())
+        .tabBarButtonStyle()
         .accessibilityLabel("\(tab.rawValue) tab")
         .accessibilityHint("Tap to switch to \(tab.rawValue) section")
     }
@@ -210,12 +210,10 @@ struct MainTabView: View {
         guard selectedTab != tab else { return }
         
         // Haptic feedback
-        let impactFeedback = UIImpactFeedbackGenerator(style: .light)
-        impactFeedback.prepare()
-        impactFeedback.impactOccurred()
+        HapticManager.tabSelection()
         
         // Animate tab change
-        withAnimation(.spring(response: 0.5, dampingFraction: 0.7)) {
+        withAnimation(AnimationPresets.tabSelection) {
             selectedTab = tab
         }
     }
@@ -225,15 +223,6 @@ struct MainTabView: View {
     }
 }
 
-// MARK: - Custom Button Style
-
-struct TabBarButtonStyle: ButtonStyle {
-    func makeBody(configuration: Configuration) -> some View {
-        configuration.label
-            .scaleEffect(configuration.isPressed ? 0.95 : 1.0)
-            .animation(.easeInOut(duration: 0.1), value: configuration.isPressed)
-    }
-}
 
 // MARK: - Enhanced Tab Bar (Alternative Design)
 
@@ -386,7 +375,7 @@ struct EnhancedMainTabView: View {
                 }
             )
         }
-        .buttonStyle(TabBarButtonStyle())
+        .tabBarButtonStyle()
         .accessibilityLabel(tab.rawValue)
     }
     

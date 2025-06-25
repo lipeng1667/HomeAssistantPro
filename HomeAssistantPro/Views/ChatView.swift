@@ -17,7 +17,6 @@ struct ChatView: View {
     @State private var message: String = ""
     @State private var messages: [ChatMessage] = ChatMessage.sampleMessages
     @State private var isTyping = false
-    @State private var animateBackground = false
     @State private var showEmojiPicker = false
     @State private var isKeyboardVisible = false
     @FocusState private var isMessageFieldFocused: Bool
@@ -27,12 +26,14 @@ struct ChatView: View {
     
     var body: some View {
         ZStack {
-            // Animated background
-            backgroundView
+            // Standardized background
+            StandardTabBackground(configuration: .chat)
             
             VStack(spacing: 0) {
-                // Header
-                headerView
+                // Standardized header
+                StandardTabHeader(configuration: .chat(onOptions: {
+                    // Options action
+                }, isTyping: isTyping))
                 
                 // Messages area
                 messagesView
@@ -43,7 +44,6 @@ struct ChatView: View {
             }
         }
         .onAppear {
-            startBackgroundAnimation()
             setupKeyboardObservers()
         }
         .onDisappear {
@@ -102,110 +102,7 @@ struct ChatView: View {
         NotificationCenter.default.removeObserver(self, name: UIResponder.keyboardWillHideNotification, object: nil)
     }
     
-    // MARK: - Background
     
-    private var backgroundView: some View {
-        LinearGradient(
-            colors: [
-                Color(hex: "#F8FAFC"),
-                Color(hex: "#F1F5F9"),
-                Color(hex: "#E2E8F0")
-            ],
-            startPoint: animateBackground ? .topLeading : .bottomTrailing,
-            endPoint: animateBackground ? .bottomTrailing : .topLeading
-        )
-        .ignoresSafeArea()
-        .overlay(
-            // Floating orbs for visual depth
-            ZStack {
-                Circle()
-                    .fill(
-                        RadialGradient(
-                            colors: [Color(hex: "#10B981").opacity(0.1), Color.clear],
-                            center: .center,
-                            startRadius: 0,
-                            endRadius: 150
-                        )
-                    )
-                    .frame(width: 300, height: 300)
-                    .offset(x: -100, y: -150)
-                    .blur(radius: 30)
-                
-                Circle()
-                    .fill(
-                        RadialGradient(
-                            colors: [Color(hex: "#8B5CF6").opacity(0.08), Color.clear],
-                            center: .center,
-                            startRadius: 0,
-                            endRadius: 120
-                        )
-                    )
-                    .frame(width: 250, height: 250)
-                    .offset(x: 120, y: 100)
-                    .blur(radius: 25)
-            }
-        )
-        .animation(.easeInOut(duration: 4).repeatForever(autoreverses: true), value: animateBackground)
-    }
-    
-    // MARK: - Header
-    
-    private var headerView: some View {
-        VStack(spacing: 16) {
-            HStack {
-                // Back button area (if needed)
-                Rectangle()
-                    .fill(Color.clear)
-                    .frame(width: 44, height: 44)
-                
-                Spacer()
-                
-                // Title with support status
-                VStack(spacing: 4) {
-                    Text("Technical Support")
-                        .font(.system(size: 18, weight: .semibold))
-                        .foregroundColor(.primary)
-                    
-                    HStack(spacing: 6) {
-                        Circle()
-                            .fill(Color(hex: "#10B981"))
-                            .frame(width: 8, height: 8)
-                            .scaleEffect(isTyping ? 1.2 : 1.0)
-                            .animation(.easeInOut(duration: 0.6).repeatForever(autoreverses: true), value: isTyping)
-                        
-                        Text("Support Agent Online")
-                            .font(.system(size: 12, weight: .medium))
-                            .foregroundColor(.secondary)
-                    }
-                }
-                
-                Spacer()
-                
-                // Options button
-                Button(action: {}) {
-                    Image(systemName: "ellipsis")
-                        .font(.system(size: 16, weight: .medium))
-                        .foregroundColor(.primary.opacity(0.7))
-                        .frame(width: 44, height: 44)
-                        .background(
-                            Circle()
-                                .fill(.ultraThinMaterial)
-                                .shadow(color: .black.opacity(0.05), radius: 8, x: 0, y: 4)
-                        )
-                }
-                .buttonStyle(ScaleButtonStyle())
-            }
-            .padding(.horizontal, 20)
-            .padding(.top, 8)
-            
-            // Divider
-            Rectangle()
-                .fill(Color.primary.opacity(0.1))
-                .frame(height: 0.5)
-                .padding(.horizontal, 20)
-        }
-        .background(.ultraThinMaterial)
-    }
     
     // MARK: - Messages
     
@@ -242,9 +139,9 @@ struct ChatView: View {
                 Button(action: {}) {
                     Image(systemName: "plus.circle.fill")
                         .font(.system(size: 24))
-                        .foregroundColor(Color(hex: "#10B981"))
+                        .foregroundColor(DesignTokens.Colors.primaryGreen)
                 }
-                .buttonStyle(ScaleButtonStyle())
+                .scaleButtonStyle()
                 
                 // Message input field
                 HStack(spacing: 12) {
@@ -271,7 +168,7 @@ struct ChatView: View {
                             .font(.system(size: 20))
                             .foregroundColor(.primary.opacity(0.6))
                     }
-                    .buttonStyle(ScaleButtonStyle())
+                    .scaleButtonStyle()
                 }
                 
                 // Send button
@@ -282,7 +179,7 @@ struct ChatView: View {
                                 LinearGradient(
                                     colors: message.isEmpty ?
                                         [Color.primary.opacity(0.3), Color.primary.opacity(0.2)] :
-                                        [Color(hex: "#10B981"), Color(hex: "#059669")],
+                                        [DesignTokens.Colors.primaryGreen, DesignTokens.Colors.secondaryGreen],
                                     startPoint: .topLeading,
                                     endPoint: .bottomTrailing
                                 )
@@ -295,7 +192,7 @@ struct ChatView: View {
                             .scaleEffect(message.isEmpty ? 1.0 : 1.1)
                     }
                 }
-                .buttonStyle(ScaleButtonStyle())
+                .scaleButtonStyle()
                 .disabled(message.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && !message.isEmpty)
             }
             .padding(.horizontal, 20)
@@ -317,8 +214,7 @@ struct ChatView: View {
         guard !trimmedMessage.isEmpty else { return }
         
         // Haptic feedback
-        let impactFeedback = UIImpactFeedbackGenerator(style: .light)
-        impactFeedback.impactOccurred()
+        HapticManager.messageSent()
         
         // Add user message
         let newMessage = ChatMessage(
@@ -370,9 +266,6 @@ struct ChatView: View {
         }
     }
     
-    private func startBackgroundAnimation() {
-        animateBackground.toggle()
-    }
 }
 
 // MARK: - Message Bubble
@@ -401,13 +294,13 @@ struct MessageBubble: View {
                 .padding(.vertical, 12)
                 .background(
                     LinearGradient(
-                        colors: [Color(hex: "#10B981"), Color(hex: "#059669")],
+                        colors: [DesignTokens.Colors.primaryGreen, DesignTokens.Colors.secondaryGreen],
                         startPoint: .topLeading,
                         endPoint: .bottomTrailing
                     )
                 )
                 .clipShape(MessageBubbleShape(isFromUser: true))
-                .shadow(color: Color(hex: "#10B981").opacity(0.3), radius: 8, x: 0, y: 4)
+                .shadow(color: DesignTokens.Colors.primaryGreen.opacity(0.3), radius: 8, x: 0, y: 4)
             
             Text(message.timestamp.formatted(date: .omitted, time: .shortened))
                 .font(.system(size: 11, weight: .medium))
@@ -423,7 +316,7 @@ struct MessageBubble: View {
                 Circle()
                     .fill(
                         LinearGradient(
-                            colors: [Color(hex: "#8B5CF6"), Color(hex: "#7C3AED")],
+                            colors: [DesignTokens.Colors.primaryPurple, DesignTokens.Colors.secondaryPurple],
                             startPoint: .topLeading,
                             endPoint: .bottomTrailing
                         )
@@ -434,12 +327,12 @@ struct MessageBubble: View {
                     .font(.system(size: 16, weight: .medium))
                     .foregroundColor(.white)
             }
-            .shadow(color: Color(hex: "#8B5CF6").opacity(0.3), radius: 6, x: 0, y: 3)
+            .shadow(color: DesignTokens.Colors.primaryPurple.opacity(0.3), radius: 6, x: 0, y: 3)
             
             VStack(alignment: .leading, spacing: 4) {
                 Text("Support Agent")
                     .font(.system(size: 12, weight: .medium))
-                    .foregroundColor(Color(hex: "#8B5CF6"))
+                    .foregroundColor(DesignTokens.Colors.primaryPurple)
                 
                 Text(message.content)
                     .font(.system(size: 16))
@@ -477,7 +370,7 @@ struct TypingIndicator: View {
                 Circle()
                     .fill(
                         LinearGradient(
-                            colors: [Color(hex: "#8B5CF6"), Color(hex: "#7C3AED")],
+                            colors: [DesignTokens.Colors.primaryPurple, DesignTokens.Colors.secondaryPurple],
                             startPoint: .topLeading,
                             endPoint: .bottomTrailing
                         )
@@ -488,12 +381,12 @@ struct TypingIndicator: View {
                     .font(.system(size: 16, weight: .medium))
                     .foregroundColor(.white)
             }
-            .shadow(color: Color(hex: "#8B5CF6").opacity(0.3), radius: 6, x: 0, y: 3)
+            .shadow(color: DesignTokens.Colors.primaryPurple.opacity(0.3), radius: 6, x: 0, y: 3)
             
             VStack(alignment: .leading, spacing: 4) {
                 Text("Support Agent")
                     .font(.system(size: 12, weight: .medium))
-                    .foregroundColor(Color(hex: "#8B5CF6"))
+                    .foregroundColor(DesignTokens.Colors.primaryPurple)
                 
                 HStack(spacing: 4) {
                     ForEach(0..<3) { index in
@@ -592,15 +485,6 @@ struct MessageBubbleShape: Shape {
     }
 }
 
-// MARK: - Scale Button Style
-
-struct ScaleButtonStyle: ButtonStyle {
-    func makeBody(configuration: Configuration) -> some View {
-        configuration.label
-            .scaleEffect(configuration.isPressed ? 0.95 : 1.0)
-            .animation(.easeInOut(duration: 0.1), value: configuration.isPressed)
-    }
-}
 
 // MARK: - Chat Message Model
 

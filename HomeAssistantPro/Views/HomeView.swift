@@ -17,35 +17,34 @@ struct HomeView: View {
     @State private var animateCards = false
     @State private var featuredCardOffset: CGFloat = 0
     @State private var tipCardScale: CGFloat = 1.0
-    @State private var backgroundAnimation = false
     
     var body: some View {
         ZStack {
-            // Dynamic background
-            backgroundView
+            // Standardized background
+            StandardTabBackground(configuration: .home)
             
             ScrollView(showsIndicators: false) {
                 LazyVStack(spacing: 28) {
-                    // Header section
-                    headerSection
-                        .padding(.top, 60)
+                    // Standardized header
+                    StandardTabHeader(configuration: .home())
                     
                     // Featured case card
                     featuredCaseCard
                         .scaleEffect(animateCards ? 1.0 : 0.95)
                         .opacity(animateCards ? 1.0 : 0.8)
                         .offset(y: featuredCardOffset)
+                        .padding(.horizontal, 24)
                     
                     // Daily tips card
                     dailyTipsCard
                         .scaleEffect(tipCardScale)
                         .opacity(animateCards ? 1.0 : 0.8)
+                        .padding(.horizontal, 24)
                     
                     // Bottom padding for tab bar
                     Spacer()
                         .frame(height: 120)
                 }
-                .padding(.horizontal, 24)
             }
             .refreshable {
                 await refreshContent()
@@ -56,82 +55,7 @@ struct HomeView: View {
         }
     }
     
-    // MARK: - Background
     
-    private var backgroundView: some View {
-        ZStack {
-            // Base gradient
-            LinearGradient(
-                colors: [
-                    Color(hex: "#FAFAFA"),
-                    Color(hex: "#F8FAFC"),
-                    Color(hex: "#F1F5F9")
-                ],
-                startPoint: backgroundAnimation ? .topLeading : .bottomTrailing,
-                endPoint: backgroundAnimation ? .bottomTrailing : .topLeading
-            )
-            .ignoresSafeArea()
-            
-            // Floating ambient elements
-            floatingElements
-        }
-        .animation(.easeInOut(duration: 6).repeatForever(autoreverses: true), value: backgroundAnimation)
-    }
-    
-    private var floatingElements: some View {
-        ZStack {
-            // Purple accent orb
-            Circle()
-                .fill(
-                    RadialGradient(
-                        colors: [Color(hex: "#8B5CF6").opacity(0.12), Color.clear],
-                        center: .center,
-                        startRadius: 0,
-                        endRadius: 120
-                    )
-                )
-                .frame(width: 240, height: 240)
-                .offset(x: -60, y: -150)
-                .blur(radius: 40)
-            
-            // Cyan accent orb
-            Circle()
-                .fill(
-                    RadialGradient(
-                        colors: [Color(hex: "#06B6D4").opacity(0.08), Color.clear],
-                        center: .center,
-                        startRadius: 0,
-                        endRadius: 80
-                    )
-                )
-                .frame(width: 160, height: 160)
-                .offset(x: 100, y: 200)
-                .blur(radius: 30)
-        }
-    }
-    
-    // MARK: - Header Section
-    
-    private var headerSection: some View {
-        VStack(spacing: 12) {
-            Text("HOME")
-                .font(.system(size: 13, weight: .semibold, design: .rounded))
-                .foregroundColor(.primary.opacity(0.6))
-                .tracking(2)
-            
-            VStack(spacing: 6) {
-                Text("Welcome back")
-                    .font(.system(size: 32, weight: .bold, design: .rounded))
-                    .foregroundColor(.primary)
-                
-                Text("Discover smart solutions for your home")
-                    .font(.system(size: 16, weight: .medium))
-                    .foregroundColor(.primary.opacity(0.7))
-                    .multilineTextAlignment(.center)
-            }
-        }
-        .frame(maxWidth: .infinity)
-    }
     
     // MARK: - Featured Case Card
     
@@ -146,7 +70,7 @@ struct HomeView: View {
                     
                     Text("Trending design")
                         .font(.system(size: 14, weight: .medium))
-                        .foregroundColor(Color(hex: "#8B5CF6"))
+                        .foregroundColor(DesignTokens.Colors.primaryPurple)
                 }
                 
                 Spacer()
@@ -167,7 +91,7 @@ struct HomeView: View {
                                 )
                         )
                 }
-                .buttonStyle(ScaleButtonStyle())
+                .scaleButtonStyle()
             }
             
             // Main card content
@@ -187,8 +111,8 @@ struct HomeView: View {
                     .fill(
                         LinearGradient(
                             colors: [
-                                Color(hex: "#8B5CF6").opacity(0.1),
-                                Color(hex: "#06B6D4").opacity(0.05)
+                                DesignTokens.Colors.primaryPurple.opacity(0.1),
+                                DesignTokens.Colors.primaryCyan.opacity(0.05)
                             ],
                             startPoint: .topLeading,
                             endPoint: .bottomTrailing
@@ -205,7 +129,7 @@ struct HomeView: View {
                             Circle()
                                 .fill(
                                     LinearGradient(
-                                        colors: [Color(hex: "#8B5CF6").opacity(0.2), Color(hex: "#06B6D4").opacity(0.1)],
+                                        colors: [DesignTokens.Colors.primaryPurple.opacity(0.2), DesignTokens.Colors.primaryCyan.opacity(0.1)],
                                         startPoint: .topLeading,
                                         endPoint: .bottomTrailing
                                     )
@@ -215,7 +139,7 @@ struct HomeView: View {
                             
                             Image(systemName: "house.fill")
                                 .font(.system(size: 40, weight: .medium))
-                                .foregroundColor(Color(hex: "#8B5CF6"))
+                                .foregroundColor(DesignTokens.Colors.primaryPurple)
                         }
                         Spacer()
                     }
@@ -272,7 +196,7 @@ struct HomeView: View {
                     
                     Text("Smart living advice")
                         .font(.system(size: 14, weight: .medium))
-                        .foregroundColor(Color(hex: "#F59E0B"))
+                        .foregroundColor(DesignTokens.Colors.primaryAmber)
                 }
                 
                 Spacer()
@@ -282,19 +206,19 @@ struct HomeView: View {
                 }) {
                     Text("More")
                         .font(.system(size: 14, weight: .semibold))
-                        .foregroundColor(Color(hex: "#F59E0B"))
+                        .foregroundColor(DesignTokens.Colors.primaryAmber)
                         .padding(.horizontal, 16)
                         .padding(.vertical, 8)
                         .background(
                             Capsule()
-                                .fill(Color(hex: "#F59E0B").opacity(0.1))
+                                .fill(DesignTokens.Colors.primaryAmber.opacity(0.1))
                                 .overlay(
                                     Capsule()
-                                        .stroke(Color(hex: "#F59E0B").opacity(0.3), lineWidth: 1)
+                                        .stroke(DesignTokens.Colors.primaryAmber.opacity(0.3), lineWidth: 1)
                                 )
                         )
                 }
-                .buttonStyle(ScaleButtonStyle())
+                .scaleButtonStyle()
             }
             
             // Tip card
@@ -307,12 +231,12 @@ struct HomeView: View {
                         
                         Text("Energy Saving")
                             .font(.system(size: 12, weight: .semibold))
-                            .foregroundColor(Color(hex: "#F59E0B"))
+                            .foregroundColor(DesignTokens.Colors.primaryAmber)
                             .padding(.horizontal, 12)
                             .padding(.vertical, 4)
                             .background(
                                 Capsule()
-                                    .fill(Color(hex: "#F59E0B").opacity(0.15))
+                                    .fill(DesignTokens.Colors.primaryAmber.opacity(0.15))
                             )
                     }
                     
@@ -336,7 +260,7 @@ struct HomeView: View {
                     RoundedRectangle(cornerRadius: 20)
                         .fill(
                             LinearGradient(
-                                colors: [Color(hex: "#F59E0B").opacity(0.15), Color(hex: "#F59E0B").opacity(0.05)],
+                                colors: [DesignTokens.Colors.primaryAmber.opacity(0.15), DesignTokens.Colors.primaryAmber.opacity(0.05)],
                                 startPoint: .topLeading,
                                 endPoint: .bottomTrailing
                             )
@@ -344,12 +268,12 @@ struct HomeView: View {
                         .frame(width: 90, height: 90)
                         .overlay(
                             RoundedRectangle(cornerRadius: 20)
-                                .stroke(Color(hex: "#F59E0B").opacity(0.2), lineWidth: 1)
+                                .stroke(DesignTokens.Colors.primaryAmber.opacity(0.2), lineWidth: 1)
                         )
                     
                     Image(systemName: "lightbulb.fill")
                         .font(.system(size: 32, weight: .medium))
-                        .foregroundColor(Color(hex: "#F59E0B"))
+                        .foregroundColor(DesignTokens.Colors.primaryAmber)
                 }
             }
             .padding(24)
@@ -384,9 +308,6 @@ struct HomeView: View {
             animateCards = true
         }
         
-        withAnimation(.easeInOut(duration: 5).repeatForever(autoreverses: true)) {
-            backgroundAnimation.toggle()
-        }
     }
     
     private func refreshContent() async {

@@ -18,7 +18,6 @@ struct ForumView: View {
     @State private var selectedTopic: Topic? = nil
     @State private var animateCards = false
     @State private var searchFocused = false
-    @State private var backgroundAnimation = false
     @State private var showCreatePost = false
     
     // Sample topics data
@@ -41,13 +40,16 @@ struct ForumView: View {
     var body: some View {
         NavigationView {
             ZStack {
-                // Dynamic background
-                backgroundView
+                // Standardized background
+                StandardTabBackground(configuration: .forum)
                 
                 VStack(spacing: 0) {
-                    // Header section
-                    headerSection
-                        .padding(.top, 60)
+                    // Standardized header
+                    StandardTabHeader(configuration: .forum(onCreatePost: {
+                        withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
+                            showCreatePost = true
+                        }
+                    }))
                     
                     // Search bar
                     searchSection
@@ -69,105 +71,7 @@ struct ForumView: View {
         }
     }
     
-    // MARK: - Background
     
-    private var backgroundView: some View {
-        ZStack {
-            // Base gradient
-            LinearGradient(
-                colors: [
-                    Color(hex: "#FAFAFA"),
-                    Color(hex: "#F8FAFC"),
-                    Color(hex: "#F1F5F9")
-                ],
-                startPoint: backgroundAnimation ? .topLeading : .bottomTrailing,
-                endPoint: backgroundAnimation ? .bottomTrailing : .topLeading
-            )
-            .ignoresSafeArea()
-            
-            // Floating ambient elements
-            floatingElements
-        }
-        .animation(.easeInOut(duration: 6).repeatForever(autoreverses: true), value: backgroundAnimation)
-    }
-    
-    private var floatingElements: some View {
-        ZStack {
-            // Cyan accent orb
-            Circle()
-                .fill(
-                    RadialGradient(
-                        colors: [Color(hex: "#06B6D4").opacity(0.12), Color.clear],
-                        center: .center,
-                        startRadius: 0,
-                        endRadius: 120
-                    )
-                )
-                .frame(width: 240, height: 240)
-                .offset(x: -80, y: -120)
-                .blur(radius: 40)
-            
-            // Green accent orb
-            Circle()
-                .fill(
-                    RadialGradient(
-                        colors: [Color(hex: "#10B981").opacity(0.08), Color.clear],
-                        center: .center,
-                        startRadius: 0,
-                        endRadius: 80
-                    )
-                )
-                .frame(width: 160, height: 160)
-                .offset(x: 120, y: 180)
-                .blur(radius: 30)
-        }
-    }
-    
-    // MARK: - Header Section
-    
-    private var headerSection: some View {
-        HStack(alignment: .center) {
-            VStack(alignment: .leading, spacing: 6) {
-                Text("COMMUNITY")
-                    .font(.system(size: 13, weight: .semibold, design: .rounded))
-                    .foregroundColor(.primary.opacity(0.6))
-                    .tracking(2)
-                
-                Text("Forum")
-                    .font(.system(size: 32, weight: .bold, design: .rounded))
-                    .foregroundColor(.primary)
-            }
-            
-            Spacer()
-            
-            // Create post button
-            Button(action: {
-                withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
-                    showCreatePost = true
-                }
-            }) {
-                ZStack {
-                    Circle()
-                        .fill(
-                            LinearGradient(
-                                colors: [Color(hex: "#06B6D4"), Color(hex: "#06B6D4").opacity(0.8)],
-                                startPoint: .topLeading,
-                                endPoint: .bottomTrailing
-                            )
-                        )
-                        .frame(width: 48, height: 48)
-                        .shadow(color: Color(hex: "#06B6D4").opacity(0.4), radius: 12, x: 0, y: 6)
-                    
-                    Image(systemName: "plus")
-                        .font(.system(size: 18, weight: .semibold))
-                        .foregroundColor(.white)
-                }
-            }
-            .buttonStyle(ScaleButtonStyle())
-        }
-        .padding(.horizontal, 24)
-        .padding(.bottom, 24)
-    }
     
     // MARK: - Search Section
     
@@ -198,7 +102,7 @@ struct ForumView: View {
                             .font(.system(size: 16, weight: .medium))
                             .foregroundColor(.primary.opacity(0.4))
                     }
-                    .buttonStyle(ScaleButtonStyle())
+                    .scaleButtonStyle()
                 }
             }
             .padding(.horizontal, 20)
@@ -208,7 +112,7 @@ struct ForumView: View {
                     .fill(.ultraThinMaterial)
                     .overlay(
                         RoundedRectangle(cornerRadius: 16)
-                            .stroke(searchFocused ? Color(hex: "#06B6D4").opacity(0.5) : Color.white.opacity(0.4), lineWidth: searchFocused ? 2 : 1)
+                            .stroke(searchFocused ? DesignTokens.Colors.primaryCyan.opacity(0.5) : Color.white.opacity(0.4), lineWidth: searchFocused ? 2 : 1)
                     )
                     .shadow(color: Color.black.opacity(0.04), radius: 12, x: 0, y: 4)
             )
@@ -232,7 +136,7 @@ struct ForumView: View {
                             .shadow(color: Color.black.opacity(0.04), radius: 8, x: 0, y: 2)
                     )
             }
-            .buttonStyle(ScaleButtonStyle())
+            .scaleButtonStyle()
         }
     }
     
@@ -271,7 +175,7 @@ struct ForumView: View {
                     Circle()
                         .fill(
                             LinearGradient(
-                                colors: [Color(hex: "#06B6D4").opacity(0.2), Color(hex: "#10B981").opacity(0.1)],
+                                colors: [DesignTokens.Colors.primaryCyan.opacity(0.2), DesignTokens.Colors.primaryGreen.opacity(0.1)],
                                 startPoint: .topLeading,
                                 endPoint: .bottomTrailing
                             )
@@ -280,19 +184,19 @@ struct ForumView: View {
                         .overlay(
                             Image(systemName: topic.avatar)
                                 .font(.system(size: 22, weight: .medium))
-                                .foregroundColor(Color(hex: "#06B6D4"))
+                                .foregroundColor(DesignTokens.Colors.primaryCyan)
                         )
                     
                     if topic.isHot {
                         Circle()
-                            .fill(Color(hex: "#F59E0B"))
+                            .fill(DesignTokens.Colors.primaryAmber)
                             .frame(width: 16, height: 16)
                             .overlay(
                                 Image(systemName: "flame.fill")
                                     .font(.system(size: 8, weight: .bold))
                                     .foregroundColor(.white)
                             )
-                            .shadow(color: Color(hex: "#F59E0B").opacity(0.4), radius: 4, x: 0, y: 2)
+                            .shadow(color: DesignTokens.Colors.primaryAmber.opacity(0.4), radius: 4, x: 0, y: 2)
                     }
                 }
                 
@@ -302,12 +206,12 @@ struct ForumView: View {
                     HStack {
                         Text(topic.category)
                             .font(.system(size: 12, weight: .semibold))
-                            .foregroundColor(Color(hex: "#06B6D4"))
+                            .foregroundColor(DesignTokens.Colors.primaryCyan)
                             .padding(.horizontal, 10)
                             .padding(.vertical, 4)
                             .background(
                                 Capsule()
-                                    .fill(Color(hex: "#06B6D4").opacity(0.15))
+                                    .fill(DesignTokens.Colors.primaryCyan.opacity(0.15))
                             )
                         
                         Spacer()
@@ -339,7 +243,7 @@ struct ForumView: View {
                         HStack(spacing: 6) {
                             Image(systemName: "heart.fill")
                                 .font(.system(size: 14, weight: .medium))
-                                .foregroundColor(Color(hex: "#F59E0B"))
+                                .foregroundColor(DesignTokens.Colors.primaryAmber)
                             
                             Text("\(topic.likes)")
                                 .font(.system(size: 14, weight: .semibold))
@@ -367,7 +271,7 @@ struct ForumView: View {
                     .shadow(color: Color.black.opacity(0.06), radius: 16, x: 0, y: 6)
             )
         }
-        .buttonStyle(CardButtonStyle())
+        .cardButtonStyle()
     }
     
     // MARK: - Actions & Animations
@@ -377,9 +281,6 @@ struct ForumView: View {
             animateCards = true
         }
         
-        withAnimation(.easeInOut(duration: 5).repeatForever(autoreverses: true)) {
-            backgroundAnimation.toggle()
-        }
     }
 }
 
@@ -412,8 +313,8 @@ struct CreatePostView: View {
                 // Background
                 LinearGradient(
                     colors: [
-                        Color(hex: "#FAFAFA"),
-                        Color(hex: "#F8FAFC")
+                        DesignTokens.Colors.backgroundLight,
+                        DesignTokens.Colors.backgroundMediumLight
                     ],
                     startPoint: .top,
                     endPoint: .bottom
@@ -454,14 +355,14 @@ struct CreatePostView: View {
                                                 .padding(.vertical, 10)
                                                 .background(
                                                     Capsule()
-                                                        .fill(selectedCategory == category ? Color(hex: "#06B6D4") : Color.clear)
+                                                        .fill(selectedCategory == category ? DesignTokens.Colors.primaryCyan : Color.clear)
                                                         .overlay(
                                                             Capsule()
                                                                 .stroke(selectedCategory == category ? Color.clear : Color.primary.opacity(0.2), lineWidth: 1)
                                                         )
                                                 )
                                         }
-                                        .buttonStyle(ScaleButtonStyle())
+                                        .scaleButtonStyle()
                                     }
                                 }
                                 .padding(.horizontal, 24)
@@ -550,7 +451,7 @@ struct CreatePostView: View {
                                         )
                                 )
                         }
-                        .buttonStyle(ScaleButtonStyle())
+                        .scaleButtonStyle()
                         
                         Button(action: {
                             // Create post logic
@@ -565,15 +466,15 @@ struct CreatePostView: View {
                                     RoundedRectangle(cornerRadius: 12)
                                         .fill(
                                             LinearGradient(
-                                                colors: [Color(hex: "#06B6D4"), Color(hex: "#06B6D4").opacity(0.8)],
+                                                colors: [DesignTokens.Colors.primaryCyan, DesignTokens.Colors.primaryCyan.opacity(0.8)],
                                                 startPoint: .topLeading,
                                                 endPoint: .bottomTrailing
                                             )
                                         )
-                                        .shadow(color: Color(hex: "#06B6D4").opacity(0.4), radius: 8, x: 0, y: 4)
+                                        .shadow(color: DesignTokens.Colors.primaryCyan.opacity(0.4), radius: 8, x: 0, y: 4)
                                 )
                         }
-                        .buttonStyle(ScaleButtonStyle())
+                        .scaleButtonStyle()
                         .disabled(postTitle.isEmpty || postContent.isEmpty)
                         .opacity(postTitle.isEmpty || postContent.isEmpty ? 0.6 : 1.0)
                     }
@@ -586,12 +487,3 @@ struct CreatePostView: View {
     }
 }
 
-// MARK: - Custom Button Styles
-
-struct CardButtonStyle: ButtonStyle {
-    func makeBody(configuration: Configuration) -> some View {
-        configuration.label
-            .scaleEffect(configuration.isPressed ? 0.98 : 1.0)
-            .animation(.easeInOut(duration: 0.1), value: configuration.isPressed)
-    }
-}

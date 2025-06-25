@@ -16,47 +16,49 @@ import SwiftUI
 /// Enhanced settings view with MainTabView design consistency
 struct SettingsView: View {
     @EnvironmentObject var tabBarVisibility: TabBarVisibilityManager
-    @State private var animateGradient = false
-    @State private var animateOrbs = false
     @State private var isEditingProfile = false
-    @State private var selectedProfileColor: Color = Color(hex: "#8B5CF6")
+    @State private var selectedProfileColor: Color = DesignTokens.Colors.primaryPurple
     @FocusState private var isFieldFocused: Bool
     @Namespace private var profileTransition
     
     // Profile color options matching MainTabView palette
     private let profileColors: [Color] = [
-        Color(hex: "#8B5CF6"), // Purple
-        Color(hex: "#06B6D4"), // Cyan
-        Color(hex: "#10B981"), // Green
-        Color(hex: "#F59E0B"), // Amber
-        Color(hex: "#EF4444"), // Red
-        Color(hex: "#8B5CF6")  // Purple variant
+        DesignTokens.Colors.primaryPurple,
+        DesignTokens.Colors.primaryCyan,
+        DesignTokens.Colors.primaryGreen,
+        DesignTokens.Colors.primaryAmber,
+        DesignTokens.Colors.primaryRed,
+        DesignTokens.Colors.secondaryPurple
     ]
     
     var body: some View {
         ZStack {
-            // Dynamic animated background
-            dynamicBackground
-            
-            // Floating visual orbs
-            floatingOrbs
+            // Standardized background with dynamic color
+            StandardTabBackground(configuration: .settings(primaryColor: selectedProfileColor))
             
             // Main content
             ScrollView(showsIndicators: false) {
                 VStack(spacing: 32) {
-                    headerView
+                    StandardTabHeader(configuration: .settings(
+                        selectedColor: selectedProfileColor,
+                        onColorPicker: {
+                            withAnimation(.spring(response: 0.6, dampingFraction: 0.8)) {
+                                isEditingProfile.toggle()
+                            }
+                        }
+                    ))
                     profileSection
+                        .padding(.horizontal, DesignTokens.Spacing.xxl)
                     accountSection
+                        .padding(.horizontal, DesignTokens.Spacing.xxl)
                     settingsSection
+                        .padding(.horizontal, DesignTokens.Spacing.xxl)
                     preferencesSection
+                        .padding(.horizontal, DesignTokens.Spacing.xxl)
                 }
-                .padding(.top, 20)
-                .padding(.horizontal, 24)
-                .padding(.bottom, 120) // Extra space for floating tab bar
+                .padding(.top, DesignTokens.Spacing.xl)
+                .padding(.bottom, DesignTokens.Spacing.tabBarBottom)
             }
-        }
-        .onAppear {
-            startAnimations()
         }
         .onChange(of: isFieldFocused) { focused in
             if focused {
@@ -68,129 +70,12 @@ struct SettingsView: View {
         .dismissKeyboardOnSwipeDown()
     }
     
-    // MARK: - Dynamic Background
     
-    private var dynamicBackground: some View {
-        ZStack {
-            // Base animated gradient
-            LinearGradient(
-                colors: [
-                    Color(hex: "#FAFAFA"),
-                    Color(hex: "#F4F4F5"),
-                    Color(hex: "#E4E4E7")
-                ],
-                startPoint: animateGradient ? .topLeading : .bottomTrailing,
-                endPoint: animateGradient ? .bottomTrailing : .topLeading
-            )
-            .ignoresSafeArea()
-            .animation(.easeInOut(duration: 4).repeatForever(autoreverses: true), value: animateGradient)
-        }
-    }
-    
-    private var floatingOrbs: some View {
-        ZStack {
-            // Primary orb with profile color
-            Circle()
-                .fill(
-                    RadialGradient(
-                        colors: [selectedProfileColor.opacity(0.2), Color.clear],
-                        center: .center,
-                        startRadius: 0,
-                        endRadius: 200
-                    )
-                )
-                .frame(width: 350, height: 350)
-                .offset(
-                    x: animateOrbs ? -60 : -100,
-                    y: animateOrbs ? -120 : -80
-                )
-                .blur(radius: 40)
-            
-            // Secondary orb
-            Circle()
-                .fill(
-                    RadialGradient(
-                        colors: [Color(hex: "#06B6D4").opacity(0.15), Color.clear],
-                        center: .center,
-                        startRadius: 0,
-                        endRadius: 120
-                    )
-                )
-                .frame(width: 240, height: 240)
-                .offset(
-                    x: animateOrbs ? 140 : 100,
-                    y: animateOrbs ? 180 : 220
-                )
-                .blur(radius: 30)
-            
-            // Accent orb
-            Circle()
-                .fill(
-                    RadialGradient(
-                        colors: [Color(hex: "#10B981").opacity(0.1), Color.clear],
-                        center: .center,
-                        startRadius: 0,
-                        endRadius: 80
-                    )
-                )
-                .frame(width: 160, height: 160)
-                .offset(
-                    x: animateOrbs ? -140 : -120,
-                    y: animateOrbs ? 300 : 280
-                )
-                .blur(radius: 25)
-        }
-        .animation(.easeInOut(duration: 6).repeatForever(autoreverses: true), value: animateOrbs)
-    }
-    
-    // MARK: - Header
-    
-    private var headerView: some View {
-        HStack {
-            VStack(alignment: .leading, spacing: 4) {
-                Text("Settings")
-                    .font(.system(size: 32, weight: .bold, design: .rounded))
-                    .foregroundColor(.primary)
-                
-                Text("Personalize your experience")
-                    .font(.system(size: 16, weight: .medium))
-                    .foregroundColor(.secondary)
-            }
-            
-            Spacer()
-            
-            // Profile color picker button
-            Button(action: {
-                withAnimation(.spring(response: 0.6, dampingFraction: 0.8)) {
-                    isEditingProfile.toggle()
-                }
-            }) {
-                ZStack {
-                    Circle()
-                        .fill(
-                            LinearGradient(
-                                colors: [selectedProfileColor, selectedProfileColor.opacity(0.7)],
-                                startPoint: .topLeading,
-                                endPoint: .bottomTrailing
-                            )
-                        )
-                        .frame(width: 44, height: 44)
-                        .shadow(color: selectedProfileColor.opacity(0.4), radius: 8, x: 0, y: 4)
-                    
-                    Image(systemName: "paintbrush.fill")
-                        .font(.system(size: 18, weight: .medium))
-                        .foregroundColor(.white)
-                }
-            }
-            .buttonStyle(EnhancedButtonStyle())
-        }
-        .padding(.bottom, 8)
-    }
     
     // MARK: - Profile Section
     
     private var profileSection: some View {
-        EnhancedGlassCard {
+        GlassmorphismCard(configuration: .settings) {
             VStack(spacing: 20) {
                 // Profile avatar with dynamic color
                 ZStack {
@@ -243,7 +128,7 @@ struct SettingsView: View {
                 // Action buttons
                 HStack(spacing: 16) {
                     actionButton(title: "Edit Profile", icon: "pencil", color: selectedProfileColor)
-                    actionButton(title: "Share", icon: "square.and.arrow.up", color: Color(hex: "#06B6D4"))
+                    actionButton(title: "Share", icon: "square.and.arrow.up", color: DesignTokens.Colors.primaryCyan)
                 }
             }
             .padding(.vertical, 24)
@@ -275,7 +160,7 @@ struct SettingsView: View {
                         )
                         .scaleEffect(selectedProfileColor == color ? 1.1 : 1.0)
                 }
-                .buttonStyle(EnhancedButtonStyle())
+                .enhancedButtonStyle()
             }
         }
         .padding(.top, 8)
@@ -310,16 +195,16 @@ struct SettingsView: View {
     // MARK: - Account Section
     
     private var accountSection: some View {
-        EnhancedGlassCard {
+        GlassmorphismCard(configuration: .settings) {
             VStack(alignment: .leading, spacing: 24) {
                 sectionHeader(title: "Account", icon: "person.crop.circle")
                 
                 VStack(spacing: 20) {
-                    accountRow(icon: "phone.fill", title: "Phone Number", value: "+1 (555) 123-4567", color: Color(hex: "#10B981"))
+                    accountRow(icon: "phone.fill", title: "Phone Number", value: "+1 (555) 123-4567", color: DesignTokens.Colors.primaryGreen)
                     Divider().opacity(0.5)
-                    accountRow(icon: "envelope.fill", title: "Email", value: "ethan.carter@email.com", color: Color(hex: "#06B6D4"))
+                    accountRow(icon: "envelope.fill", title: "Email", value: "ethan.carter@email.com", color: DesignTokens.Colors.primaryCyan)
                     Divider().opacity(0.5)
-                    accountRow(icon: "lock.fill", title: "Password", value: "••••••••", color: Color(hex: "#F59E0B"))
+                    accountRow(icon: "lock.fill", title: "Password", value: "••••••••", color: DesignTokens.Colors.primaryAmber)
                 }
             }
             .padding(.vertical, 20)
@@ -358,16 +243,16 @@ struct SettingsView: View {
     // MARK: - Settings Section
     
     private var settingsSection: some View {
-        EnhancedGlassCard {
+        GlassmorphismCard(configuration: .settings) {
             VStack(alignment: .leading, spacing: 24) {
                 sectionHeader(title: "Preferences", icon: "gearshape.fill")
                 
                 VStack(spacing: 20) {
-                    settingsRow(icon: "bell.fill", title: "Notifications", subtitle: "Push, email, SMS", color: Color(hex: "#EF4444"))
+                    settingsRow(icon: "bell.fill", title: "Notifications", subtitle: "Push, email, SMS", color: DesignTokens.Colors.primaryRed)
                     Divider().opacity(0.5)
-                    settingsRow(icon: "moon.fill", title: "Dark Mode", subtitle: "System", color: Color(hex: "#6366F1"))
+                    settingsRow(icon: "moon.fill", title: "Dark Mode", subtitle: "System", color: DesignTokens.Colors.secondaryPurple)
                     Divider().opacity(0.5)
-                    settingsRow(icon: "globe", title: "Language", subtitle: "English", color: Color(hex: "#8B5CF6"))
+                    settingsRow(icon: "globe", title: "Language", subtitle: "English", color: DesignTokens.Colors.primaryPurple)
                 }
             }
             .padding(.vertical, 20)
@@ -377,16 +262,16 @@ struct SettingsView: View {
     // MARK: - Preferences Section
     
     private var preferencesSection: some View {
-        EnhancedGlassCard {
+        GlassmorphismCard(configuration: .settings) {
             VStack(alignment: .leading, spacing: 24) {
                 sectionHeader(title: "Support", icon: "questionmark.circle.fill")
                 
                 VStack(spacing: 20) {
-                    settingsRow(icon: "headphones", title: "Help Center", subtitle: "FAQs and guides", color: Color(hex: "#10B981"))
+                    settingsRow(icon: "headphones", title: "Help Center", subtitle: "FAQs and guides", color: DesignTokens.Colors.primaryGreen)
                     Divider().opacity(0.5)
-                    settingsRow(icon: "message.fill", title: "Contact Us", subtitle: "Get in touch", color: Color(hex: "#06B6D4"))
+                    settingsRow(icon: "message.fill", title: "Contact Us", subtitle: "Get in touch", color: DesignTokens.Colors.primaryCyan)
                     Divider().opacity(0.5)
-                    settingsRow(icon: "star.fill", title: "Rate App", subtitle: "Share your feedback", color: Color(hex: "#F59E0B"))
+                    settingsRow(icon: "star.fill", title: "Rate App", subtitle: "Share your feedback", color: DesignTokens.Colors.primaryAmber)
                 }
             }
             .padding(.vertical, 20)
@@ -436,17 +321,6 @@ struct SettingsView: View {
     
     // MARK: - Helper Functions
     
-    private func startAnimations() {
-        withAnimation(.easeInOut(duration: 4).repeatForever(autoreverses: true)) {
-            animateGradient = true
-        }
-        
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-            withAnimation(.easeInOut(duration: 6).repeatForever(autoreverses: true)) {
-                animateOrbs = true
-            }
-        }
-    }
     
     private func cycleProfileColor() {
         guard let currentIndex = profileColors.firstIndex(of: selectedProfileColor) else { return }
@@ -457,42 +331,7 @@ struct SettingsView: View {
         }
         
         // Haptic feedback
-        let impactFeedback = UIImpactFeedbackGenerator(style: .light)
-        impactFeedback.impactOccurred()
+        HapticManager.colorSelection()
     }
 }
 
-// MARK: - Enhanced Glass Card
-
-struct EnhancedGlassCard<Content: View>: View {
-    let content: Content
-    
-    init(@ViewBuilder content: () -> Content) {
-        self.content = content()
-    }
-    
-    var body: some View {
-        content
-            .padding(.horizontal, 24)
-            .background(
-                RoundedRectangle(cornerRadius: 28, style: .continuous)
-                    .fill(.ultraThinMaterial)
-                    .shadow(color: Color.black.opacity(0.08), radius: 20, x: 0, y: 8)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 28, style: .continuous)
-                            .stroke(Color.white.opacity(0.4), lineWidth: 1)
-                    )
-            )
-    }
-}
-
-// MARK: - Enhanced Button Style
-
-struct EnhancedButtonStyle: ButtonStyle {
-    func makeBody(configuration: Configuration) -> some View {
-        configuration.label
-            .scaleEffect(configuration.isPressed ? 0.95 : 1.0)
-            .opacity(configuration.isPressed ? 0.8 : 1.0)
-            .animation(.easeInOut(duration: 0.1), value: configuration.isPressed)
-    }
-}

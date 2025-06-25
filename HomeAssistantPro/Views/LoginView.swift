@@ -22,15 +22,14 @@ struct ModernLoginView: View {
     @State private var showError = false
     @State private var errorMessage = ""
     @State private var isLoading = false
-    @State private var animateGradient = false
     @FocusState private var isEmailFocused: Bool
     @FocusState private var isPasswordFocused: Bool
     
     var body: some View {
         GeometryReader { geometry in
             ZStack {
-                // Dynamic animated background
-                backgroundView
+                // Standardized background
+                StandardTabBackground(configuration: .login)
                 
                 ScrollView {
                     VStack(spacing: 0) {
@@ -57,65 +56,11 @@ struct ModernLoginView: View {
             dismissKeyboard()
         }
         .onAppear {
-            startGradientAnimation()
             UIScrollView.appearance().showsVerticalScrollIndicator = false
         }
         .dismissKeyboardOnSwipeDown()
     }
     
-    // MARK: - Background
-    
-    private var backgroundView: some View {
-        ZStack {
-            // Base gradient background
-            LinearGradient(
-                colors: [
-                    Color(hex: "#F8FAFC"),
-                    Color(hex: "#E2E8F0"),
-                    Color(hex: "#CBD5E1")
-                ],
-                startPoint: animateGradient ? .topLeading : .bottomTrailing,
-                endPoint: animateGradient ? .bottomTrailing : .topLeading
-            )
-            .ignoresSafeArea()
-            .animation(.easeInOut(duration: 3).repeatForever(autoreverses: true), value: animateGradient)
-            
-            // Floating elements for depth
-            floatingElements
-        }
-    }
-    
-    private var floatingElements: some View {
-        ZStack {
-            // Large background circle
-            Circle()
-                .fill(
-                    RadialGradient(
-                        colors: [Color(hex: "#8B5CF6").opacity(0.1), Color.clear],
-                        center: .center,
-                        startRadius: 0,
-                        endRadius: 200
-                    )
-                )
-                .frame(width: 400, height: 400)
-                .offset(x: -100, y: -200)
-                .blur(radius: 20)
-            
-            // Medium accent circle
-            Circle()
-                .fill(
-                    RadialGradient(
-                        colors: [Color(hex: "#06B6D4").opacity(0.08), Color.clear],
-                        center: .center,
-                        startRadius: 0,
-                        endRadius: 150
-                    )
-                )
-                .frame(width: 300, height: 300)
-                .offset(x: 150, y: 300)
-                .blur(radius: 15)
-        }
-    }
     
     // MARK: - Header Section
     
@@ -453,9 +398,6 @@ struct ModernLoginView: View {
     
     // MARK: - Helper Methods
     
-    private func startGradientAnimation() {
-        animateGradient.toggle()
-    }
     
     private func dismissKeyboard() {
         isEmailFocused = false
