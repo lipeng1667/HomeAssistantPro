@@ -2,12 +2,26 @@
 //  GlassmorphismCard.swift
 //  HomeAssistantPro
 //
-//  Purpose: Reusable glassmorphism card component to eliminate styling duplication
-//  Author: Michael
-//  Updated: 2025-06-25
+//  Created: June 25, 2025
+//  Last Modified: June 26, 2025
+//  Author: Michael Lee
+//  Version: 1.2.0
 //
-//  Features: Configurable glassmorphism effects, shadows, borders,
-//  and corner radius for consistent card styling throughout the app.
+//  Purpose: Reusable glassmorphism card component with configurable
+//  styling options and preset configurations. Eliminates code duplication
+//  across views while maintaining consistent visual design.
+//
+//  Update History:
+//  v1.0.0 (June 25, 2025) - Initial creation with configurable glass effects
+//  v1.1.0 (June 26, 2025) - Fixed generic type inference issues with static methods
+//  v1.2.0 (June 26, 2025) - Updated default border colors to use adaptive tokens
+//
+//  Features:
+//  - Configurable glassmorphism effects and material backgrounds
+//  - Preset configurations for different use cases
+//  - Adaptive border colors for light/dark mode compatibility
+//  - Generic content support with ViewBuilder syntax
+//  - Shadow integration with design system tokens
 //
 
 import SwiftUI

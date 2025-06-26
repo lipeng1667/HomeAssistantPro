@@ -1,0 +1,118 @@
+/*
+  Localizable.strings (English)
+  HomeAssistantPro
+
+  Created: June 26, 2025
+  Last Modified: June 26, 2025
+  Language: English (en)
+  
+  English localization strings for HomeAssistantPro app.
+*/
+
+// MARK: - Tab Titles
+"tab.home" = "Home";
+"tab.forum" = "Forum";
+"tab.chat" = "Chat";
+"tab.settings" = "Settings";
+
+// MARK: - Home View
+"home.featured_case" = "Featured Case";
+"home.trending_design" = "Trending design";
+"home.smart_home_design" = "Modern Smart Home Design";
+"home.smart_home_description" = "A sleek, minimalist design with integrated smart lighting and security systems for the modern lifestyle.";
+"home.daily_tips" = "Daily Tips";
+"home.smart_living_advice" = "Smart living advice";
+"home.more_button" = "More";
+"home.energy_saving" = "Energy Saving";
+"home.turn_off_lights" = "Turn off lights in unoccupied rooms";
+"home.light_tip_description" = "Small actions can lead to significant savings on your energy bill. Make it a habit to switch off lights when leaving a room.";
+
+// MARK: - Forum View
+"forum.community" = "COMMUNITY";
+"forum.title" = "Forum";
+"forum.search_placeholder" = "Search topics, categories...";
+"forum.create_post" = "Create New Post";
+"forum.new_post_title" = "Create New Post";
+"forum.new_post_description" = "Share your question or insight with the community";
+"forum.category" = "Category";
+"forum.title2" = "Title";
+"forum.content" = "Content";
+"forum.title_placeholder" = "Enter your post title...";
+"forum.content_placeholder" = "Write your post content...";
+"forum.cancel" = "Cancel";
+"forum.post" = "Post";
+
+// MARK: - Chat View
+"chat.support" = "SUPPORT";
+"chat.title" = "Chat";
+"chat.support_agent" = "Support Agent";
+"chat.type_placeholder" = "Type your message...";
+
+// MARK: - Settings View
+"settings.title" = "Settings";
+"settings.profile" = "Profile";
+"settings.preferences" = "Preferences";
+"settings.language" = "Language";
+"settings.language_description" = "Choose your preferred language";
+"settings.color_theme" = "Color Theme";
+"settings.color_description" = "Customize your profile color";
+"settings.support" = "Support";
+"settings.help_center" = "Help Center";
+"settings.contact_us" = "Contact Us";
+"settings.feedback" = "Send Feedback";
+"settings.about" = "About";
+"settings.version" = "Version 2.0.0";
+"settings.terms" = "Terms of Service";
+"settings.privacy" = "Privacy Policy";
+
+// MARK: - Common
+"common.save" = "Save";
+"common.cancel" = "Cancel";
+"common.done" = "Done";
+"common.next" = "Next";
+"common.back" = "Back";
+"common.close" = "Close";
+"common.edit" = "Edit";
+"common.delete" = "Delete";
+"common.share" = "Share";
+"common.settings" = "Settings";
+
+// MARK: - Login View
+"login.welcome" = "Welcome to HomeAssistantPro";
+"login.subtitle" = "Your smart home companion";
+"login.phone" = "Continue with Phone";
+"login.email" = "Continue with Email";
+"login.anonymous" = "Explore as Guest";
+"login.phone_description" = "Sign in using your phone number";
+"login.email_description" = "Sign in using your email address";
+"login.anonymous_description" = "Browse without creating an account";
+
+// MARK: - Sample Forum Topics
+"forum.topic1" = "How to connect my smart thermostat to HomeKit?";
+"forum.topic2" = "Best smart lighting setup for beginners";
+"forum.topic3" = "Security camera recommendations for outdoor use";
+"forum.topic4" = "Smart speakers comparison: Alexa vs Google vs Siri";
+"forum.topic5" = "DIY smart home automation on a budget";
+
+// MARK: - Categories
+"category.smart_home" = "Smart Home";
+"category.lighting" = "Lighting";
+"category.security" = "Security";
+"category.voice_control" = "Voice Control";
+"category.diy" = "DIY";
+"category.general" = "General";
+
+// MARK: - Time Indicators
+"time.hours_ago" = "%d hours ago";
+"time.days_ago" = "%d days ago";
+"time.just_now" = "Just now";
+"time.minutes_ago" = "%d minutes ago";
+
+// MARK: - Accessibility
+"accessibility.home_tab" = "Home tab";
+"accessibility.forum_tab" = "Forum tab";
+"accessibility.chat_tab" = "Chat tab";
+"accessibility.settings_tab" = "Settings tab";
+"accessibility.back_button" = "Back";
+"accessibility.close_button" = "Close";
+"accessibility.more_button" = "More options";

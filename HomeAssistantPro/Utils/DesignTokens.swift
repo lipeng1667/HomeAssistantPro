@@ -2,12 +2,26 @@
 //  DesignTokens.swift
 //  HomeAssistantPro
 //
-//  Purpose: Centralized design system tokens for consistent theming
-//  Author: Michael
-//  Updated: 2025-06-25
+//  Created: June 25, 2025
+//  Last Modified: June 26, 2025
+//  Author: Michael Lee
+//  Version: 2.1.0
 //
-//  Features: Color palette, spacing scale, typography, corner radius,
-//  and other design tokens used throughout the app.
+//  Purpose: Centralized design system tokens for consistent theming across
+//  all views and components. Provides adaptive colors, responsive spacing,
+//  typography scales, and device detection for optimal UX.
+//
+//  Update History:
+//  v1.0.0 (June 25, 2025) - Initial creation with basic color tokens and spacing
+//  v2.0.0 (June 26, 2025) - Added dark mode support, responsive design system
+//  v2.1.0 (June 26, 2025) - Enhanced shadow system with adaptive colors
+//
+//  Features: 
+//  - Adaptive colors for light/dark mode switching
+//  - Responsive spacing that scales with device size
+//  - Typography system with device-aware font sizes
+//  - Shadow presets with mode-appropriate opacity
+//  - Device size detection and categorization
 //
 
 import SwiftUI

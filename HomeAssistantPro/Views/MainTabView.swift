@@ -2,12 +2,26 @@
 //  MainTabView.swift
 //  HomeAssistantPro
 //
-//  Purpose: Modern tab navigation with 2025 iOS design aesthetics and keyboard-responsive behavior
-//  Author: Michael
-//  Updated: 2025-06-25
+//  Created: March 3, 2025
+//  Last Modified: June 26, 2025
+//  Author: Michael Lee
+//  Version: 2.0.0
 //
-//  Features: Custom tab bar design, dynamic island-inspired styling,
-//  glassmorphism effects, smooth animations, and keyboard-responsive tab bar.
+//  Purpose: Main tab navigation controller with custom tab bar design,
+//  glassmorphism effects, and keyboard-responsive behavior. Features
+//  modern iOS 2025 aesthetics with dark mode support.
+//
+//  Update History:
+//  v1.0.0 (March 3, 2025) - Initial creation with basic tab navigation
+//  v1.5.0 (June 25, 2025) - Added glassmorphism effects and custom tab bar
+//  v2.0.0 (June 26, 2025) - Implemented dark mode support and responsive spacing
+//
+//  Features:
+//  - Custom glassmorphism tab bar with floating design
+//  - Keyboard-responsive behavior with smooth animations
+//  - Dynamic island-inspired styling and transitions
+//  - Adaptive colors and spacing for all device sizes
+//  - Haptic feedback integration for tab selection
 //
 
 import SwiftUI
@@ -41,6 +55,15 @@ struct MainTabView: View {
         case forum = "Forum"
         case chat = "Chat"
         case settings = "Settings"
+        
+        var localizedTitle: String {
+            switch self {
+            case .home: return LocalizedKeys.tabHome.localized
+            case .forum: return LocalizedKeys.tabForum.localized
+            case .chat: return LocalizedKeys.tabChat.localized
+            case .settings: return LocalizedKeys.tabSettings.localized
+            }
+        }
         
         var icon: String {
             switch self {
@@ -191,7 +214,7 @@ struct MainTabView: View {
                 .frame(height: 40)
                 
                 // Tab label
-                Text(tab.rawValue)
+                Text(tab.localizedTitle)
                     .font(.system(size: selectedTab == tab ? 12 : 11, weight: .medium))
                     .foregroundColor(selectedTab == tab ? tab.activeColor : DesignTokens.Colors.textSecondary)
                     .scaleEffect(selectedTab == tab ? 1.05 : 1.0)
@@ -200,8 +223,8 @@ struct MainTabView: View {
             .contentShape(Rectangle())
         }
         .tabBarButtonStyle()
-        .accessibilityLabel("\(tab.rawValue) tab")
-        .accessibilityHint("Tap to switch to \(tab.rawValue) section")
+        .accessibilityLabel("\(tab.localizedTitle) tab")
+        .accessibilityHint("Tap to switch to \(tab.localizedTitle) section")
     }
     
     // MARK: - Actions

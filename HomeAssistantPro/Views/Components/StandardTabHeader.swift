@@ -2,12 +2,25 @@
 //  StandardTabHeader.swift
 //  HomeAssistantPro
 //
-//  Purpose: Standardized header component for consistent tab navigation styling
-//  Author: Michael
-//  Updated: 2025-06-25
+//  Created: June 25, 2025
+//  Last Modified: June 26, 2025
+//  Author: Michael Lee
+//  Version: 1.1.0
 //
-//  Features: Flexible configuration, modern iOS 2025 design consistency,
-//  glassmorphism effects, and smooth animations across all tab views.
+//  Purpose: Unified header component for all tab views with ForumView-style
+//  layout. Provides consistent navigation and branding across the app
+//  with flexible configuration options.
+//
+//  Update History:
+//  v1.0.0 (June 25, 2025) - Initial creation with flexible configuration system
+//  v1.1.0 (June 26, 2025) - Removed duplicate StandardButtonStyle declaration
+//
+//  Features:
+//  - Flexible configuration system for different tab requirements
+//  - ForumView-inspired layout with title/category on left, actions on right
+//  - Status indicators for dynamic content (typing, online status)
+//  - Preset configurations for Home, Forum, Chat, and Settings tabs
+//  - Consistent spacing and typography using design system tokens
 //
 
 import SwiftUI
@@ -243,7 +256,7 @@ extension HeaderConfiguration {
     static func home() -> HeaderConfiguration {
         HeaderConfiguration(
             categoryLabel: "WELCOME",
-            title: "HOME",
+            title: LocalizedKeys.tabHome.localized,
             topPadding: 40,
             bottomPadding: 24
         )
@@ -251,12 +264,12 @@ extension HeaderConfiguration {
     
     static func forum(onCreatePost: @escaping () -> Void) -> HeaderConfiguration {
         HeaderConfiguration(
-            categoryLabel: "COMMUNITY",
-            title: "Forum",
+            categoryLabel: LocalizedKeys.forumCommunity.localized,
+            title: LocalizedKeys.forumTitle.localized,
             topPadding: 40,
             bottomPadding: 24,
             actionButton: ActionButton(
-                style: .circular(icon: "plus", color: Color(hex: "#06B6D4")),
+                style: .circular(icon: "plus", color: DesignTokens.Colors.primaryCyan),
                 action: onCreatePost
             )
         )
@@ -264,14 +277,14 @@ extension HeaderConfiguration {
     
     static func chat(onOptions: @escaping () -> Void, isTyping: Bool = false) -> HeaderConfiguration {
         HeaderConfiguration(
-            categoryLabel: "TECHNICAL",
-            title: "Support",
+            categoryLabel: LocalizedKeys.chatSupport.localized,
+            title: LocalizedKeys.chatTitle.localized,
             topPadding: 40,
             bottomPadding: 24,
             showDivider: true,
             statusIndicator: StatusIndicator(
                 text: "Agent Online",
-                color: Color(hex: "#10B981"),
+                color: DesignTokens.Colors.primaryGreen,
                 isAnimated: isTyping
             ),
             actionButton: ActionButton(

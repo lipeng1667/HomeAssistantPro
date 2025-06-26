@@ -1,0 +1,118 @@
+/*
+  Localizable.strings (Chinese Simplified)
+  HomeAssistantPro
+
+  Created: June 26, 2025
+  Last Modified: June 26, 2025
+  Language: Chinese Simplified (zh-Hans)
+  
+  Chinese localization strings for HomeAssistantPro app.
+*/
+
+// MARK: - Tab Titles
+"tab.home" = "首页";
+"tab.forum" = "论坛";
+"tab.chat" = "聊天";
+"tab.settings" = "设置";
+
+// MARK: - Home View
+"home.featured_case" = "精选案例";
+"home.trending_design" = "热门设计";
+"home.smart_home_design" = "现代智能家居设计";
+"home.smart_home_description" = "集成智能照明和安全系统的时尚、简约设计，适合现代生活方式。";
+"home.daily_tips" = "每日贴士";
+"home.smart_living_advice" = "智能生活建议";
+"home.more_button" = "更多";
+"home.energy_saving" = "节能省电";
+"home.turn_off_lights" = "离开房间时关闭电灯";
+"home.light_tip_description" = "小小的行动可以为您的电费账单带来显著的节省。养成离开房间时关灯的习惯。";
+
+// MARK: - Forum View
+"forum.community" = "社区";
+"forum.title" = "论坛";
+"forum.search_placeholder" = "搜索话题、分类...";
+"forum.create_post" = "创建新帖子";
+"forum.new_post_title" = "创建新帖子";
+"forum.new_post_description" = "与社区分享您的问题或见解";
+"forum.category" = "分类";
+"forum.title2" = "标题";
+"forum.content" = "内容";
+"forum.title_placeholder" = "输入您的帖子标题...";
+"forum.content_placeholder" = "编写您的帖子内容...";
+"forum.cancel" = "取消";
+"forum.post" = "发布";
+
+// MARK: - Chat View
+"chat.support" = "客服支持";
+"chat.title" = "聊天";
+"chat.support_agent" = "客服代表";
+"chat.type_placeholder" = "输入您的消息...";
+
+// MARK: - Settings View
+"settings.title" = "设置";
+"settings.profile" = "个人资料";
+"settings.preferences" = "偏好设置";
+"settings.language" = "语言";
+"settings.language_description" = "选择您的首选语言";
+"settings.color_theme" = "主题颜色";
+"settings.color_description" = "自定义您的个人资料颜色";
+"settings.support" = "支持";
+"settings.help_center" = "帮助中心";
+"settings.contact_us" = "联系我们";
+"settings.feedback" = "发送反馈";
+"settings.about" = "关于";
+"settings.version" = "版本 2.0.0";
+"settings.terms" = "服务条款";
+"settings.privacy" = "隐私政策";
+
+// MARK: - Common
+"common.save" = "保存";
+"common.cancel" = "取消";
+"common.done" = "完成";
+"common.next" = "下一步";
+"common.back" = "返回";
+"common.close" = "关闭";
+"common.edit" = "编辑";
+"common.delete" = "删除";
+"common.share" = "分享";
+"common.settings" = "设置";
+
+// MARK: - Login View
+"login.welcome" = "欢迎使用智能家居助手";
+"login.subtitle" = "您的智能家居伴侣";
+"login.phone" = "手机号登录";
+"login.email" = "邮箱登录";
+"login.anonymous" = "游客体验";
+"login.phone_description" = "使用手机号码登录";
+"login.email_description" = "使用邮箱地址登录";
+"login.anonymous_description" = "无需注册即可浏览";
+
+// MARK: - Sample Forum Topics
+"forum.topic1" = "如何将智能恒温器连接到HomeKit？";
+"forum.topic2" = "初学者最佳智能照明设置";
+"forum.topic3" = "户外安全摄像头推荐";
+"forum.topic4" = "智能音箱对比：Alexa vs Google vs Siri";
+"forum.topic5" = "预算内的DIY智能家居自动化";
+
+// MARK: - Categories
+"category.smart_home" = "智能家居";
+"category.lighting" = "照明系统";
+"category.security" = "安全防护";
+"category.voice_control" = "语音控制";
+"category.diy" = "DIY项目";
+"category.general" = "综合讨论";
+
+// MARK: - Time Indicators
+"time.hours_ago" = "%d小时前";
+"time.days_ago" = "%d天前";
+"time.just_now" = "刚刚";
+"time.minutes_ago" = "%d分钟前";
+
+// MARK: - Accessibility
+"accessibility.home_tab" = "首页标签";
+"accessibility.forum_tab" = "论坛标签";
+"accessibility.chat_tab" = "聊天标签";
+"accessibility.settings_tab" = "设置标签";
+"accessibility.back_button" = "返回";
+"accessibility.close_button" = "关闭";
+"accessibility.more_button" = "更多选项";

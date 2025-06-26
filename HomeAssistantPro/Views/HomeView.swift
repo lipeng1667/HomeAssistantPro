@@ -2,18 +2,33 @@
 //  HomeView.swift
 //  HomeAssistantPro
 //
-//  Purpose: Modern home dashboard with 2025 iOS design aesthetics
-//  Author: Michael
-//  Updated: 2025-06-25
+//  Created: March 3, 2025
+//  Last Modified: June 26, 2025
+//  Author: Michael Lee
+//  Version: 2.0.0
 //
-//  Features: Glassmorphism cards, dynamic gradients, smooth animations,
-//  floating elements, and contemporary visual hierarchy.
+//  Purpose: Home dashboard featuring curated smart home case studies
+//  and daily tips with modern iOS 2025 design aesthetics including
+//  glassmorphism effects and responsive layouts.
+//
+//  Update History:
+//  v1.0.0 (March 3, 2025) - Initial creation with basic dashboard layout
+//  v1.5.0 (June 25, 2025) - Added glassmorphism cards and standardized components
+//  v2.0.0 (June 26, 2025) - Implemented responsive typography and dark mode colors
+//
+//  Features:
+//  - Featured case card with interactive animations
+//  - Daily tips section with energy saving advice
+//  - Responsive spacing for different device sizes
+//  - Adaptive colors for light and dark modes
+//  - Smooth card interactions with haptic feedback
 //
 
 import SwiftUI
 
 /// Modern home view with contemporary design aesthetics
 struct HomeView: View {
+    @StateObject private var localizationManager = LocalizationManager.shared
     @State private var animateCards = false
     @State private var featuredCardOffset: CGFloat = 0
     @State private var tipCardScale: CGFloat = 1.0
@@ -64,11 +79,11 @@ struct HomeView: View {
             // Section header
             HStack {
                 VStack(alignment: .leading, spacing: 4) {
-                    Text("Featured Case")
+                    Text(LocalizedKeys.homeFeaturedCase.localized)
                         .font(DesignTokens.ResponsiveTypography.headingMedium)
                         .foregroundColor(DesignTokens.Colors.textPrimary)
                     
-                    Text("Trending design")
+                    Text(LocalizedKeys.homeTrendingDesign.localized)
                         .font(DesignTokens.ResponsiveTypography.bodyMedium)
                         .foregroundColor(DesignTokens.Colors.primaryPurple)
                 }
@@ -148,7 +163,7 @@ struct HomeView: View {
                 
                 // Content overlay
                 VStack(alignment: .leading, spacing: 8) {
-                    Text("Modern Smart Home Design")
+                    Text(LocalizedKeys.homeSmartHomeDesign.localized)
                         .font(DesignTokens.ResponsiveTypography.headingMedium)
                         .foregroundColor(DesignTokens.Colors.textPrimary)
                     

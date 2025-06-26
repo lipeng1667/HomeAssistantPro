@@ -16,8 +16,10 @@ import SwiftUI
 /// Enhanced settings view with MainTabView design consistency
 struct SettingsView: View {
     @EnvironmentObject var tabBarVisibility: TabBarVisibilityManager
+    @StateObject private var localizationManager = LocalizationManager.shared
     @State private var isEditingProfile = false
     @State private var selectedProfileColor: Color = DesignTokens.Colors.primaryPurple
+    @State private var showLanguageSelection = false
     @FocusState private var isFieldFocused: Bool
     @Namespace private var profileTransition
     
@@ -68,6 +70,10 @@ struct SettingsView: View {
             }
         }
         .dismissKeyboardOnSwipeDown()
+        .sheet(isPresented: $showLanguageSelection) {
+            LanguageSelectionView()
+                .environmentObject(localizationManager)
+        }
     }
     
     
@@ -262,19 +268,80 @@ struct SettingsView: View {
     // MARK: - Preferences Section
     
     private var preferencesSection: some View {
-        GlassmorphismCard(configuration: .settings) {
-            VStack(alignment: .leading, spacing: 24) {
-                sectionHeader(title: "Support", icon: "questionmark.circle.fill")
-                
-                VStack(spacing: 20) {
-                    settingsRow(icon: "headphones", title: "Help Center", subtitle: "FAQs and guides", color: DesignTokens.Colors.primaryGreen)
-                    Divider().opacity(0.5)
-                    settingsRow(icon: "message.fill", title: "Contact Us", subtitle: "Get in touch", color: DesignTokens.Colors.primaryCyan)
-                    Divider().opacity(0.5)
-                    settingsRow(icon: "star.fill", title: "Rate App", subtitle: "Share your feedback", color: DesignTokens.Colors.primaryAmber)
+        VStack(spacing: DesignTokens.ResponsiveSpacing.lg) {
+            // Language & Preferences
+            GlassmorphismCard(configuration: .settings) {
+                VStack(alignment: .leading, spacing: 24) {
+                    sectionHeader(title: LocalizedKeys.settingsPreferences.localized, icon: "gearshape.fill")
+                    
+                    VStack(spacing: 20) {
+                        // Language Selection
+                        Button(action: {
+                            showLanguageSelection = true
+                        }) {
+                            HStack(spacing: 16) {
+                                ZStack {
+                                    Circle()
+                                        .fill(DesignTokens.Colors.primaryCyan.opacity(0.15))
+                                        .frame(width: 44, height: 44)
+                                    
+                                    Image(systemName: "globe")
+                                        .font(.system(size: 18, weight: .semibold))
+                                        .foregroundColor(DesignTokens.Colors.primaryCyan)
+                                }
+                                
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text(LocalizedKeys.settingsLanguage.localized)
+                                        .font(.system(size: 16, weight: .semibold))
+                                        .foregroundColor(DesignTokens.Colors.textPrimary)
+                                    
+                                    Text(localizationManager.currentLanguage.nativeName)
+                                        .font(.system(size: 14, weight: .medium))
+                                        .foregroundColor(DesignTokens.Colors.textSecondary)
+                                }
+                                
+                                Spacer()
+                                
+                                HStack(spacing: 8) {
+                                    Text(localizationManager.currentLanguage.flag)
+                                        .font(.system(size: 20))
+                                    
+                                    Image(systemName: "chevron.right")
+                                        .font(.system(size: 12, weight: .semibold))
+                                        .foregroundColor(DesignTokens.Colors.textTertiary)
+                                }
+                            }
+                        }
+                        .cardButtonStyle()
+                        
+                        Divider().opacity(0.5)
+                        
+                        settingsRow(
+                            icon: "paintpalette.fill", 
+                            title: LocalizedKeys.settingsColorTheme.localized, 
+                            subtitle: LocalizedKeys.settingsColorDescription.localized, 
+                            color: selectedProfileColor
+                        )
+                    }
                 }
+                .padding(.vertical, 20)
             }
-            .padding(.vertical, 20)
+            
+            // Support Section
+            GlassmorphismCard(configuration: .settings) {
+                VStack(alignment: .leading, spacing: 24) {
+                    sectionHeader(title: LocalizedKeys.settingsSupport.localized, icon: "questionmark.circle.fill")
+                    
+                    VStack(spacing: 20) {
+                        settingsRow(icon: "headphones", title: LocalizedKeys.settingsHelpCenter.localized, subtitle: "FAQs and guides", color: DesignTokens.Colors.primaryGreen)
+                        Divider().opacity(0.5)
+                        settingsRow(icon: "message.fill", title: LocalizedKeys.settingsContactUs.localized, subtitle: "Get in touch", color: DesignTokens.Colors.primaryCyan)
+                        Divider().opacity(0.5)
+                        settingsRow(icon: "star.fill", title: LocalizedKeys.settingsFeedback.localized, subtitle: "Share your feedback", color: DesignTokens.Colors.primaryAmber)
+                    }
+                }
+                .padding(.vertical, 20)
+            }
         }
     }
     
@@ -332,6 +399,121 @@ struct SettingsView: View {
         
         // Haptic feedback
         HapticManager.colorSelection()
+    }
+}
+
+// MARK: - Language Selection View
+
+struct LanguageSelectionView: View {
+    @EnvironmentObject var localizationManager: LocalizationManager
+    @Environment(\.presentationMode) var presentationMode
+    
+    var body: some View {
+        NavigationView {
+            ZStack {
+                // Background
+                LinearGradient(
+                    colors: [
+                        DesignTokens.Colors.backgroundPrimary,
+                        DesignTokens.Colors.backgroundSecondary
+                    ],
+                    startPoint: .top,
+                    endPoint: .bottom
+                )
+                .ignoresSafeArea()
+                
+                ScrollView {
+                    VStack(spacing: DesignTokens.ResponsiveSpacing.lg) {
+                        // Header
+                        VStack(spacing: DesignTokens.ResponsiveSpacing.sm) {
+                            Text(LocalizedKeys.settingsLanguage.localized)
+                                .font(DesignTokens.ResponsiveTypography.headingLarge)
+                                .foregroundColor(DesignTokens.Colors.textPrimary)
+                            
+                            Text(LocalizedKeys.settingsLanguageDescription.localized)
+                                .font(DesignTokens.ResponsiveTypography.bodyMedium)
+                                .foregroundColor(DesignTokens.Colors.textSecondary)
+                                .multilineTextAlignment(.center)
+                        }
+                        .padding(.top, DesignTokens.ResponsiveSpacing.xl)
+                        
+                        // Language Options
+                        GlassmorphismCard(configuration: .settings) {
+                            VStack(spacing: 0) {
+                                ForEach(Language.allCases, id: \.self) { language in
+                                    languageRow(language: language)
+                                    
+                                    if language != Language.allCases.last {
+                                        Divider()
+                                            .padding(.horizontal, DesignTokens.ResponsiveSpacing.lg)
+                                    }
+                                }
+                            }
+                            .padding(.vertical, DesignTokens.ResponsiveSpacing.md)
+                        }
+                        .padding(.horizontal, DesignTokens.ResponsiveSpacing.lg)
+                        
+                        Spacer()
+                    }
+                }
+            }
+            .navigationBarTitleDisplayMode(.inline)
+            .navigationBarHidden(true)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button(LocalizedKeys.commonDone.localized) {
+                        presentationMode.wrappedValue.dismiss()
+                    }
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundColor(DesignTokens.Colors.primaryCyan)
+                }
+            }
+        }
+    }
+    
+    private func languageRow(language: Language) -> some View {
+        Button(action: {
+            HapticManager.buttonTap()
+            withAnimation(.spring(response: 0.5, dampingFraction: 0.8)) {
+                localizationManager.setLanguage(language)
+            }
+            
+            // Dismiss after a short delay to show the selection
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                presentationMode.wrappedValue.dismiss()
+            }
+        }) {
+            HStack(spacing: DesignTokens.ResponsiveSpacing.lg) {
+                // Flag
+                Text(language.flag)
+                    .font(.system(size: 32))
+                
+                // Language Info
+                VStack(alignment: .leading, spacing: DesignTokens.ResponsiveSpacing.xs) {
+                    Text(language.nativeName)
+                        .font(DesignTokens.ResponsiveTypography.bodyLarge)
+                        .foregroundColor(DesignTokens.Colors.textPrimary)
+                    
+                    Text(language.displayName)
+                        .font(DesignTokens.ResponsiveTypography.bodyMedium)
+                        .foregroundColor(DesignTokens.Colors.textSecondary)
+                }
+                
+                Spacer()
+                
+                // Selection Indicator
+                if localizationManager.currentLanguage == language {
+                    Image(systemName: "checkmark.circle.fill")
+                        .font(.system(size: 20, weight: .semibold))
+                        .foregroundColor(DesignTokens.Colors.primaryCyan)
+                        .transition(.scale.combined(with: .opacity))
+                }
+            }
+            .padding(.horizontal, DesignTokens.ResponsiveSpacing.lg)
+            .padding(.vertical, DesignTokens.ResponsiveSpacing.lg)
+            .contentShape(Rectangle())
+        }
+        .scaleButtonStyle()
     }
 }
 
