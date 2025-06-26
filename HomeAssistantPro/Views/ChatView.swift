@@ -123,7 +123,7 @@ struct ChatView: View {
                         .transition(.scale.combined(with: .opacity))
                 }
             }
-            .padding(.horizontal, 20)
+            .padding(.horizontal, DesignTokens.ResponsiveSpacing.lg)
             .padding(.vertical, 16)
         }
         .background(Color.clear)
@@ -195,7 +195,7 @@ struct ChatView: View {
                 .scaleButtonStyle()
                 .disabled(message.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && !message.isEmpty)
             }
-            .padding(.horizontal, 20)
+            .padding(.horizontal, DesignTokens.ResponsiveSpacing.lg)
             .padding(.top, 12)
             .padding(.bottom, 20)
             .background(
@@ -288,7 +288,7 @@ struct MessageBubble: View {
     private var userMessageBubble: some View {
         VStack(alignment: .trailing, spacing: 4) {
             Text(message.content)
-                .font(.system(size: 16))
+                .font(DesignTokens.ResponsiveTypography.bodyLarge)
                 .foregroundColor(.white)
                 .padding(.horizontal, 16)
                 .padding(.vertical, 12)
@@ -335,8 +335,8 @@ struct MessageBubble: View {
                     .foregroundColor(DesignTokens.Colors.primaryPurple)
                 
                 Text(message.content)
-                    .font(.system(size: 16))
-                    .foregroundColor(.primary)
+                    .font(DesignTokens.ResponsiveTypography.bodyLarge)
+                    .foregroundColor(DesignTokens.Colors.textPrimary)
                     .padding(.horizontal, 16)
                     .padding(.vertical, 12)
                     .background(

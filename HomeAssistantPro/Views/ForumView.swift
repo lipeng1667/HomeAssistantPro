@@ -53,7 +53,7 @@ struct ForumView: View {
                     
                     // Search bar
                     searchSection
-                        .padding(.horizontal, 24)
+                        .padding(.horizontal, DesignTokens.ResponsiveSpacing.lg)
                         .padding(.bottom, 16)
                     
                     // Topics list
@@ -81,7 +81,7 @@ struct ForumView: View {
             HStack(spacing: 12) {
                 Image(systemName: "magnifyingglass")
                     .font(.system(size: 16, weight: .medium))
-                    .foregroundColor(.primary.opacity(searchFocused ? 0.8 : 0.5))
+                    .foregroundColor(searchFocused ? DesignTokens.Colors.textPrimary : DesignTokens.Colors.textSecondary)
                 
                 TextField("Search topics, categories...", text: $searchText)
                     .font(.system(size: 16, weight: .medium))
@@ -112,9 +112,9 @@ struct ForumView: View {
                     .fill(.ultraThinMaterial)
                     .overlay(
                         RoundedRectangle(cornerRadius: 16)
-                            .stroke(searchFocused ? DesignTokens.Colors.primaryCyan.opacity(0.5) : Color.white.opacity(0.4), lineWidth: searchFocused ? 2 : 1)
+                            .stroke(searchFocused ? DesignTokens.Colors.primaryCyan.opacity(0.5) : DesignTokens.Colors.borderPrimary, lineWidth: searchFocused ? 2 : 1)
                     )
-                    .shadow(color: Color.black.opacity(0.04), radius: 12, x: 0, y: 4)
+                    .shadow(color: DesignTokens.Shadow.light.color, radius: DesignTokens.Shadow.light.radius, x: DesignTokens.Shadow.light.x, y: DesignTokens.Shadow.light.y)
             )
             .scaleEffect(searchFocused ? 1.02 : 1.0)
             
@@ -124,7 +124,7 @@ struct ForumView: View {
             }) {
                 Image(systemName: "line.3.horizontal.decrease.circle")
                     .font(.system(size: 20, weight: .medium))
-                    .foregroundColor(.primary.opacity(0.7))
+                    .foregroundColor(DesignTokens.Colors.textSecondary)
                     .frame(width: 48, height: 48)
                     .background(
                         Circle()
@@ -217,14 +217,14 @@ struct ForumView: View {
                         Spacer()
                         
                         Text(topic.timeAgo)
-                            .font(.system(size: 12, weight: .medium))
-                            .foregroundColor(.primary.opacity(0.5))
+                            .font(DesignTokens.Typography.captionSmall)
+                            .foregroundColor(DesignTokens.Colors.textTertiary)
                     }
                     
                     // Title
                     Text(topic.title)
-                        .font(.system(size: 16, weight: .semibold, design: .rounded))
-                        .foregroundColor(.primary)
+                        .font(DesignTokens.ResponsiveTypography.bodyLarge)
+                        .foregroundColor(DesignTokens.Colors.textPrimary)
                         .multilineTextAlignment(.leading)
                         .lineLimit(2)
                     
@@ -237,7 +237,7 @@ struct ForumView: View {
                             
                             Text("\(topic.comments)")
                                 .font(.system(size: 14, weight: .semibold))
-                                .foregroundColor(.primary.opacity(0.7))
+                                .foregroundColor(DesignTokens.Colors.textSecondary)
                         }
                         
                         HStack(spacing: 6) {
@@ -247,7 +247,7 @@ struct ForumView: View {
                             
                             Text("\(topic.likes)")
                                 .font(.system(size: 14, weight: .semibold))
-                                .foregroundColor(.primary.opacity(0.7))
+                                .foregroundColor(DesignTokens.Colors.textSecondary)
                         }
                         
                         Spacer()
@@ -266,7 +266,7 @@ struct ForumView: View {
                     .fill(.ultraThinMaterial)
                     .overlay(
                         RoundedRectangle(cornerRadius: 20)
-                            .stroke(Color.white.opacity(0.4), lineWidth: 1)
+                            .stroke(DesignTokens.Colors.borderPrimary, lineWidth: 1)
                     )
                     .shadow(color: Color.black.opacity(0.06), radius: 16, x: 0, y: 6)
             )
@@ -330,7 +330,7 @@ struct CreatePostView: View {
                         
                         Text("Share your question or insight with the community")
                             .font(.system(size: 16, weight: .medium))
-                            .foregroundColor(.primary.opacity(0.7))
+                            .foregroundColor(DesignTokens.Colors.textSecondary)
                             .multilineTextAlignment(.center)
                     }
                     .padding(.top, 40)
@@ -365,7 +365,7 @@ struct CreatePostView: View {
                                         .scaleButtonStyle()
                                     }
                                 }
-                                .padding(.horizontal, 24)
+                                .padding(.horizontal, DesignTokens.ResponsiveSpacing.lg)
                             }
                         }
                         
@@ -387,7 +387,7 @@ struct CreatePostView: View {
                                         )
                                 )
                         }
-                        .padding(.horizontal, 24)
+                        .padding(.horizontal, DesignTokens.ResponsiveSpacing.lg)
                         
                         // Content input - Fixed for iOS compatibility
                         VStack(alignment: .leading, spacing: 12) {
@@ -427,7 +427,7 @@ struct CreatePostView: View {
                                     }
                                 )
                         }
-                        .padding(.horizontal, 24)
+                        .padding(.horizontal, DesignTokens.ResponsiveSpacing.lg)
                     }
                     
                     Spacer()
@@ -439,7 +439,7 @@ struct CreatePostView: View {
                         }) {
                             Text("Cancel")
                                 .font(.system(size: 16, weight: .semibold))
-                                .foregroundColor(.primary.opacity(0.7))
+                                .foregroundColor(DesignTokens.Colors.textSecondary)
                                 .frame(maxWidth: .infinity)
                                 .padding(.vertical, 16)
                                 .background(

@@ -17,7 +17,7 @@ struct DesignTokens {
     
     // MARK: - Color Palette
     
-    /// Primary brand colors used throughout the app
+    /// Environment-aware colors that adapt to light and dark modes
     struct Colors {
         
         // MARK: Primary Brand Colors
@@ -51,33 +51,123 @@ struct DesignTokens {
         /// Secondary amber variation
         static let secondaryAmber = Color(hex: "#D97706")
         
-        // MARK: Background Colors
+        // MARK: Dynamic Background Colors
+        
+        /// Primary background - adapts to light/dark mode
+        static let backgroundPrimary = Color(
+            light: Color(hex: "#FAFAFA"),
+            dark: Color(hex: "#0F0F0F")
+        )
+        
+        /// Secondary background - adapts to light/dark mode
+        static let backgroundSecondary = Color(
+            light: Color(hex: "#F8FAFC"),
+            dark: Color(hex: "#1A1A1A")
+        )
+        
+        /// Tertiary background - adapts to light/dark mode
+        static let backgroundTertiary = Color(
+            light: Color(hex: "#F4F4F5"),
+            dark: Color(hex: "#262626")
+        )
+        
+        /// Surface background - adapts to light/dark mode
+        static let backgroundSurface = Color(
+            light: Color(hex: "#FFFFFF"),
+            dark: Color(hex: "#171717")
+        )
+        
+        /// Elevated surface - adapts to light/dark mode
+        static let backgroundElevated = Color(
+            light: Color(hex: "#F1F5F9"),
+            dark: Color(hex: "#1F1F1F")
+        )
+        
+        // MARK: Dynamic Text Colors
+        
+        /// Primary text color - adapts to light/dark mode
+        static let textPrimary = Color(
+            light: Color(hex: "#1F2937"),
+            dark: Color(hex: "#F9FAFB")
+        )
+        
+        /// Secondary text color - adapts to light/dark mode
+        static let textSecondary = Color(
+            light: Color(hex: "#6B7280"),
+            dark: Color(hex: "#9CA3AF")
+        )
+        
+        /// Tertiary text color - adapts to light/dark mode
+        static let textTertiary = Color(
+            light: Color(hex: "#9CA3AF"),
+            dark: Color(hex: "#6B7280")
+        )
+        
+        // MARK: Dynamic Border Colors
+        
+        /// Primary border color - adapts to light/dark mode
+        static let borderPrimary = Color(
+            light: Color(hex: "#E5E7EB"),
+            dark: Color(hex: "#374151")
+        )
+        
+        /// Secondary border color - adapts to light/dark mode
+        static let borderSecondary = Color(
+            light: Color(hex: "#F3F4F6"),
+            dark: Color(hex: "#2D3748")
+        )
+        
+        // MARK: Legacy Colors (for backwards compatibility)
         
         /// Light background tint
-        static let backgroundLight = Color(hex: "#FAFAFA")
+        static let backgroundLight = Color(
+            light: Color(hex: "#FAFAFA"),
+            dark: Color(hex: "#0F0F0F")
+        )
         
         /// Medium light background
-        static let backgroundMediumLight = Color(hex: "#F8FAFC")
+        static let backgroundMediumLight = Color(
+            light: Color(hex: "#F8FAFC"),
+            dark: Color(hex: "#1A1A1A")
+        )
         
         /// Medium background
-        static let backgroundMedium = Color(hex: "#F4F4F5")
+        static let backgroundMedium = Color(
+            light: Color(hex: "#F4F4F5"),
+            dark: Color(hex: "#262626")
+        )
         
         /// Medium dark background
-        static let backgroundMediumDark = Color(hex: "#F1F5F9")
+        static let backgroundMediumDark = Color(
+            light: Color(hex: "#F1F5F9"),
+            dark: Color(hex: "#1F1F1F")
+        )
         
         /// Darker background tint
-        static let backgroundDark = Color(hex: "#E4E4E7")
+        static let backgroundDark = Color(
+            light: Color(hex: "#E4E4E7"),
+            dark: Color(hex: "#171717")
+        )
         
         // MARK: Surface Colors
         
         /// Login background light
-        static let loginLight = Color(hex: "#F8FAFC")
+        static let loginLight = Color(
+            light: Color(hex: "#F8FAFC"),
+            dark: Color(hex: "#1A1A1A")
+        )
         
         /// Login background medium
-        static let loginMedium = Color(hex: "#E2E8F0")
+        static let loginMedium = Color(
+            light: Color(hex: "#E2E8F0"),
+            dark: Color(hex: "#2D3748")
+        )
         
         /// Login background dark
-        static let loginDark = Color(hex: "#CBD5E1")
+        static let loginDark = Color(
+            light: Color(hex: "#CBD5E1"),
+            dark: Color(hex: "#374151")
+        )
         
         // MARK: Tab Colors
         
@@ -265,7 +355,10 @@ struct DesignTokens {
         
         /// Light shadow for subtle elevation
         static let light = Shadow(
-            color: Color.black.opacity(0.04),
+            color: Color(
+                light: Color.black.opacity(0.04),
+                dark: Color.black.opacity(0.2)
+            ),
             radius: 8,
             x: 0,
             y: 2
@@ -273,7 +366,10 @@ struct DesignTokens {
         
         /// Medium shadow for cards and containers
         static let medium = Shadow(
-            color: Color.black.opacity(0.06),
+            color: Color(
+                light: Color.black.opacity(0.06),
+                dark: Color.black.opacity(0.3)
+            ),
             radius: 16,
             x: 0,
             y: 6
@@ -281,7 +377,10 @@ struct DesignTokens {
         
         /// Strong shadow for elevated elements
         static let strong = Shadow(
-            color: Color.black.opacity(0.08),
+            color: Color(
+                light: Color.black.opacity(0.08),
+                dark: Color.black.opacity(0.4)
+            ),
             radius: 20,
             x: 0,
             y: 8
@@ -289,7 +388,10 @@ struct DesignTokens {
         
         /// Extra strong shadow for modals
         static let extraStrong = Shadow(
-            color: Color.black.opacity(0.1),
+            color: Color(
+                light: Color.black.opacity(0.1),
+                dark: Color.black.opacity(0.5)
+            ),
             radius: 25,
             x: 0,
             y: 12
@@ -343,6 +445,152 @@ struct DesignTokens {
         /// Profile image container (100pt)
         static let profileImage: CGFloat = 100
     }
+    
+    // MARK: - Device Detection
+    
+    /// Device size categories for responsive design
+    enum DeviceSize {
+        case compact    // iPhone 15, iPhone 15 Pro (393pt width)
+        case regular    // iPhone 15 Plus (430pt width)
+        case large      // iPhone 15 Pro Max (430pt width)
+        
+        static var current: DeviceSize {
+            let screenWidth = UIScreen.main.bounds.width
+            switch screenWidth {
+            case 0..<400:
+                return .compact
+            case 400..<435:
+                return .regular
+            default:
+                return .large
+            }
+        }
+        
+        /// Get responsive spacing value
+        func spacing(_ compact: CGFloat, _ regular: CGFloat? = nil, _ large: CGFloat? = nil) -> CGFloat {
+            switch self {
+            case .compact:
+                return compact
+            case .regular:
+                return regular ?? compact * 1.2
+            case .large:
+                return large ?? regular ?? compact * 1.4
+            }
+        }
+        
+        /// Get responsive font size
+        func fontSize(_ compact: CGFloat, _ regular: CGFloat? = nil, _ large: CGFloat? = nil) -> CGFloat {
+            switch self {
+            case .compact:
+                return compact
+            case .regular:
+                return regular ?? compact + 1
+            case .large:
+                return large ?? regular ?? compact + 2
+            }
+        }
+    }
+    
+    // MARK: - Responsive Values
+    
+    /// Responsive spacing that adapts to device size
+    struct ResponsiveSpacing {
+        
+        /// Extra small responsive spacing
+        static var xs: CGFloat {
+            DeviceSize.current.spacing(4, 5, 6)
+        }
+        
+        /// Small responsive spacing
+        static var sm: CGFloat {
+            DeviceSize.current.spacing(8, 10, 12)
+        }
+        
+        /// Medium responsive spacing
+        static var md: CGFloat {
+            DeviceSize.current.spacing(16, 20, 24)
+        }
+        
+        /// Large responsive spacing
+        static var lg: CGFloat {
+            DeviceSize.current.spacing(24, 28, 32)
+        }
+        
+        /// Extra large responsive spacing
+        static var xl: CGFloat {
+            DeviceSize.current.spacing(32, 38, 44)
+        }
+        
+        /// Extra extra large responsive spacing
+        static var xxl: CGFloat {
+            DeviceSize.current.spacing(48, 56, 64)
+        }
+        
+        /// Card padding responsive spacing
+        static var cardPadding: CGFloat {
+            DeviceSize.current.spacing(20, 24, 28)
+        }
+        
+        /// Section spacing
+        static var sectionSpacing: CGFloat {
+            DeviceSize.current.spacing(28, 32, 36)
+        }
+    }
+    
+    /// Responsive typography that adapts to device size
+    struct ResponsiveTypography {
+        
+        /// Display heading responsive
+        static var displayLarge: Font {
+            Font.system(
+                size: DeviceSize.current.fontSize(32, 36, 40),
+                weight: .bold,
+                design: .rounded
+            )
+        }
+        
+        /// Large heading responsive
+        static var headingLarge: Font {
+            Font.system(
+                size: DeviceSize.current.fontSize(24, 26, 28),
+                weight: .bold,
+                design: .rounded
+            )
+        }
+        
+        /// Medium heading responsive
+        static var headingMedium: Font {
+            Font.system(
+                size: DeviceSize.current.fontSize(20, 22, 24),
+                weight: .bold,
+                design: .rounded
+            )
+        }
+        
+        /// Body text responsive
+        static var bodyLarge: Font {
+            Font.system(
+                size: DeviceSize.current.fontSize(16, 17, 18),
+                weight: .medium
+            )
+        }
+        
+        /// Body medium responsive
+        static var bodyMedium: Font {
+            Font.system(
+                size: DeviceSize.current.fontSize(14, 15, 16),
+                weight: .medium
+            )
+        }
+        
+        /// Button text responsive
+        static var buttonLarge: Font {
+            Font.system(
+                size: DeviceSize.current.fontSize(16, 17, 18),
+                weight: .semibold
+            )
+        }
+    }
 }
 
 // MARK: - Convenience Extensions
@@ -372,6 +620,18 @@ extension Color {
             blue:  Double(b) / 255,
             opacity: Double(a) / 255
         )
+    }
+    
+    /// Create adaptive color for light and dark mode
+    init(light: Color, dark: Color) {
+        self.init(UIColor { traitCollection in
+            switch traitCollection.userInterfaceStyle {
+            case .dark:
+                return UIColor(dark)
+            default:
+                return UIColor(light)
+            }
+        })
     }
 }
 

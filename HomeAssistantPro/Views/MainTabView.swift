@@ -74,7 +74,7 @@ struct MainTabView: View {
             // Custom tab bar with keyboard-responsive behavior
             if tabBarVisibility.isTabBarVisible {
                 customTabBar
-                    .padding(.horizontal, DesignTokens.Spacing.xl)
+                    .padding(.horizontal, DesignTokens.ResponsiveSpacing.xl)
                     .padding(.bottom, 34) // Safe area padding
                     .transition(.move(edge: .bottom).combined(with: .opacity))
             }
@@ -132,10 +132,10 @@ struct MainTabView: View {
         .padding(.horizontal, 16)
         .background(tabBarBackground)
         .clipShape(RoundedRectangle(cornerRadius: 28))
-        .shadow(color: Color.black.opacity(0.08), radius: 20, x: 0, y: 8)
+        .shadow(color: DesignTokens.Shadow.strong.color, radius: DesignTokens.Shadow.strong.radius, x: DesignTokens.Shadow.strong.x, y: DesignTokens.Shadow.strong.y)
         .overlay(
             RoundedRectangle(cornerRadius: 28)
-                .stroke(Color.white.opacity(0.5), lineWidth: 1)
+                .stroke(DesignTokens.Colors.borderSecondary, lineWidth: 1)
         )
     }
     
@@ -150,8 +150,8 @@ struct MainTabView: View {
                 .fill(
                     LinearGradient(
                         colors: [
-                            Color.white.opacity(0.3),
-                            Color.white.opacity(0.1)
+                            DesignTokens.Colors.backgroundSurface.opacity(0.3),
+                            DesignTokens.Colors.backgroundSurface.opacity(0.1)
                         ],
                         startPoint: .top,
                         endPoint: .bottom
@@ -185,7 +185,7 @@ struct MainTabView: View {
                     // Tab icon
                     Image(systemName: tab.icon)
                         .font(.system(size: selectedTab == tab ? 18 : 16, weight: .medium))
-                        .foregroundColor(selectedTab == tab ? .white : .primary.opacity(0.6))
+                        .foregroundColor(selectedTab == tab ? .white : DesignTokens.Colors.textSecondary)
                         .scaleEffect(selectedTab == tab ? 1.1 : 1.0)
                 }
                 .frame(height: 40)
@@ -193,7 +193,7 @@ struct MainTabView: View {
                 // Tab label
                 Text(tab.rawValue)
                     .font(.system(size: selectedTab == tab ? 12 : 11, weight: .medium))
-                    .foregroundColor(selectedTab == tab ? tab.activeColor : .primary.opacity(0.6))
+                    .foregroundColor(selectedTab == tab ? tab.activeColor : DesignTokens.Colors.textSecondary)
                     .scaleEffect(selectedTab == tab ? 1.05 : 1.0)
             }
             .frame(maxWidth: .infinity)
@@ -261,9 +261,9 @@ struct EnhancedMainTabView: View {
             // Base gradient
             LinearGradient(
                 colors: [
-                    Color(hex: "#FAFAFA"),
-                    Color(hex: "#F4F4F5"),
-                    Color(hex: "#E4E4E7")
+                    DesignTokens.Colors.backgroundPrimary,
+                    DesignTokens.Colors.backgroundSecondary,
+                    DesignTokens.Colors.backgroundTertiary
                 ],
                 startPoint: animateGradient ? .topLeading : .bottomTrailing,
                 endPoint: animateGradient ? .bottomTrailing : .topLeading
@@ -293,7 +293,7 @@ struct EnhancedMainTabView: View {
             Circle()
                 .fill(
                     RadialGradient(
-                        colors: [Color(hex: "#8B5CF6").opacity(0.1), Color.clear],
+                        colors: [DesignTokens.Colors.primaryPurple.opacity(0.1), Color.clear],
                         center: .center,
                         startRadius: 0,
                         endRadius: 100
@@ -331,10 +331,10 @@ struct EnhancedMainTabView: View {
         .background(
             Capsule()
                 .fill(.ultraThinMaterial)
-                .shadow(color: Color.black.opacity(0.1), radius: 25, x: 0, y: 12)
+                .shadow(color: DesignTokens.Shadow.extraStrong.color, radius: DesignTokens.Shadow.extraStrong.radius, x: DesignTokens.Shadow.extraStrong.x, y: DesignTokens.Shadow.extraStrong.y)
                 .overlay(
                     Capsule()
-                        .stroke(Color.white.opacity(0.4), lineWidth: 1)
+                        .stroke(DesignTokens.Colors.borderSecondary, lineWidth: 1)
                 )
         )
     }
@@ -347,7 +347,7 @@ struct EnhancedMainTabView: View {
             HStack(spacing: 8) {
                 Image(systemName: tab.icon)
                     .font(.system(size: 18, weight: .medium))
-                    .foregroundColor(selectedTab == tab ? .white : .primary.opacity(0.7))
+                    .foregroundColor(selectedTab == tab ? .white : DesignTokens.Colors.textSecondary)
                 
                 if selectedTab == tab {
                     Text(tab.rawValue)

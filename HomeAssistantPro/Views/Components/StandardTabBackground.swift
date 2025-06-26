@@ -107,9 +107,9 @@ struct BackgroundConfiguration {
     
     init(
         gradientColors: [Color] = [
-            Color(hex: "#FAFAFA"),
-            Color(hex: "#F8FAFC"),
-            Color(hex: "#F1F5F9")
+            DesignTokens.Colors.backgroundPrimary,
+            DesignTokens.Colors.backgroundSecondary,
+            DesignTokens.Colors.backgroundTertiary
         ],
         gradientAnimationDuration: Double = 4.0,
         orbs: [OrbConfiguration] = [],
@@ -255,9 +255,9 @@ extension BackgroundConfiguration {
     static func settings(primaryColor: Color) -> BackgroundConfiguration {
         BackgroundConfiguration(
             gradientColors: [
-                Color(hex: "#FAFAFA"),
-                Color(hex: "#F4F4F5"),
-                Color(hex: "#E4E4E7")
+                DesignTokens.Colors.backgroundPrimary,
+                DesignTokens.Colors.backgroundSecondary,
+                DesignTokens.Colors.backgroundTertiary
             ],
             orbs: [
                 OrbConfiguration(
@@ -294,9 +294,9 @@ extension BackgroundConfiguration {
     // Login view specific background
     static let login = BackgroundConfiguration(
         gradientColors: [
-            Color(hex: "#F8FAFC"),
-            Color(hex: "#E2E8F0"),
-            Color(hex: "#CBD5E1")
+            DesignTokens.Colors.backgroundSecondary,
+            DesignTokens.Colors.backgroundTertiary,
+            DesignTokens.Colors.backgroundElevated
         ],
         gradientAnimationDuration: 3.0,
         orbs: [

@@ -87,7 +87,7 @@ struct CardConfiguration {
         backgroundMaterial: Material = .ultraThinMaterial,
         gradientOverlay: LinearGradient? = nil,
         showBorder: Bool = true,
-        borderColor: Color = Color.white.opacity(0.4),
+        borderColor: Color = DesignTokens.Colors.borderPrimary,
         borderWidth: CGFloat = 1,
         shadowColor: Color = DesignTokens.Shadow.medium.color,
         shadowRadius: CGFloat = DesignTokens.Shadow.medium.radius,
