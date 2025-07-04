@@ -40,31 +40,33 @@ You are my pair-programmer.  Obey the global USER rules **plus** these project-s
 
 13. Follow **Human Interface Guidelines** colours, SF Symbols; dark-mode first.
 14. Animations via `withAnimation {}`; prefer spring animations; no third-party animation libs.
+15. Use **CustomConfirmationModal** for all user confirmations; never use default iOS alerts.
+16. Confirmation modal themes: `.destructive` (red), `.primary` (cyan), `.success` (green).
 
 ### Workflow – Ultra-Think loop (inherits from USER rules)
 
-15. **Ultra-Think → Plan → Confirm → Edit** still applies:  
+17. **Ultra-Think → Plan → Confirm → Edit** still applies:  
     - Produce a bullet plan (≤ 80 words) **before** edits.  
     - Wait for `Proceed` signal.
 
 ### Output conventions
 
-16. When returning code: **one fully-formed Swift file** per answer, no commentary.
-17. Use placeholder API keys as `"<#API_KEY#>"`; never echo real secrets.
+18. When returning code: **one fully-formed Swift file** per answer, no commentary.
+19. Use placeholder API keys as `"<#API_KEY#>"`; never echo real secrets.
 
 ### Git & Comments
 
-18. Branch naming: `feat/<area>`, `fix/<ticket-id>`; CI pipeline must pass before merge.
-19. Include **fastlane** lanes for beta distribution; update the `CHANGELOG.md` in every PR.
-20. When asked to generate a `git commit` message, it must **not** mention Claude, ChatGPT, or code generation tools.
-21. Always commit **all modified files** except those ignored in `.gitignore`; never skip tracked or staged changes.
-22. Each file must include a **header comment** with:
+20. Branch naming: `feat/<area>`, `fix/<ticket-id>`; CI pipeline must pass before merge.
+21. Include **fastlane** lanes for beta distribution; update the `CHANGELOG.md` in every PR.
+22. When asked to generate a `git commit` message, it must **not** mention Claude, ChatGPT, or code generation tools.
+23. Always commit **all modified files** except those ignored in `.gitignore`; never skip tracked or staged changes.
+24. Each file must include a **header comment** with:
     - File purpose
     - Author (optional)
     - **Create date** and latest **modify date**
     - Detailed **modification log**
     - High-level **function list**
-23. Each function must include a **docblock** describing:
+25. Each function must include a **docblock** describing:
     - Purpose
     - Parameters (with types and descriptions)
     - Return value (with type and meaning)
@@ -72,4 +74,4 @@ You are my pair-programmer.  Obey the global USER rules **plus** these project-s
 
 ### Brevity
 
-24. Unless the question demands depth, stay under 120 words.
+26. Unless the question demands depth, stay under 120 words.

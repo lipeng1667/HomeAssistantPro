@@ -16,10 +16,12 @@ import SwiftUI
 /// Enhanced settings view with MainTabView design consistency
 struct SettingsView: View {
     @EnvironmentObject var tabBarVisibility: TabBarVisibilityManager
+    @EnvironmentObject var appViewModel: AppViewModel
     @StateObject private var localizationManager = LocalizationManager.shared
     @State private var isEditingProfile = false
     @State private var selectedProfileColor: Color = DesignTokens.Colors.primaryPurple
     @State private var showLanguageSelection = false
+    @State private var showLogoutConfirmation = false
     @FocusState private var isFieldFocused: Bool
     @Namespace private var profileTransition
     
@@ -53,9 +55,9 @@ struct SettingsView: View {
                         .padding(.horizontal, DesignTokens.Spacing.xxl)
                     accountSection
                         .padding(.horizontal, DesignTokens.Spacing.xxl)
-                    settingsSection
-                        .padding(.horizontal, DesignTokens.Spacing.xxl)
                     preferencesSection
+                        .padding(.horizontal, DesignTokens.Spacing.xxl)
+                    securitySection
                         .padding(.horizontal, DesignTokens.Spacing.xxl)
                 }
                 .padding(.top, DesignTokens.Spacing.xl)
@@ -74,6 +76,20 @@ struct SettingsView: View {
             LanguageSelectionView()
                 .environmentObject(localizationManager)
         }
+        .confirmationModal(
+            isPresented: $showLogoutConfirmation,
+            config: .destructive(
+                title: "Sign Out",
+                message: "Are you sure you want to end your current session?",
+                icon: "arrow.right.square.fill",
+                confirmText: "Sign Out",
+                onConfirm: {
+                    Task {
+                        await handleLogout()
+                    }
+                }
+            )
+        )
     }
     
     
@@ -245,26 +261,7 @@ struct SettingsView: View {
                 .foregroundColor(.secondary.opacity(0.6))
         }
     }
-    
-    // MARK: - Settings Section
-    
-    private var settingsSection: some View {
-        GlassmorphismCard(configuration: .settings) {
-            VStack(alignment: .leading, spacing: 24) {
-                sectionHeader(title: "Preferences", icon: "gearshape.fill")
-                
-                VStack(spacing: 20) {
-                    settingsRow(icon: "bell.fill", title: "Notifications", subtitle: "Push, email, SMS", color: DesignTokens.Colors.primaryRed)
-                    Divider().opacity(0.5)
-                    settingsRow(icon: "moon.fill", title: "Dark Mode", subtitle: "System", color: DesignTokens.Colors.secondaryPurple)
-                    Divider().opacity(0.5)
-                    settingsRow(icon: "globe", title: "Language", subtitle: "English", color: DesignTokens.Colors.primaryPurple)
-                }
-            }
-            .padding(.vertical, 20)
-        }
-    }
-    
+       
     // MARK: - Preferences Section
     
     private var preferencesSection: some View {
@@ -310,7 +307,7 @@ struct SettingsView: View {
                                         .font(.system(size: 12, weight: .semibold))
                                         .foregroundColor(DesignTokens.Colors.textTertiary)
                                 }
-                            }
+                            }.contentShape(Rectangle())  // <-- Make entire area tappable
                         }
                         .cardButtonStyle()
                         
@@ -322,22 +319,6 @@ struct SettingsView: View {
                             subtitle: LocalizedKeys.settingsColorDescription.localized, 
                             color: selectedProfileColor
                         )
-                    }
-                }
-                .padding(.vertical, 20)
-            }
-            
-            // Support Section
-            GlassmorphismCard(configuration: .settings) {
-                VStack(alignment: .leading, spacing: 24) {
-                    sectionHeader(title: LocalizedKeys.settingsSupport.localized, icon: "questionmark.circle.fill")
-                    
-                    VStack(spacing: 20) {
-                        settingsRow(icon: "headphones", title: LocalizedKeys.settingsHelpCenter.localized, subtitle: "FAQs and guides", color: DesignTokens.Colors.primaryGreen)
-                        Divider().opacity(0.5)
-                        settingsRow(icon: "message.fill", title: LocalizedKeys.settingsContactUs.localized, subtitle: "Get in touch", color: DesignTokens.Colors.primaryCyan)
-                        Divider().opacity(0.5)
-                        settingsRow(icon: "star.fill", title: LocalizedKeys.settingsFeedback.localized, subtitle: "Share your feedback", color: DesignTokens.Colors.primaryAmber)
                     }
                 }
                 .padding(.vertical, 20)
@@ -386,7 +367,72 @@ struct SettingsView: View {
         }
     }
     
+    // MARK: - Security Section
+    
+    private var securitySection: some View {
+        GlassmorphismCard(configuration: .settings) {
+            VStack(alignment: .leading, spacing: 24) {
+                sectionHeader(title: "Security", icon: "shield.fill")
+                
+                // Logout Button
+                Button(action: {
+                    HapticManager.buttonTap()
+                    showLogoutConfirmation = true
+                }) {
+                    HStack(spacing: 16) {
+                        ZStack {
+                            Circle()
+                                .fill(DesignTokens.Colors.primaryRed.opacity(0.15))
+                                .frame(width: 44, height: 44)
+                            
+                            if appViewModel.isLoading {
+                                ProgressView()
+                                    .progressViewStyle(CircularProgressViewStyle(tint: DesignTokens.Colors.primaryRed))
+                                    .scaleEffect(0.8)
+                            } else {
+                                Image(systemName: "arrow.right.square.fill")
+                                    .font(.system(size: 18, weight: .semibold))
+                                    .foregroundColor(DesignTokens.Colors.primaryRed)
+                            }
+                        }
+                        
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("Sign Out")
+                                .font(.system(size: 16, weight: .semibold))
+                                .foregroundColor(.primary)
+                            Text("End your current session")
+                                .font(.system(size: 14, weight: .medium))
+                                .foregroundColor(.secondary)
+                        }
+                        
+                        Spacer()
+                        
+                        Image(systemName: "chevron.right")
+                            .font(.system(size: 14, weight: .semibold))
+                            .foregroundColor(.secondary.opacity(0.6))
+                    }
+                    .contentShape(Rectangle())
+                }
+                .disabled(appViewModel.isLoading)
+                .cardButtonStyle()
+            }
+            .padding(.vertical, 20)
+        }
+    }
+    
     // MARK: - Helper Functions
+    
+    private func handleLogout() async {
+        HapticManager.medium()
+        let success = await appViewModel.logout()
+        
+        if !success {
+            // Show error feedback
+            HapticManager.error()
+        } else {
+            HapticManager.success()
+        }
+    }
     
     
     private func cycleProfileColor() {
@@ -516,4 +562,5 @@ struct LanguageSelectionView: View {
         .scaleButtonStyle()
     }
 }
+
 

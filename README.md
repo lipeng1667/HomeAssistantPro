@@ -11,6 +11,7 @@
 ## 🌟 Features
 
 ### Core Functionality
+
 - **🏠 Home Dashboard**: Curated smart home case studies and daily tips
 - **💬 Community Forum**: Discussion platform with hot topics and categories  
 - **🔧 Tech Support Chat**: Real-time support with typing indicators
@@ -19,6 +20,7 @@
 - **🔐 Authentication**: Anonymous login with persistent session management
 
 ### Design & UX
+
 - **🌙 Dark Mode**: Automatic light/dark theme switching
 - **📱 Responsive Design**: Optimized for iPhone 15 to iPhone 15 Pro Max
 - **✨ Glassmorphism**: Modern iOS 2025 design aesthetics
@@ -27,6 +29,7 @@
 - **🎪 Floating Elements**: Dynamic orbs and animated backgrounds
 
 ### Technical Excellence
+
 - **🏗️ MVVM Architecture**: Clean separation of concerns
 - **🔧 Modular Components**: Reusable UI components with 40% less code duplication
 - **📐 Responsive Layouts**: Adaptive spacing and typography
@@ -38,7 +41,8 @@
 ## 🚀 Quick Start
 
 ### Prerequisites
-```
+
+```text
 - Xcode 17+
 - iOS 15.6+ deployment target
 - Swift 5.10+
@@ -46,6 +50,7 @@
 ```
 
 ### Installation
+
 ```bash
 # Clone the repository
 git clone https://github.com/lipeng1667/HomeAssistantPro.git
@@ -60,43 +65,54 @@ open HomeAssistantPro.xcodeproj
 ## 📁 Architecture Overview
 
 ### Project Structure
-```
+
+```text
 HomeAssistantPro/
-├── 📱 App/
-│   ├── HomeAssistantProApp.swift        # App entry point
-│   └── ContentView.swift                # Root view
-├── 🎨 Design/
-│   └── DesignTokens.swift               # Design system tokens
+├── HomeAssistantProApp.swift            # App entry point
+├── 🧠 ViewModels/
+│   ├── AppViewModel.swift               # Global app state & authentication
+│   └── SettingsStore.swift             # Onboarding and user preferences
 ├── 🛠️ Utils/
-│   ├── DesignTokens.swift               # Colors, spacing, typography
+│   ├── DesignTokens.swift               # Colors, spacing, typography tokens
 │   ├── AnimationPresets.swift           # Consistent animations
 │   ├── HapticManager.swift              # Haptic feedback patterns
 │   ├── SharedButtonStyles.swift         # Unified button behaviors
-│   └── DeviceIdentifier.swift           # Secure device ID management
+│   ├── KeyboardDismissModifier.swift    # Keyboard handling utilities
+│   ├── LocalizationManager.swift       # Multi-language support
+│   └── DeviceIdentifier.swift          # Secure device ID management
 ├── 🖥️ Views/
 │   ├── MainTabView.swift                # Tab navigation controller
 │   ├── HomeView.swift                   # Home dashboard
 │   ├── ForumView.swift                  # Community forum
 │   ├── ChatView.swift                   # Support chat
 │   ├── SettingsView.swift               # Settings & profile
-│   ├── LoginView.swift                  # Authentication
+│   ├── LoginView.swift                  # Authentication interface
+│   ├── IntroView.swift                  # Onboarding flow
+│   ├── TopicDetailView.swift            # Forum topic details
 │   └── Components/                      # Reusable components
 │       ├── StandardTabHeader.swift      # Unified headers
 │       ├── StandardTabBackground.swift  # Animated backgrounds
-│       └── GlassmorphismCard.swift      # Glass effect cards
-├── 🌐 Services/                         # Network layer
+│       ├── GlassmorphismCard.swift      # Glass effect cards
+│       └── CustomConfirmationModal.swift # Configurable confirmation modals
+├── 🌐 Services/
 │   └── APIClient.swift                  # HMAC authenticated HTTP client
-├── 📦 Models/                           # Data models
+├── 📦 Models/
 │   └── AuthModels.swift                 # Authentication request/response models
-├── 🎬 IntroViews/                       # Onboarding flow
-├── 📦 Extensions/                       # Swift extensions
-└── 🧪 Tests/                           # Unit & UI tests
+├── 📱 Extensions/
+│   └── ColorExtension.swift             # Color utilities
+├── 🏛️ Legacy/
+│   └── AppDelegate.swift                # Legacy app delegate
+└── 🧪 Tests/
+    ├── HomeAssistantProTests/           # Unit tests
+    └── HomeAssistantProUITests/         # UI tests
 ```
 
 ### Design System Architecture
 
 #### 🎨 DesignTokens.swift
+
 The foundation of our design system providing:
+
 - **Adaptive Colors**: Automatic light/dark mode switching
 - **Responsive Spacing**: Device-aware spacing (iPhone 15 → Pro Max)
 - **Typography Scale**: Consistent font sizing and weights
@@ -104,14 +120,17 @@ The foundation of our design system providing:
 - **Device Detection**: Screen size categorization
 
 #### 🧩 Component System
+
 - **StandardTabHeader**: Unified header component with ForumView-style layout
 - **StandardTabBackground**: Animated gradient backgrounds with floating orbs
 - **GlassmorphismCard**: Reusable card component with material effects
+- **CustomConfirmationModal**: Configurable confirmation dialogs with glassmorphism design
 - **SharedButtonStyles**: Centralized button behaviors and animations
 
 ## 🎨 Design System
 
 ### Color Palette
+
 ```swift
 // Brand Colors
 primaryPurple   #8B5CF6  // Home tab, primary actions
@@ -126,6 +145,7 @@ backgroundTertiary   #F4F4F5 → #262626
 ```
 
 ### Responsive Spacing
+
 ```swift
 Device Sizes:
 - Compact (iPhone 15): Base spacing
@@ -138,6 +158,7 @@ Examples:
 ```
 
 ### Typography Scale
+
 ```swift
 // Responsive Typography
 Display Large:  32pt → 36pt → 40pt
@@ -148,6 +169,7 @@ Body Large:     16pt → 17pt → 18pt
 ## 🔧 Development
 
 ### Building
+
 ```bash
 # Debug build
 xcodebuild -project HomeAssistantPro.xcodeproj -scheme HomeAssistantPro -destination 'platform=iOS Simulator,name=iPhone 15' build
@@ -157,6 +179,7 @@ xcodebuild -project HomeAssistantPro.xcodeproj -scheme HomeAssistantPro -configu
 ```
 
 ### Testing
+
 ```bash
 # Run unit tests
 xcodebuild test -project HomeAssistantPro.xcodeproj -scheme HomeAssistantPro -destination 'platform=iOS Simulator,name=iPhone 15'
@@ -166,6 +189,7 @@ xcodebuild test -project HomeAssistantPro.xcodeproj -scheme HomeAssistantProUITe
 ```
 
 ### Code Quality
+
 - **SwiftLint**: Enforced code style and best practices
 - **Type Safety**: Comprehensive use of Swift's type system
 - **MVVM Pattern**: Clear separation between View, ViewModel, and Model
@@ -174,37 +198,53 @@ xcodebuild test -project HomeAssistantPro.xcodeproj -scheme HomeAssistantProUITe
 ## 🔐 Authentication & Network Architecture
 
 ### Security Implementation
+
 - **Device Identification**: UUID-based device ID stored securely in iOS Keychain
 - **HMAC Authentication**: SHA-256 signature validation for all API requests
 - **App Transport Security**: HTTP exception configured for backend server
 - **Session Persistence**: UserDefaults for login state, Keychain for sensitive data
 
 ### API Integration
+
 ```swift
 // Anonymous Login Flow
 DeviceID (Keychain) → Backend API → UserID (UserDefaults) → Session State
 ```
 
 ### Session Management
+
 - **Lazy Validation**: Session checked only when API calls are made
 - **Automatic Restoration**: App remembers login state across launches
 - **Session Expiry**: Global handler for expired sessions with auto-logout
 - **Network Resilience**: Graceful handling of connectivity issues
 
 ### Backend Communication
+
 - **Base URL**: `http://47.94.108.189:10000`
 - **Authentication Headers**: `X-Timestamp`, `X-Signature`
 - **API Endpoints**: `/api/auth/anonymous`, `/api/auth/logout`
 - **Error Handling**: Standardized error responses with user feedback
 
+#### Features
+
+- **Three Themes**: Destructive (red), Primary (cyan), Success (green)
+- **Background Blur**: Blurs and blocks interaction with content behind modal
+- **Smooth Animations**: Spring-based scale and opacity transitions
+- **Configurable Content**: Custom titles, messages, icons, and button text
+- **Haptic Feedback**: Built-in haptic responses for all interactions
+- **Tap Outside**: Dismisses modal when tapping backdrop
+- **Glassmorphism Design**: Matches app's overall visual aesthetic
+
 ## 📱 Device Support
 
 ### Screen Sizes
+
 - **iPhone 15 (Compact)**: 393pt width - base spacing
 - **iPhone 15 Plus (Regular)**: 430pt width - enhanced spacing  
 - **iPhone 15 Pro Max (Large)**: 430pt+ width - maximum spacing
 
 ### OS Support
+
 - **iOS 15.6+**: Minimum deployment target
 - **iOS 18.0+**: Recommended for latest features
 - **Dark Mode**: Automatic system theme detection
@@ -213,12 +253,14 @@ DeviceID (Keychain) → Backend API → UserID (UserDefaults) → Session State
 ## 🎯 Key Achievements
 
 ### Performance Optimizations
+
 - **40% Code Reduction**: Eliminated duplicate styling code
 - **Centralized Design**: Single source of truth for all visual elements
 - **Responsive Layouts**: Automatic adaptation to screen sizes
 - **Material Efficiency**: Proper glassmorphism performance
 
 ### User Experience
+
 - **Seamless Dark Mode**: No manual switching required
 - **Consistent Interactions**: Unified haptic feedback patterns
 - **Smooth Animations**: 60fps fluid transitions
@@ -227,13 +269,17 @@ DeviceID (Keychain) → Backend API → UserID (UserDefaults) → Session State
 ## 🚀 Recent Updates
 
 ### v2.1.0 (July 4, 2025)
+
 - **🌐 Network Integration**: Real API authentication with backend server
 - **🔐 Anonymous Login**: Persistent session management with secure device identification
 - **🔒 Security**: HMAC-SHA256 authenticated requests with app-level validation
 - **💾 Session Persistence**: Automatic login state restoration across app launches
 - **⚡ Lazy Validation**: Efficient session validation only when needed
+- **🔄 Logout Feature**: Secure logout with custom confirmation modal
+- **🎨 Reusable Modals**: CustomConfirmationModal component with multiple themes
 
 ### v2.0.0 (June 26, 2025)
+
 - **✨ Dark Mode**: Complete adaptive color system
 - **📱 Responsive Design**: Multi-device screen support
 - **🎨 Design System**: Centralized tokens and components
@@ -241,6 +287,7 @@ DeviceID (Keychain) → Backend API → UserID (UserDefaults) → Session State
 - **🎪 Animations**: Smooth transitions and haptic feedback
 
 ### v1.0.0 (March 3, 2025)
+
 - **🏗️ Initial Release**: Core MVVM architecture
 - **🎬 Intro Views**: Onboarding flow implementation
 - **📱 Tab Navigation**: Four-tab app structure
@@ -253,10 +300,9 @@ This project is licensed under the MIT License. See [LICENSE.md](LICENSE.md) for
 ## 👨‍💻 Author
 
 **Michael Lee**  
+
 - Created: March 3, 2025
 - Architecture: MVVM + SwiftUI
 - Design: Modern iOS 2025 aesthetics
 
 ---
-
-*Built with ❤️ using SwiftUI and modern iOS development practices*
