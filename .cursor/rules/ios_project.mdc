@@ -3,13 +3,18 @@ description:
 globs: 
 alwaysApply: true
 ---
+# Ruls
+
 ---
+
 description: iOS Home-Assistant App – project rules
 alwaysApply: true     # applies to every chat / Cmd-K inside this repo only
 ---
+
 You are my pair-programmer.  Obey the global USER rules **plus** these project-specific rules.
 
 ### Platform & tooling
+
 1. **Swift 5.10** (Xcode 17), target **iOS 18.0** minimum.
 2. UI must be **SwiftUI**; avoid UIKit unless impossible.
 3. Concurrency: use **async/await** & structured concurrency; no Combine.
@@ -18,6 +23,7 @@ You are my pair-programmer.  Obey the global USER rules **plus** these project-s
 6. Logging via `os.Logger` (Unified Logging); tag subsystem as `"com.homeassistant.ios"`.
 
 ### Architecture & patterns
+
 7. Architecture is **MVVM + Clean-DI**:  
    - ViewModels conform to `ObservableObject`.  
    - Inject services with constructor injection or `@Environment(\.injection)`.
@@ -26,25 +32,44 @@ You are my pair-programmer.  Obey the global USER rules **plus** these project-s
 10. All new modules must ship **unit tests** (XCTest) and **UI snapshot tests** (SwiftSnapshotTesting).
 
 ### Security & privacy
+
 11. Opt-in to **App Privacy Report**; annotate every network domain in `Info.plist`.
 12. Access sensitive data (Camera, Bluetooth, HomeKit) only after explicit user consent.
 
 ### Design & theming
+
 13. Follow **Human Interface Guidelines** colours, SF Symbols; dark-mode first.
 14. Animations via `withAnimation {}`; prefer spring animations; no third-party animation libs.
 
 ### Workflow – Ultra-Think loop (inherits from USER rules)
+
 15. **Ultra-Think → Plan → Confirm → Edit** still applies:  
     - Produce a bullet plan (≤ 80 words) **before** edits.  
     - Wait for `Proceed` signal.
 
 ### Output conventions
+
 16. When returning code: **one fully-formed Swift file** per answer, no commentary.
 17. Use placeholder API keys as `"<#API_KEY#>"`; never echo real secrets.
 
-### Git & CI
+### Git & Comments
+
 18. Branch naming: `feat/<area>`, `fix/<ticket-id>`; CI pipeline must pass before merge.
 19. Include **fastlane** lanes for beta distribution; update the `CHANGELOG.md` in every PR.
+20. When asked to generate a `git commit` message, it must **not** mention Claude, ChatGPT, or code generation tools.
+21. Always commit **all modified files** except those ignored in `.gitignore`; never skip tracked or staged changes.
+22. Each file must include a **header comment** with:
+    - File purpose
+    - Author (optional)
+    - **Create date** and latest **modify date**
+    - Detailed **modification log**
+    - High-level **function list**
+23. Each function must include a **docblock** describing:
+    - Purpose
+    - Parameters (with types and descriptions)
+    - Return value (with type and meaning)
+    - Any important side effects or exceptions
 
 ### Brevity
-20. Unless the question demands depth, stay under 120 words.
+
+24. Unless the question demands depth, stay under 120 words.

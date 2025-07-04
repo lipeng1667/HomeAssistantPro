@@ -312,10 +312,16 @@ struct ModernLoginView: View {
     private var guestAccessButton: some View {
         Button(action: handleGuestLogin) {
             HStack(spacing: 8) {
-                Image(systemName: "person.circle")
-                    .font(.system(size: 16))
+                if appViewModel.isLoading {
+                    ProgressView()
+                        .progressViewStyle(CircularProgressViewStyle(tint: .primary))
+                        .scaleEffect(0.8)
+                } else {
+                    Image(systemName: "person.circle")
+                        .font(.system(size: 16))
+                }
                 
-                Text("Continue as Guest")
+                Text(appViewModel.isLoading ? "Connecting..." : "Continue as Guest")
                     .font(.system(size: 16, weight: .medium))
             }
             .frame(maxWidth: .infinity)
@@ -329,7 +335,10 @@ struct ModernLoginView: View {
                     )
             )
             .foregroundColor(.primary)
+            .scaleEffect(appViewModel.isLoading ? 0.98 : 1.0)
         }
+        .disabled(appViewModel.isLoading)
+        .animation(.easeInOut(duration: 0.2), value: appViewModel.isLoading)
         .accessibilityLabel("Continue as guest")
     }
     
@@ -461,6 +470,20 @@ struct ModernLoginView: View {
     
     private func handleGuestLogin() {
         hapticFeedback(.light)
-        appViewModel.login()
+        
+        Task {
+            let success = await appViewModel.loginAnonymously()
+            if !success {
+                await MainActor.run {
+                    withAnimation(.spring(response: 0.5, dampingFraction: 0.8)) {
+                        showError = true
+                        errorMessage = appViewModel.errorMessage ?? "Anonymous login failed"
+                    }
+                    
+                    let notificationFeedback = UINotificationFeedbackGenerator()
+                    notificationFeedback.notificationOccurred(.error)
+                }
+            }
+        }
     }
 }
