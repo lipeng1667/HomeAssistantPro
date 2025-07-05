@@ -3,9 +3,9 @@
 //  HomeAssistantPro
 //
 //  Created: March 3, 2025
-//  Last Modified: June 26, 2025
+//  Last Modified: July 5, 2025
 //  Author: Michael Lee
-//  Version: 2.0.0
+//  Version: 2.1.0
 //
 //  Purpose: Main tab navigation controller with custom tab bar design,
 //  glassmorphism effects, and keyboard-responsive behavior. Features
@@ -15,6 +15,7 @@
 //  v1.0.0 (March 3, 2025) - Initial creation with basic tab navigation
 //  v1.5.0 (June 25, 2025) - Added glassmorphism effects and custom tab bar
 //  v2.0.0 (June 26, 2025) - Implemented dark mode support and responsive spacing
+//  v2.1.0 (July 5, 2025) - Added swipe gesture support for tab navigation
 //
 //  Features:
 //  - Custom glassmorphism tab bar with floating design
@@ -22,6 +23,7 @@
 //  - Dynamic island-inspired styling and transitions
 //  - Adaptive colors and spacing for all device sizes
 //  - Haptic feedback integration for tab selection
+//  - Swipe gesture support for tab navigation
 //
 
 import SwiftUI
@@ -47,6 +49,8 @@ class TabBarVisibilityManager: ObservableObject {
 struct MainTabView: View {
     @StateObject private var tabBarVisibility = TabBarVisibilityManager()
     @State private var selectedTab: Tab = .home
+    @State private var previousTab: Tab = .home
+    @State private var isMovingForward: Bool = true
     @State private var animateBackground = false
     @Namespace private var tabTransition
     
@@ -55,6 +59,21 @@ struct MainTabView: View {
         case forum = "Forum"
         case chat = "Chat"
         case settings = "Settings"
+        
+        var index: Int {
+            switch self {
+            case .home: return 0
+            case .forum: return 1
+            case .chat: return 2
+            case .settings: return 3
+            }
+        }
+        
+        static func fromIndex(_ index: Int) -> Tab {
+            let allCases = Tab.allCases
+            guard index >= 0 && index < allCases.count else { return .home }
+            return allCases[index]
+        }
         
         var localizedTitle: String {
             switch self {
@@ -93,6 +112,7 @@ struct MainTabView: View {
             contentView
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                 .environmentObject(tabBarVisibility)
+                .simultaneousGesture(swipeGesture)
             
             // Custom tab bar with keyboard-responsive behavior
             if tabBarVisibility.isTabBarVisible {
@@ -130,16 +150,35 @@ struct MainTabView: View {
         switch selectedTab {
         case .home:
             HomeView()
-                .transition(.asymmetric(insertion: .move(edge: .leading), removal: .move(edge: .trailing)))
+                .transition(getTransition(for: .home))
         case .forum:
             ForumView()
-                .transition(.asymmetric(insertion: .move(edge: .leading), removal: .move(edge: .trailing)))
+                .transition(getTransition(for: .forum))
         case .chat:
             ChatView()
-                .transition(.asymmetric(insertion: .move(edge: .leading), removal: .move(edge: .trailing)))
+                .transition(getTransition(for: .chat))
         case .settings:
             SettingsView()
-                .transition(.asymmetric(insertion: .move(edge: .leading), removal: .move(edge: .trailing)))
+                .transition(getTransition(for: .settings))
+        }
+    }
+    
+    /// Gets the appropriate transition animation based on current navigation direction
+    /// - Parameter tab: The target tab to transition to
+    /// - Returns: AnyTransition configured for the direction of movement
+    private func getTransition(for tab: Tab) -> AnyTransition {
+        if isMovingForward {
+            // Moving to next tab (left to right) - slide in from right
+            return .asymmetric(
+                insertion: .move(edge: .trailing).combined(with: .opacity),
+                removal: .move(edge: .leading).combined(with: .opacity)
+            )
+        } else {
+            // Moving to previous tab (right to left) - slide in from left
+            return .asymmetric(
+                insertion: .move(edge: .leading).combined(with: .opacity),
+                removal: .move(edge: .trailing).combined(with: .opacity)
+            )
         }
     }
     
@@ -227,10 +266,62 @@ struct MainTabView: View {
         .accessibilityHint("Tap to switch to \(tab.localizedTitle) section")
     }
     
+    // MARK: - Gestures
+    
+    /// Swipe gesture for tab navigation
+    private var swipeGesture: some Gesture {
+        DragGesture(minimumDistance: 30, coordinateSpace: .local)
+            .onEnded { value in
+                handleSwipeGesture(value)
+            }
+    }
+    
+    /// Handles swipe gesture for tab switching
+    /// - Parameter value: The drag gesture value containing translation information
+    private func handleSwipeGesture(_ value: DragGesture.Value) {
+        let horizontalDistance = value.translation.width
+        let verticalDistance = abs(value.translation.height)
+        
+        // Debug logging
+        print("Swipe detected - H: \(horizontalDistance), V: \(verticalDistance), Current tab: \(selectedTab.rawValue)")
+        
+        // Only process horizontal swipes (ignore vertical scrolling)
+        // Must be horizontal movement of at least 80px and predominantly horizontal
+        guard abs(horizontalDistance) > 80 && abs(horizontalDistance) > verticalDistance * 1.5 else {
+            print("Swipe ignored - not horizontal enough")
+            return
+        }
+        
+        let currentIndex = selectedTab.index
+        
+        if horizontalDistance > 0 {
+            // Swipe right - go to previous tab
+            let newIndex = max(0, currentIndex - 1)
+            let newTab = Tab.fromIndex(newIndex)
+            if newTab != selectedTab {
+                selectTab(newTab)
+            }
+        } else {
+            // Swipe left - go to next tab
+            let newIndex = min(Tab.allCases.count - 1, currentIndex + 1)
+            let newTab = Tab.fromIndex(newIndex)
+            if newTab != selectedTab {
+                selectTab(newTab)
+            }
+        }
+    }
+    
     // MARK: - Actions
     
     private func selectTab(_ tab: Tab) {
         guard selectedTab != tab else { return }
+        
+        // Calculate and store transition direction BEFORE animation
+        isMovingForward = tab.index > selectedTab.index
+        previousTab = selectedTab
+        
+        // Debug logging
+        print("Tab transition: \(selectedTab.rawValue) → \(tab.rawValue), forward: \(isMovingForward)")
         
         // Haptic feedback
         HapticManager.tabSelection()
@@ -263,6 +354,7 @@ struct EnhancedMainTabView: View {
             // Content
             contentArea
                 .environmentObject(tabBarVisibility)
+                .simultaneousGesture(enhancedSwipeGesture)
             
             // Floating tab bar with keyboard-responsive behavior
             if tabBarVisibility.isTabBarVisible {
@@ -400,6 +492,45 @@ struct EnhancedMainTabView: View {
         }
         .tabBarButtonStyle()
         .accessibilityLabel(tab.rawValue)
+    }
+    
+    /// Enhanced swipe gesture for tab navigation
+    private var enhancedSwipeGesture: some Gesture {
+        DragGesture(minimumDistance: 30, coordinateSpace: .local)
+            .onEnded { value in
+                handleEnhancedSwipeGesture(value)
+            }
+    }
+    
+    /// Handles swipe gesture for enhanced tab switching
+    /// - Parameter value: The drag gesture value containing translation information
+    private func handleEnhancedSwipeGesture(_ value: DragGesture.Value) {
+        let horizontalDistance = value.translation.width
+        let verticalDistance = abs(value.translation.height)
+        
+        // Only process horizontal swipes (ignore vertical scrolling)
+        // Must be horizontal movement of at least 80px and predominantly horizontal
+        guard abs(horizontalDistance) > 80 && abs(horizontalDistance) > verticalDistance * 1.5 else {
+            return
+        }
+        
+        let currentIndex = selectedTab.index
+        
+        if horizontalDistance > 0 {
+            // Swipe right - go to previous tab
+            let newIndex = max(0, currentIndex - 1)
+            let newTab = MainTabView.Tab.fromIndex(newIndex)
+            if newTab != selectedTab {
+                selectTab(newTab)
+            }
+        } else {
+            // Swipe left - go to next tab
+            let newIndex = min(MainTabView.Tab.allCases.count - 1, currentIndex + 1)
+            let newTab = MainTabView.Tab.fromIndex(newIndex)
+            if newTab != selectedTab {
+                selectTab(newTab)
+            }
+        }
     }
     
     private func selectTab(_ tab: MainTabView.Tab) {

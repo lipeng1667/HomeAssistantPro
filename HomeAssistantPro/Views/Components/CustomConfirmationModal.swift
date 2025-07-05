@@ -5,13 +5,14 @@
 //  Purpose: Reusable confirmation modal component with glassmorphism design
 //  Author: Claude
 //  Created: 2025-07-04
-//  Modified: 2025-07-04
+//  Modified: 2025-07-05
 //
 //  Modification Log:
 //  - 2025-07-04: Initial creation of reusable confirmation modal component
+//  - 2025-07-05: Added tab bar visibility control - hides tab bar when modal appears
 //
 //  Functions:
-//  - CustomConfirmationModal: Main modal view with configurable content
+//  - CustomConfirmationModal: Main modal view with configurable content and tab bar control
 //  - ConfirmationConfig: Configuration struct for modal appearance
 //  - ConfirmationStyle: Enum for different styling themes
 //
@@ -152,6 +153,9 @@ struct CustomConfirmationModal: View {
     @State private var scale: CGFloat = 0.8
     @State private var opacity: Double = 0
     
+    // Access the tab bar visibility manager from environment
+    @EnvironmentObject var tabBarVisibility: TabBarVisibilityManager
+    
     var body: some View {
         ZStack {
             // Backdrop with blur
@@ -260,10 +264,17 @@ struct CustomConfirmationModal: View {
             .opacity(opacity)
         }
         .onAppear {
+            // Hide tab bar when modal appears
+            tabBarVisibility.hideTabBar()
+            
             withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
                 scale = 1.0
                 opacity = 1.0
             }
+        }
+        .onDisappear {
+            // Show tab bar when modal disappears
+            tabBarVisibility.showTabBar()
         }
     }
     
