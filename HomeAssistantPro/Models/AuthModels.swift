@@ -9,10 +9,13 @@
 //
 //  Modification Log:
 //  - 2025-07-04: Initial creation with anonymous login and logout models
+//  - 2025-07-05: Added register and login request/response models
 //
 //  Functions:
 //  - Codable models for API communication
 //  - AnonymousLoginRequest: Anonymous login request payload
+//  - RegisterRequest: User registration request payload
+//  - LoginRequest: User login request payload
 //  - LogoutRequest: Logout request payload
 //  - LoginResponse: Login success response
 //  - LogoutResponse: Logout success response
@@ -20,6 +23,7 @@
 //
 
 import Foundation
+import CryptoKit
 
 // MARK: - Request Models
 
@@ -39,6 +43,87 @@ struct AnonymousLoginRequest: Codable {
     /// Creates anonymous login request with custom device ID (for testing)
     init(deviceId: String) {
         self.deviceId = deviceId
+    }
+}
+
+/// Request payload for user registration
+struct RegisterRequest: Codable {
+    let deviceId: String
+    let accountName: String
+    let phoneNumber: String
+    let password: String
+    let userId: String?
+    
+    enum CodingKeys: String, CodingKey {
+        case deviceId = "device_id"
+        case accountName = "account_name"
+        case phoneNumber = "phone_number"
+        case password
+        case userId = "user_id"
+    }
+    
+    /// Creates registration request with hashed password
+    /// - Parameters:
+    ///   - accountName: User's full name
+    ///   - phoneNumber: User's phone number
+    ///   - password: Plain text password (will be hashed)
+    ///   - userId: Optional user ID for existing anonymous users
+    init(accountName: String, phoneNumber: String, password: String, userId: String? = nil) {
+        self.deviceId = DeviceIdentifier.shared.deviceId
+        self.accountName = accountName
+        self.phoneNumber = phoneNumber
+        self.password = Self.hashPassword(password)
+        self.userId = userId
+    }
+    
+    /// Hashes password using SHA-256
+    /// - Parameter password: Plain text password
+    /// - Returns: SHA-256 hashed password as hex string
+    private static func hashPassword(_ password: String) -> String {
+        let inputData = Data(password.utf8)
+        let hashed = SHA256.hash(data: inputData)
+        return hashed.compactMap { String(format: "%02x", $0) }.joined()
+    }
+}
+
+/// Request payload for user login
+struct LoginRequest: Codable {
+    let userId: String
+    let phoneNumber: String
+    let password: String
+    
+    enum CodingKeys: String, CodingKey {
+        case userId = "user_id"
+        case phoneNumber = "phone_number"
+        case password
+    }
+    
+    /// Creates login request with double-hashed password
+    /// - Parameters:
+    ///   - userId: User ID from previous session
+    ///   - phoneNumber: User's phone number
+    ///   - password: Plain text password (will be double-hashed)
+    ///   - timestamp: Current timestamp for password hashing
+    init(userId: String, phoneNumber: String, password: String, timestamp: String) {
+        self.userId = userId
+        self.phoneNumber = phoneNumber
+        self.password = Self.hashPasswordWithTimestamp(password, timestamp: timestamp)
+    }
+    
+    /// Double-hashes password with timestamp: SHA-256(SHA-256(password) + timestamp)
+    /// - Parameters:
+    ///   - password: Plain text password
+    ///   - timestamp: Current timestamp string
+    /// - Returns: Double-hashed password as hex string
+    private static func hashPasswordWithTimestamp(_ password: String, timestamp: String) -> String {
+        // First hash: SHA-256(password)
+        let firstHash = SHA256.hash(data: Data(password.utf8))
+        let firstHashString = firstHash.compactMap { String(format: "%02x", $0) }.joined()
+        
+        // Second hash: SHA-256(firstHash + timestamp)
+        let combinedData = Data((firstHashString + timestamp).utf8)
+        let secondHash = SHA256.hash(data: combinedData)
+        return secondHash.compactMap { String(format: "%02x", $0) }.joined()
     }
 }
 

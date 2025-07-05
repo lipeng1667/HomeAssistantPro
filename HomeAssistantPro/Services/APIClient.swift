@@ -15,6 +15,8 @@
 //  - generateSignature(timestamp:): Generates HMAC-SHA256 signature for authentication
 //  - performRequest(_:): Executes HTTP requests with authentication headers
 //  - authenticateAnonymously(deviceId:): Anonymous login API call
+//  - register(accountName:phoneNumber:password:userId:): User registration API call
+//  - login(userId:phoneNumber:password:): User login API call
 //  - logout(userId:deviceId:): Logout API call
 //
 
@@ -112,6 +114,82 @@ final class APIClient {
             throw APIError.badRequest(errorResponse.message)
         case 401:
             throw APIError.unauthorized
+        case 500:
+            throw APIError.serverError
+        default:
+            throw APIError.unknownError(statusCode)
+        }
+    }
+    
+    /// Registers a new user account
+    /// - Parameters:
+    ///   - accountName: User's full name
+    ///   - phoneNumber: User's phone number
+    ///   - password: Plain text password (will be hashed)
+    ///   - userId: Optional user ID for existing anonymous users
+    /// - Returns: LoginResponse with user information
+    /// - Throws: APIError for registration failures
+    func register(accountName: String, phoneNumber: String, password: String, userId: String? = nil) async throws -> LoginResponse {
+        let registerRequest = RegisterRequest(
+            accountName: accountName,
+            phoneNumber: phoneNumber,
+            password: password,
+            userId: userId
+        )
+        let body = try JSONEncoder().encode(registerRequest)
+        
+        let request = createAuthenticatedRequest(endpoint: "/api/auth/register", method: "POST", body: body)
+        
+        let (data, statusCode) = try await performRequest(request)
+        
+        switch statusCode {
+        case 200:
+            let response = try JSONDecoder().decode(LoginResponse.self, from: data)
+            logger.info("Registration successful for phone: \(phoneNumber)")
+            return response
+        case 400:
+            let errorResponse = try JSONDecoder().decode(ErrorResponse.self, from: data)
+            throw APIError.badRequest(errorResponse.message)
+        case 500:
+            throw APIError.serverError
+        default:
+            throw APIError.unknownError(statusCode)
+        }
+    }
+    
+    /// Logs in a user with phone number and password
+    /// - Parameters:
+    ///   - userId: User ID from previous session
+    ///   - phoneNumber: User's phone number
+    ///   - password: Plain text password (will be double-hashed)
+    /// - Returns: LoginResponse with user information
+    /// - Throws: APIError for login failures
+    func login(userId: String, phoneNumber: String, password: String) async throws -> LoginResponse {
+        // Get timestamp for password hashing (same as used in headers)
+        let timestamp = String(Int(Date().timeIntervalSince1970 * 1000))
+        
+        let loginRequest = LoginRequest(
+            userId: userId,
+            phoneNumber: phoneNumber,
+            password: password,
+            timestamp: timestamp
+        )
+        let body = try JSONEncoder().encode(loginRequest)
+        
+        let request = createAuthenticatedRequest(endpoint: "/api/auth/login", method: "POST", body: body)
+        
+        let (data, statusCode) = try await performRequest(request)
+        
+        switch statusCode {
+        case 200:
+            let response = try JSONDecoder().decode(LoginResponse.self, from: data)
+            logger.info("Login successful for user: \(userId)")
+            return response
+        case 400:
+            let errorResponse = try JSONDecoder().decode(ErrorResponse.self, from: data)
+            throw APIError.badRequest(errorResponse.message)
+        case 403:
+            throw APIError.unauthorized // Wrong password
         case 500:
             throw APIError.serverError
         default:

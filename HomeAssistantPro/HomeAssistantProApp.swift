@@ -41,7 +41,7 @@ struct HomeAssistantProApp: App {
                     .environmentObject(appViewModel)
                     .environmentObject(settingsStore)
             } else {
-                ModernLoginView()
+                AuthenticationView()
                     .environmentObject(appViewModel)
                     .environmentObject(settingsStore)
             }

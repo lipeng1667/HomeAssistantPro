@@ -25,6 +25,15 @@ struct ModernLoginView: View {
     @FocusState private var isEmailFocused: Bool
     @FocusState private var isPasswordFocused: Bool
     
+    /// Callback to navigate to registration view
+    let onCreateAccount: (() -> Void)?
+    
+    /// Initializer with optional create account callback
+    /// - Parameter onCreateAccount: Callback for create account navigation
+    init(onCreateAccount: (() -> Void)? = nil) {
+        self.onCreateAccount = onCreateAccount
+    }
+    
     var body: some View {
         GeometryReader { geometry in
             ZStack {
@@ -161,17 +170,18 @@ struct ModernLoginView: View {
     private var modernEmailField: some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack {
-                Image(systemName: "envelope.fill")
+                Image(systemName: "phone.fill")
                     .foregroundColor(.secondary)
                     .frame(width: 20)
                 
-                TextField("Email or phone", text: $email)
+                TextField("Phone number", text: $email)
                     .font(.system(size: 16, weight: .medium))
-                    .keyboardType(.emailAddress)
+                    .keyboardType(.phonePad)
                     .autocapitalization(.none)
                     .focused($isEmailFocused)
                     .onChange(of: email) { newValue in
-                        validateEmail(newValue)
+                        email = formatPhoneNumber(newValue)
+                        validateEmail(email)
                     }
             }
             .padding(.horizontal, 20)
@@ -196,14 +206,14 @@ struct ModernLoginView: View {
                         .foregroundColor(.red)
                         .font(.caption)
                     
-                    Text("Please enter a valid email address")
+                    Text("Please enter a valid phone number")
                         .font(.caption)
                         .foregroundColor(.red)
                 }
                 .transition(.opacity.combined(with: .move(edge: .top)))
             }
         }
-        .accessibilityLabel("Email or phone number field")
+        .accessibilityLabel("Phone number field")
     }
     
     private var modernPasswordField: some View {
@@ -302,7 +312,7 @@ struct ModernLoginView: View {
             
             Button("Create Account") {
                 hapticFeedback(.light)
-                // Handle create account
+                onCreateAccount?()
             }
             .font(.system(size: 15, weight: .medium))
             .foregroundColor(Color(hex: "#8B5CF6"))
@@ -423,19 +433,56 @@ struct ModernLoginView: View {
         impactFeedback.impactOccurred()
     }
     
-    private func validateEmail(_ email: String) {
-        let emailRegex = "^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$"
-        let phoneRegex = "^[+]?[0-9]{10,15}$"
+    private func validateEmail(_ phoneNumber: String) {
+        // Extract digits only for validation
+        let digits = phoneNumber.replacingOccurrences(of: "[^0-9]", with: "", options: .regularExpression)
         
         withAnimation(.easeInOut(duration: 0.3)) {
-            isEmailValid = email.isEmpty ||
-                          NSPredicate(format: "SELF MATCHES %@", emailRegex).evaluate(with: email) ||
-                          NSPredicate(format: "SELF MATCHES %@", phoneRegex).evaluate(with: email)
+            // China mobile numbers: 11 digits starting with 1 and valid second digit
+            if phoneNumber.isEmpty {
+                isEmailValid = true
+            } else if digits.count == 11 && digits.hasPrefix("1") {
+                // Valid China mobile prefixes: 13X, 14X, 15X, 16X, 17X, 18X, 19X
+                let secondDigit = String(digits.dropFirst(1).prefix(1))
+                isEmailValid = ["3", "4", "5", "6", "7", "8", "9"].contains(secondDigit)
+            } else {
+                isEmailValid = false
+            }
         }
     }
     
     private func isFormValid() -> Bool {
         return !email.isEmpty && !password.isEmpty && isEmailValid
+    }
+    
+    /// Formats phone number with China mobile format (3-4-4 spacing)
+    /// - Parameter phoneNumber: Raw phone number string
+    /// - Returns: Formatted phone number string in China format
+    private func formatPhoneNumber(_ phoneNumber: String) -> String {
+        // Remove all non-numeric characters
+        let digits = phoneNumber.replacingOccurrences(of: "[^0-9]", with: "", options: .regularExpression)
+        
+        // Limit to 11 digits (China mobile standard)
+        let limitedDigits = String(digits.prefix(11))
+        
+        // Format based on length - China format: XXX XXXX XXXX
+        switch limitedDigits.count {
+        case 0:
+            return ""
+        case 1...3:
+            return limitedDigits
+        case 4...7:
+            let firstPart = String(limitedDigits.prefix(3))
+            let secondPart = String(limitedDigits.dropFirst(3))
+            return "\(firstPart) \(secondPart)"
+        case 8...11:
+            let firstPart = String(limitedDigits.prefix(3))
+            let secondPart = String(limitedDigits.dropFirst(3).prefix(4))
+            let thirdPart = String(limitedDigits.dropFirst(7))
+            return "\(firstPart) \(secondPart) \(thirdPart)"
+        default:
+            return limitedDigits
+        }
     }
     
     private func handleLogin() {
@@ -448,22 +495,76 @@ struct ModernLoginView: View {
         
         hapticFeedback(.medium)
         
-        // Simulate login process
-        DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
+        // Check if user has a stored user ID from previous sessions
+        guard let userId = appViewModel.currentUserId, !userId.isEmpty else {
             withAnimation(.easeInOut(duration: 0.3)) {
                 isLoading = false
+                showError = true
+                errorMessage = "Please register for an account first or continue as guest to get started."
             }
             
-            if Bool.random() {
-                appViewModel.login()
-            } else {
-                withAnimation(.spring(response: 0.5, dampingFraction: 0.8)) {
-                    showError = true
-                    errorMessage = "Invalid credentials. Please check your email and password."
-                }
+            let notificationFeedback = UINotificationFeedbackGenerator()
+            notificationFeedback.notificationOccurred(.error)
+            return
+        }
+        
+        // Remove spaces from phone number for API
+        let cleanPhoneNumber = email.replacingOccurrences(of: " ", with: "")
+        
+        Task {
+            do {
+                let response = try await APIClient.shared.login(
+                    userId: userId,
+                    phoneNumber: cleanPhoneNumber,
+                    password: password
+                )
                 
-                let notificationFeedback = UINotificationFeedbackGenerator()
-                notificationFeedback.notificationOccurred(.error)
+                await MainActor.run {
+                    withAnimation(.easeInOut(duration: 0.3)) {
+                        isLoading = false
+                    }
+                    
+                    // Login successful
+                    HapticManager.success()
+                    
+                    // Update user ID in app state
+                    appViewModel.currentUserId = String(response.data.user.id)
+                    appViewModel.isLoggedIn = true
+                    appViewModel.login()
+                }
+            } catch {
+                await MainActor.run {
+                    withAnimation(.easeInOut(duration: 0.3)) {
+                        isLoading = false
+                    }
+                    
+                    // Handle login error
+                    let errorMsg: String
+                    if let apiError = error as? APIError {
+                        switch apiError {
+                        case .badRequest(let message):
+                            errorMsg = message
+                        case .unauthorized:
+                            errorMsg = "Invalid credentials. Please check your phone number and password."
+                        case .serverError:
+                            errorMsg = "Server error. Please try again later."
+                        case .networkError:
+                            errorMsg = "Network error. Please check your connection."
+                        default:
+                            errorMsg = "Login failed. Please try again."
+                        }
+                    } else {
+                        errorMsg = "Login failed. Please try again."
+                    }
+                    
+                    withAnimation(.spring(response: 0.5, dampingFraction: 0.8)) {
+                        showError = true
+                        errorMessage = errorMsg
+                    }
+                    
+                    let notificationFeedback = UINotificationFeedbackGenerator()
+                    notificationFeedback.notificationOccurred(.error)
+                }
             }
         }
     }

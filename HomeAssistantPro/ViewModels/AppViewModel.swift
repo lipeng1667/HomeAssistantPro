@@ -46,6 +46,12 @@ final class AppViewModel: ObservableObject {
         set { UserDefaults.standard.set(newValue, forKey: "user_id") }
     }
     
+    /// Public accessor for current user ID
+    var currentUserId: String? {
+        get { userId }
+        set { userId = newValue }
+    }
+    
     // Login state stored in UserDefaults
     private var isUserLoggedIn: Bool {
         get { UserDefaults.standard.bool(forKey: "is_logged_in") }
