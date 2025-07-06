@@ -19,6 +19,19 @@
 
 import SwiftUI
 
+// MARK: - Environment Key for Optional TabBarVisibilityManager
+
+private struct TabBarVisibilityKey: EnvironmentKey {
+    static let defaultValue: TabBarVisibilityManager? = nil
+}
+
+extension EnvironmentValues {
+    var optionalTabBarVisibility: TabBarVisibilityManager? {
+        get { self[TabBarVisibilityKey.self] }
+        set { self[TabBarVisibilityKey.self] = newValue }
+    }
+}
+
 /// Configuration for custom confirmation modal appearance and behavior
 struct ConfirmationConfig {
     let title: String
@@ -152,9 +165,7 @@ struct CustomConfirmationModal: View {
     let config: ConfirmationConfig
     @State private var scale: CGFloat = 0.8
     @State private var opacity: Double = 0
-    
-    // Access the tab bar visibility manager from environment
-    @EnvironmentObject var tabBarVisibility: TabBarVisibilityManager
+    @Environment(\.optionalTabBarVisibility) private var tabBarVisibility
     
     var body: some View {
         ZStack {
@@ -264,8 +275,8 @@ struct CustomConfirmationModal: View {
             .opacity(opacity)
         }
         .onAppear {
-            // Hide tab bar when modal appears
-            tabBarVisibility.hideTabBar()
+            // Hide tab bar when modal appears (if available)
+            tabBarVisibility?.hideTabBar()
             
             withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
                 scale = 1.0
@@ -273,8 +284,8 @@ struct CustomConfirmationModal: View {
             }
         }
         .onDisappear {
-            // Show tab bar when modal disappears
-            tabBarVisibility.showTabBar()
+            // Show tab bar when modal disappears (if available)
+            tabBarVisibility?.showTabBar()
         }
     }
     

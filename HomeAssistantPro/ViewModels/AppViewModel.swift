@@ -5,11 +5,12 @@
 //  Purpose: Manages global app state, including login status.
 //  Author: Michael
 //  Created: 2025-06-24
-//  Modified: 2025-07-04
+//  Modified: 2025-07-06
 //
 //  Modification Log:
 //  - 2025-07-04: Added real API authentication with anonymous login and logout
 //  - 2025-07-04: Integrated secure DeviceIdentifier for device identification
+//  - 2025-07-06: Integrated SettingsStore for secure user ID storage
 //
 //  Functions:
 //  - loginAnonymously(): Performs anonymous login via API
@@ -34,22 +35,39 @@ final class AppViewModel: ObservableObject {
     @Published var isLoading: Bool = false
     
     private let apiClient = APIClient.shared
+    private let settingsStore = SettingsStore()
     private let logger = Logger(subsystem: "com.homeassistant.ios", category: "AppViewModel")
     
+    /// Initialize AppViewModel and restore previous login state
     init() {
         restoreLoginState()
     }
     
-    // User ID stored in UserDefaults for logout
-    private var userId: String? {
-        get { UserDefaults.standard.string(forKey: "user_id") }
-        set { UserDefaults.standard.set(newValue, forKey: "user_id") }
-    }
-    
-    /// Public accessor for current user ID
+    /// Public accessor for current user ID stored securely in Keychain
     var currentUserId: String? {
-        get { userId }
-        set { userId = newValue }
+        get {
+            do {
+                return try settingsStore.retrieveUserId()
+            } catch {
+                logger.error("Failed to retrieve user ID: \(error.localizedDescription)")
+                return nil
+            }
+        }
+        set {
+            if let newValue = newValue {
+                do {
+                    try settingsStore.storeUserId(newValue)
+                } catch {
+                    logger.error("Failed to store user ID: \(error.localizedDescription)")
+                }
+            } else {
+                do {
+                    try settingsStore.removeUserId()
+                } catch {
+                    logger.error("Failed to remove user ID: \(error.localizedDescription)")
+                }
+            }
+        }
     }
     
     // Login state stored in UserDefaults
@@ -68,8 +86,7 @@ final class AppViewModel: ObservableObject {
         do {
             let response = try await apiClient.authenticateAnonymously()
             
-            // Store user information
-            userId = String(response.data.user.id)
+            // Store user information (user ID is now stored securely by APIClient)
             currentUser = User(id: response.data.user.id, deviceId: DeviceIdentifier.shared.deviceId)
             isLoggedIn = true
             isUserLoggedIn = true // Persist to UserDefaults
@@ -99,7 +116,7 @@ final class AppViewModel: ObservableObject {
     /// - Returns: Success/failure status
     @MainActor
     func logout() async -> Bool {
-        guard let userId = userId else {
+        guard let userId = currentUserId else {
             isLoggedIn = false
             currentUser = nil
             return true
@@ -111,8 +128,7 @@ final class AppViewModel: ObservableObject {
         do {
             _ = try await apiClient.logout(userId: userId)
             
-            // Clear user data
-            self.userId = nil
+            // Clear user session (user ID persists for re-login)
             currentUser = nil
             isLoggedIn = false
             isUserLoggedIn = false // Clear from UserDefaults
@@ -131,7 +147,6 @@ final class AppViewModel: ObservableObject {
             }
             
             // Even if logout fails, clear local state
-            self.userId = nil
             currentUser = nil
             isLoggedIn = false
             isUserLoggedIn = false // Clear from UserDefaults
@@ -142,7 +157,6 @@ final class AppViewModel: ObservableObject {
             logger.error("Logout failed with unexpected error: \(error.localizedDescription)")
             
             // Even if logout fails, clear local state
-            self.userId = nil
             currentUser = nil
             isLoggedIn = false
             isUserLoggedIn = false // Clear from UserDefaults
@@ -158,9 +172,9 @@ final class AppViewModel: ObservableObject {
         }
     }
     
-    /// Restores login state from UserDefaults on app launch
+    /// Restores login state from secure storage on app launch
     private func restoreLoginState() {
-        if isUserLoggedIn, let userId = userId {
+        if isUserLoggedIn, let userId = currentUserId {
             // Restore user session from stored data
             currentUser = User(id: Int(userId) ?? 0, deviceId: DeviceIdentifier.shared.deviceId)
             isLoggedIn = true
@@ -175,7 +189,7 @@ final class AppViewModel: ObservableObject {
     /// Forces logout when session expires (called from API errors)
     @MainActor
     func forceLogout() {
-        userId = nil
+        // Don't clear user_id - it persists for re-login
         currentUser = nil
         isLoggedIn = false
         isUserLoggedIn = false

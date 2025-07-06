@@ -112,6 +112,7 @@ struct MainTabView: View {
             contentView
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                 .environmentObject(tabBarVisibility)
+                .environment(\.optionalTabBarVisibility, tabBarVisibility)
                 .simultaneousGesture(swipeGesture)
             
             // Custom tab bar with keyboard-responsive behavior

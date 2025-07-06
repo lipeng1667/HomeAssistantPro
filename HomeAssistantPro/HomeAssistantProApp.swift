@@ -32,7 +32,7 @@ struct HomeAssistantProApp: App {
                 }
                 .environmentObject(appViewModel)
                 .environmentObject(settingsStore)
-            } else if !settingsStore.isIntroShown {
+            } else if settingsStore.isFirstLaunch {
                 IntroView()
                     .environmentObject(appViewModel)
                     .environmentObject(settingsStore)

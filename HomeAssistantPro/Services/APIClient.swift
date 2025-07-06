@@ -3,17 +3,20 @@
 //  HomeAssistantPro
 //
 //  Purpose: Network service layer for API communication with authentication headers
-//  Author: Claude
+//  Author: Michael
 //  Created: 2025-07-04
-//  Modified: 2025-07-04
+//  Modified: 2025-07-06
 //
 //  Modification Log:
 //  - 2025-07-04: Initial creation with HMAC-SHA256 signature generation
+//  - 2025-07-06: Added SettingsStore integration for user ID storage
 //
 //  Functions:
 //  - APIClient.shared: Singleton instance
 //  - generateSignature(timestamp:): Generates HMAC-SHA256 signature for authentication
-//  - performRequest(_:): Executes HTTP requests with authentication headers
+//  - performRequest(_:): Executes HTTP requests with authentication headers and detailed logging
+//  - logRequest(_:): Logs complete request details including headers and body
+//  - logResponse(_:data:): Logs response details including status and body
 //  - authenticateAnonymously(deviceId:): Anonymous login API call
 //  - register(accountName:phoneNumber:password:userId:): User registration API call
 //  - login(userId:phoneNumber:password:): User login API call
@@ -31,8 +34,13 @@ final class APIClient {
     private let baseURL = "http://47.94.108.189:10000"
     private let appSecret = "EJFIDNFNGIUHq32923HDFHIHsdf866HU"
     private let logger = Logger(subsystem: "com.homeassistant.ios", category: "APIClient")
+    private let settingsStore: SettingsStore
     
-    private init() {}
+    /// Initialize APIClient with dependency injection
+    /// - Parameter settingsStore: Settings storage service for user data persistence
+    private init(settingsStore: SettingsStore = SettingsStore()) {
+        self.settingsStore = settingsStore
+    }
     
     /// Generates HMAC-SHA256 signature for app-level authentication
     /// - Parameter timestamp: Current timestamp in milliseconds
@@ -48,6 +56,9 @@ final class APIClient {
     /// - Returns: Response data and HTTP status code
     /// - Throws: APIError for various failure cases
     private func performRequest(_ request: URLRequest) async throws -> (Data, Int) {
+        // Log complete request details
+        logRequest(request)
+        
         do {
             let (data, response) = try await URLSession.shared.data(for: request)
             
@@ -55,13 +66,73 @@ final class APIClient {
                 throw APIError.invalidResponse
             }
             
-            logger.info("API Response: \(httpResponse.statusCode) for \(request.url?.absoluteString ?? "unknown")")
+            // Log response details
+            logResponse(httpResponse, data: data)
             
             return (data, httpResponse.statusCode)
         } catch {
             logger.error("Network request failed: \(error.localizedDescription)")
             throw APIError.networkError(error)
         }
+    }
+    
+    /// Logs complete request details including headers and body
+    /// - Parameter request: URLRequest to log
+    private func logRequest(_ request: URLRequest) {
+        logger.info("📤 API REQUEST")
+        logger.info("URL: \(request.url?.absoluteString ?? "Unknown")")
+        logger.info("Method: \(request.httpMethod ?? "Unknown")")
+        
+        // Log headers
+        logger.info("Headers:")
+        if let headers = request.allHTTPHeaderFields {
+            for (key, value) in headers {
+                // Hide sensitive signature for security
+                if key == "X-Signature" {
+                    logger.info("  \(key): [HIDDEN]")
+                } else {
+                    logger.info("  \(key): \(value)")
+                }
+            }
+        }
+        
+        // Log body
+        if let body = request.httpBody {
+            if let bodyString = String(data: body, encoding: .utf8) {
+                logger.info("Body: \(bodyString)")
+            } else {
+                logger.info("Body: [Binary data, \(body.count) bytes]")
+            }
+        } else {
+            logger.info("Body: [Empty]")
+        }
+        
+        logger.info("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+    }
+    
+    /// Logs response details including status and body
+    /// - Parameters:
+    ///   - response: HTTPURLResponse received
+    ///   - data: Response data
+    private func logResponse(_ response: HTTPURLResponse, data: Data) {
+        logger.info("📥 API RESPONSE")
+        logger.info("Status: \(response.statusCode)")
+        logger.info("URL: \(response.url?.absoluteString ?? "Unknown")")
+        
+        // Log response headers (optional, uncomment if needed)
+        // logger.info("Response Headers:")
+        // for (key, value) in response.allHeaderFields {
+        //     logger.info("  \(key): \(value)")
+        // }
+        
+        // Log response body
+        if let responseString = String(data: data, encoding: .utf8) {
+            logger.info("Response Body: \(responseString)")
+        } else {
+            logger.info("Response Body: [Binary data, \(data.count) bytes]")
+        }
+        
+        logger.info("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
     }
     
     /// Creates authenticated URLRequest with required headers
@@ -108,6 +179,19 @@ final class APIClient {
         case 200:
             let response = try JSONDecoder().decode(LoginResponse.self, from: data)
             logger.info("Anonymous login successful for device: \(loginRequest.deviceId)")
+            
+            // Store user ID securely in Keychain
+            do {
+                try settingsStore.storeUserId(String(response.data.user.id))
+                // Store device ID for future use
+                try settingsStore.storeDeviceId(loginRequest.deviceId)
+                logger.info("User ID and device ID stored successfully")
+            } catch {
+                logger.error("Failed to store user credentials: \(error.localizedDescription)")
+                // Note: We don't throw here as the login was successful
+                // The caller should handle storage separately if needed
+            }
+            
             return response
         case 400:
             let errorResponse = try JSONDecoder().decode(ErrorResponse.self, from: data)
@@ -146,6 +230,15 @@ final class APIClient {
         case 200:
             let response = try JSONDecoder().decode(LoginResponse.self, from: data)
             logger.info("Registration successful for phone: \(phoneNumber)")
+            
+            // Store updated user ID securely in Keychain
+            do {
+                try settingsStore.storeUserId(String(response.data.user.id))
+                logger.info("Updated user ID stored successfully after registration")
+            } catch {
+                logger.error("Failed to store user ID after registration: \(error.localizedDescription)")
+            }
+            
             return response
         case 400:
             let errorResponse = try JSONDecoder().decode(ErrorResponse.self, from: data)
@@ -184,6 +277,15 @@ final class APIClient {
         case 200:
             let response = try JSONDecoder().decode(LoginResponse.self, from: data)
             logger.info("Login successful for user: \(userId)")
+            
+            // Store user ID securely in Keychain (in case it changed)
+            do {
+                try settingsStore.storeUserId(String(response.data.user.id))
+                logger.info("User ID confirmed and stored after login")
+            } catch {
+                logger.error("Failed to store user ID after login: \(error.localizedDescription)")
+            }
+            
             return response
         case 400:
             let errorResponse = try JSONDecoder().decode(ErrorResponse.self, from: data)
@@ -213,6 +315,11 @@ final class APIClient {
         case 200:
             let response = try JSONDecoder().decode(LogoutResponse.self, from: data)
             logger.info("Logout successful for user: \(userId)")
+            
+            // Clear login session (user_id and device_id remain for re-login)
+            settingsStore.clearAuthenticationSession()
+            logger.info("Login session cleared after logout")
+            
             return response.message
         case 400, 401:
             let errorResponse = try JSONDecoder().decode(ErrorResponse.self, from: data)

@@ -36,6 +36,7 @@ struct RegisterView: View {
     @State private var errorMessage = ""
     @State private var isLoading = false
     @State private var agreedToTerms = false
+    @State private var showSuccessModal = false
     @FocusState private var isFullNameFocused: Bool
     @FocusState private var isPhoneNumberFocused: Bool
     @FocusState private var isPasswordFocused: Bool
@@ -75,6 +76,19 @@ struct RegisterView: View {
             dismissKeyboard()
         }
         .dismissKeyboardOnSwipeDown()
+        .confirmationModal(
+            isPresented: $showSuccessModal,
+            config: .success(
+                title: "Registration Successful!",
+                message: "Welcome to AuraHome! Your account has been created successfully. You will be automatically logged in.",
+                icon: "checkmark.circle.fill",
+                confirmText: "Continue",
+                onConfirm: {
+                    // Close modal - app will automatically navigate to MainTabView since isLoggedIn = true
+                    showSuccessModal = false
+                }
+            )
+        )
     }
     
     // MARK: - Header Section
@@ -729,8 +743,8 @@ struct RegisterView: View {
                     appViewModel.currentUserId = String(response.data.user.id)
                     appViewModel.isLoggedIn = true
                     
-                    // Navigate back to login or main app flow
-                    onBackToLogin()
+                    // Show success confirmation modal
+                    showSuccessModal = true
                 }
             } catch {
                 await MainActor.run {
