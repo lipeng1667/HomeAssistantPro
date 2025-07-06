@@ -460,24 +460,76 @@ struct DesignTokens {
         static let profileImage: CGFloat = 100
     }
     
+    /// Responsive container dimensions
+    struct ResponsiveContainer {
+        
+        /// Card width that adapts to screen size
+        static var cardWidth: CGFloat {
+            let screenWidth = UIScreen.main.bounds.width
+            return screenWidth - (DesignTokens.ResponsiveSpacing.contentMargins * 2)
+        }
+        
+        /// Maximum content width for readability
+        static var maxContentWidth: CGFloat {
+            switch DeviceSize.current {
+            case .compact:
+                return UIScreen.main.bounds.width - 32
+            case .regular:
+                return UIScreen.main.bounds.width - 40
+            case .large:
+                return UIScreen.main.bounds.width - 48
+            }
+        }
+        
+        /// Tab bar height that adapts to device
+        static var tabBarHeight: CGFloat {
+            DeviceSize.current.spacing(60, 70, 80)
+        }
+        
+        /// Profile icon size
+        static var profileIconSize: CGFloat {
+            DeviceSize.current.spacing(64, 72, 80)
+        }
+        
+        /// Button height
+        static var buttonHeight: CGFloat {
+            DeviceSize.current.spacing(44, 48, 52)
+        }
+        
+        /// Input field height
+        static var inputFieldHeight: CGFloat {
+            DeviceSize.current.spacing(48, 52, 56)
+        }
+    }
+    
     // MARK: - Device Detection
     
     /// Device size categories for responsive design
     enum DeviceSize {
-        case compact    // iPhone 15, iPhone 15 Pro (393pt width)
-        case regular    // iPhone 15 Plus (430pt width)
-        case large      // iPhone 15 Pro Max (430pt width)
+        case compact    // iPhone SE, iPhone 12 mini, iPhone 13 mini (375pt width)
+        case regular    // iPhone 12, iPhone 13, iPhone 14, iPhone 15, iPhone 15 Pro (390-393pt width)
+        case large      // iPhone 12 Plus, iPhone 13 Plus, iPhone 14 Plus, iPhone 15 Plus, iPhone 15 Pro Max (428-430pt width)
         
         static var current: DeviceSize {
             let screenWidth = UIScreen.main.bounds.width
             switch screenWidth {
-            case 0..<400:
-                return .compact
-            case 400..<435:
-                return .regular
+            case 0..<385:
+                return .compact  // SE, mini series
+            case 385..<415:
+                return .regular  // Standard models
             default:
-                return .large
+                return .large    // Plus/Pro Max models
             }
+        }
+        
+        /// Check if device is iPhone SE or mini size
+        var isSmallDevice: Bool {
+            return self == .compact
+        }
+        
+        /// Check if device is Pro Max or Plus size
+        var isLargeDevice: Bool {
+            return self == .large
         }
         
         /// Get responsive spacing value
@@ -549,6 +601,31 @@ struct DesignTokens {
         static var sectionSpacing: CGFloat {
             DeviceSize.current.spacing(28, 32, 36)
         }
+        
+        /// Tab bar responsive spacing
+        static var tabBarSpacing: CGFloat {
+            DeviceSize.current.spacing(12, 16, 20)
+        }
+        
+        /// Header spacing
+        static var headerSpacing: CGFloat {
+            DeviceSize.current.spacing(24, 32, 40)
+        }
+        
+        /// Content margins
+        static var contentMargins: CGFloat {
+            DeviceSize.current.spacing(16, 20, 24)
+        }
+        
+        /// Button padding
+        static var buttonPadding: CGFloat {
+            DeviceSize.current.spacing(12, 16, 20)
+        }
+        
+        /// Input field padding
+        static var inputPadding: CGFloat {
+            DeviceSize.current.spacing(16, 18, 20)
+        }
     }
     
     /// Responsive typography that adapts to device size
@@ -581,6 +658,15 @@ struct DesignTokens {
             )
         }
         
+        /// Small heading responsive
+        static var headingSmall: Font {
+            Font.system(
+                size: DeviceSize.current.fontSize(18, 19, 20),
+                weight: .bold,
+                design: .rounded
+            )
+        }
+        
         /// Body text responsive
         static var bodyLarge: Font {
             Font.system(
@@ -597,10 +683,42 @@ struct DesignTokens {
             )
         }
         
+        /// Body small responsive
+        static var bodySmall: Font {
+            Font.system(
+                size: DeviceSize.current.fontSize(13, 14, 15),
+                weight: .medium
+            )
+        }
+        
         /// Button text responsive
         static var buttonLarge: Font {
             Font.system(
                 size: DeviceSize.current.fontSize(16, 17, 18),
+                weight: .semibold
+            )
+        }
+        
+        /// Button medium responsive
+        static var buttonMedium: Font {
+            Font.system(
+                size: DeviceSize.current.fontSize(14, 15, 16),
+                weight: .semibold
+            )
+        }
+        
+        /// Caption text responsive
+        static var caption: Font {
+            Font.system(
+                size: DeviceSize.current.fontSize(11, 12, 13),
+                weight: .medium
+            )
+        }
+        
+        /// Label text responsive
+        static var label: Font {
+            Font.system(
+                size: DeviceSize.current.fontSize(12, 13, 14),
                 weight: .semibold
             )
         }
@@ -680,5 +798,40 @@ extension View {
             x: DesignTokens.Shadow.strong.x,
             y: DesignTokens.Shadow.strong.y
         )
+    }
+    
+    /// Apply responsive padding that adapts to device size
+    func responsivePadding(_ compact: CGFloat, _ regular: CGFloat? = nil, _ large: CGFloat? = nil) -> some View {
+        self.padding(DesignTokens.DeviceSize.current.spacing(compact, regular, large))
+    }
+    
+    /// Apply responsive horizontal padding
+    func responsiveHorizontalPadding(_ compact: CGFloat, _ regular: CGFloat? = nil, _ large: CGFloat? = nil) -> some View {
+        self.padding(.horizontal, DesignTokens.DeviceSize.current.spacing(compact, regular, large))
+    }
+    
+    /// Apply responsive vertical padding
+    func responsiveVerticalPadding(_ compact: CGFloat, _ regular: CGFloat? = nil, _ large: CGFloat? = nil) -> some View {
+        self.padding(.vertical, DesignTokens.DeviceSize.current.spacing(compact, regular, large))
+    }
+    
+    /// Apply content margins based on device size
+    func contentMargins() -> some View {
+        self.padding(.horizontal, DesignTokens.ResponsiveSpacing.contentMargins)
+    }
+    
+    /// Apply card padding based on device size
+    func cardPadding() -> some View {
+        self.padding(DesignTokens.ResponsiveSpacing.cardPadding)
+    }
+    
+    /// Limit content width for better readability on large screens
+    func limitedContentWidth() -> some View {
+        self.frame(maxWidth: DesignTokens.ResponsiveContainer.maxContentWidth)
+    }
+    
+    /// Make view responsive to device size changes
+    func deviceSizeAdaptive<Content: View>(@ViewBuilder content: @escaping (DesignTokens.DeviceSize) -> Content) -> some View {
+        content(DesignTokens.DeviceSize.current)
     }
 }

@@ -59,17 +59,17 @@ struct ModernLoginView: View {
                         
                         // Header section with modern styling
                         headerSection
-                            .padding(.bottom, 48)
+                            .responsiveVerticalPadding(40, 48, 56)
                         
                         // Main content card
                         mainContentCard
-                            .padding(.horizontal, 20)
+                            .responsiveHorizontalPadding(6, 8, 10)
                         
-                        Spacer(minLength: 20)
+                        Spacer(minLength: DesignTokens.ResponsiveSpacing.lg)
                         
                         // Footer section
                         footerSection
-                            .padding(.bottom, 40)
+                            .responsiveVerticalPadding(32, 40, 48)
                     }
                 }
             }
@@ -92,14 +92,14 @@ struct ModernLoginView: View {
             modernLogo
             
             // Welcome text with refined typography
-            VStack(spacing: 12) {
+            VStack(spacing: DesignTokens.ResponsiveSpacing.md) {
                 Text("AuraHome")
-                    .font(.system(size: 36, weight: .bold, design: .rounded))
+                    .font(DesignTokens.ResponsiveTypography.displayLarge)
                     .foregroundStyle(titleGradient)
                     .accessibilityAddTraits(.isHeader)
                 
                 Text("Your smart sanctuary awaits")
-                    .font(.system(size: 18, weight: .medium))
+                    .font(DesignTokens.ResponsiveTypography.bodyLarge)
                     .foregroundColor(.primary.opacity(0.8))
                     .tracking(0.5)
             }
@@ -109,12 +109,15 @@ struct ModernLoginView: View {
     private var modernLogo: some View {
         ZStack {
             // Background blur effect
-            RoundedRectangle(cornerRadius: 28)
+            RoundedRectangle(cornerRadius: DesignTokens.CornerRadius.xxxl)
                 .fill(.ultraThinMaterial)
-                .frame(width: 100, height: 100)
-                .shadow(color: Color.black.opacity(0.08), radius: 20, x: 0, y: 8)
+                .frame(
+                    width: DesignTokens.ResponsiveContainer.profileIconSize,
+                    height: DesignTokens.ResponsiveContainer.profileIconSize
+                )
+                .standardShadowMedium()
                 .overlay(
-                    RoundedRectangle(cornerRadius: 28)
+                    RoundedRectangle(cornerRadius: DesignTokens.CornerRadius.xxxl)
                         .stroke(Color.white.opacity(0.5), lineWidth: 1)
                 )
             
@@ -122,8 +125,11 @@ struct ModernLoginView: View {
             Image("icon")
                 .resizable()
                 .scaledToFit()
-                .frame(width: 60, height: 60)
-                .clipShape(RoundedRectangle(cornerRadius: 16))
+                .frame(
+                    width: DesignTokens.DeviceSize.current.spacing(40, 45, 50),
+                    height: DesignTokens.DeviceSize.current.spacing(40, 45, 50)
+                )
+                .clipShape(RoundedRectangle(cornerRadius: DesignTokens.CornerRadius.lg))
         }
         .accessibilityLabel("AuraHome app logo")
     }
@@ -139,7 +145,7 @@ struct ModernLoginView: View {
     // MARK: - Main Content Card
     
     private var mainContentCard: some View {
-        VStack(spacing: 28) {
+        VStack(spacing: DesignTokens.ResponsiveSpacing.lg) {
             // Input fields section
             inputFieldsSection
             
@@ -158,14 +164,14 @@ struct ModernLoginView: View {
             // Guest access
             guestAccessButton
         }
-        .padding(.vertical, 32)
-        .padding(.horizontal, 24)
+        .cardPadding()
+        .limitedContentWidth()
         .background(
-            RoundedRectangle(cornerRadius: 24)
+            RoundedRectangle(cornerRadius: DesignTokens.CornerRadius.xxl)
                 .fill(.ultraThinMaterial)
-                .shadow(color: Color.black.opacity(0.05), radius: 20, x: 0, y: 10)
+                .standardShadowMedium()
                 .overlay(
-                    RoundedRectangle(cornerRadius: 24)
+                    RoundedRectangle(cornerRadius: DesignTokens.CornerRadius.xxl)
                         .stroke(Color.white.opacity(0.3), lineWidth: 1)
                 )
         )
@@ -174,21 +180,21 @@ struct ModernLoginView: View {
     // MARK: - Input Fields
     
     private var inputFieldsSection: some View {
-        VStack(spacing: 16) {
+        VStack(spacing: DesignTokens.ResponsiveSpacing.lg) {
             modernPhoneNumberField
             modernPasswordField
         }
     }
     
     private var modernPhoneNumberField: some View {
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: DesignTokens.ResponsiveSpacing.sm) {
             HStack {
                 Image(systemName: "phone.fill")
                     .foregroundColor(.secondary)
-                    .frame(width: 20)
+                    .frame(width: DesignTokens.IconSize.lg)
                 
                 TextField("Phone number", text: $phoneNumber)
-                    .font(.system(size: 16, weight: .medium))
+                    .font(DesignTokens.ResponsiveTypography.bodyMedium)
                     .keyboardType(.phonePad)
                     .autocapitalization(.none)
                     .focused($isPhoneNumberFocused)
@@ -197,16 +203,17 @@ struct ModernLoginView: View {
                         validatePhoneNumber(phoneNumber)
                     }
             }
-            .padding(.horizontal, 20)
-            .padding(.vertical, 16)
+            .padding(.horizontal, DesignTokens.ResponsiveSpacing.inputPadding)
+            .padding(.vertical, DesignTokens.ResponsiveSpacing.buttonPadding)
+            .frame(height: DesignTokens.ResponsiveContainer.inputFieldHeight)
             .background(
-                RoundedRectangle(cornerRadius: 16)
+                RoundedRectangle(cornerRadius: DesignTokens.CornerRadius.lg)
                     .fill(Color(.systemBackground))
                     .overlay(
-                        RoundedRectangle(cornerRadius: 16)
+                        RoundedRectangle(cornerRadius: DesignTokens.CornerRadius.lg)
                             .stroke(
-                                isPhoneNumberFocused ? Color(hex: "#8B5CF6") :
-                                !isPhoneNumberValid ? Color.red : Color.clear,
+                                isPhoneNumberFocused ? DesignTokens.Colors.primaryPurple :
+                                !isPhoneNumberValid ? DesignTokens.Colors.primaryRed : Color.clear,
                                 lineWidth: isPhoneNumberFocused ? 2 : 1
                             )
                     )
@@ -216,12 +223,12 @@ struct ModernLoginView: View {
             if !isPhoneNumberValid {
                 HStack {
                     Image(systemName: "exclamationmark.triangle.fill")
-                        .foregroundColor(.red)
-                        .font(.caption)
+                        .foregroundColor(DesignTokens.Colors.primaryRed)
+                        .font(DesignTokens.ResponsiveTypography.caption)
                     
                     Text("Please enter a valid phone number")
-                        .font(.caption)
-                        .foregroundColor(.red)
+                        .font(DesignTokens.ResponsiveTypography.caption)
+                        .foregroundColor(DesignTokens.Colors.primaryRed)
                 }
                 .transition(.opacity.combined(with: .move(edge: .top)))
             }
@@ -233,7 +240,7 @@ struct ModernLoginView: View {
         HStack {
             Image(systemName: "lock.fill")
                 .foregroundColor(.secondary)
-                .frame(width: 20)
+                .frame(width: DesignTokens.IconSize.lg)
             
             Group {
                 if showPassword {
@@ -244,24 +251,25 @@ struct ModernLoginView: View {
                         .focused($isPasswordFocused)
                 }
             }
-            .font(.system(size: 16, weight: .medium))
+            .font(DesignTokens.ResponsiveTypography.bodyMedium)
             
             Button(action: togglePasswordVisibility) {
                 Image(systemName: showPassword ? "eye.slash.fill" : "eye.fill")
                     .foregroundColor(.secondary)
-                    .font(.system(size: 16))
+                    .font(.system(size: DesignTokens.IconSize.lg))
             }
             .accessibilityLabel(showPassword ? "Hide password" : "Show password")
         }
-        .padding(.horizontal, 20)
-        .padding(.vertical, 16)
+        .padding(.horizontal, DesignTokens.ResponsiveSpacing.inputPadding)
+        .padding(.vertical, DesignTokens.ResponsiveSpacing.buttonPadding)
+        .frame(height: DesignTokens.ResponsiveContainer.inputFieldHeight)
         .background(
-            RoundedRectangle(cornerRadius: 16)
+            RoundedRectangle(cornerRadius: DesignTokens.CornerRadius.lg)
                 .fill(Color(.systemBackground))
                 .overlay(
-                    RoundedRectangle(cornerRadius: 16)
+                    RoundedRectangle(cornerRadius: DesignTokens.CornerRadius.lg)
                         .stroke(
-                            isPasswordFocused ? Color(hex: "#8B5CF6") : Color.clear,
+                            isPasswordFocused ? DesignTokens.Colors.primaryPurple : Color.clear,
                             lineWidth: isPasswordFocused ? 2 : 1
                         )
                 )
@@ -274,7 +282,7 @@ struct ModernLoginView: View {
     
     private var signInButton: some View {
         Button(action: handleLogin) {
-            HStack(spacing: 12) {
+            HStack(spacing: DesignTokens.ResponsiveSpacing.md) {
                 if isLoading {
                     ProgressView()
                         .progressViewStyle(CircularProgressViewStyle(tint: .white))
@@ -282,23 +290,23 @@ struct ModernLoginView: View {
                 }
                 
                 Text(isLoading ? "Signing In..." : "Sign In")
-                    .font(.system(size: 18, weight: .semibold))
+                    .font(DesignTokens.ResponsiveTypography.buttonLarge)
             }
             .frame(maxWidth: .infinity)
-            .padding(.vertical, 16)
+            .frame(height: DesignTokens.ResponsiveContainer.buttonHeight)
             .background(
-                RoundedRectangle(cornerRadius: 16)
+                RoundedRectangle(cornerRadius: DesignTokens.CornerRadius.lg)
                     .fill(
                         isFormValid() ?
                         LinearGradient(
-                            colors: [Color(hex: "#8B5CF6"), Color(hex: "#06B6D4")],
+                            colors: [DesignTokens.Colors.primaryPurple, DesignTokens.Colors.primaryCyan],
                             startPoint: .leading,
                             endPoint: .trailing
                         ) :
-                        LinearGradient(colors: [Color.gray.opacity(0.3)], startPoint: .leading, endPoint: .trailing)
+                        LinearGradient(colors: [DesignTokens.Colors.textTertiary.opacity(0.3)], startPoint: .leading, endPoint: .trailing)
                     )
                     .shadow(
-                        color: isFormValid() ? Color(hex: "#8B5CF6").opacity(0.3) : Color.clear,
+                        color: isFormValid() ? DesignTokens.Colors.primaryPurple.opacity(0.3) : Color.clear,
                         radius: isFormValid() ? 12 : 0,
                         x: 0,
                         y: 6
@@ -318,8 +326,8 @@ struct ModernLoginView: View {
                 hapticFeedback(.light)
                 // Handle forgot password
             }
-            .font(.system(size: 15, weight: .medium))
-            .foregroundColor(Color(hex: "#8B5CF6"))
+            .font(DesignTokens.ResponsiveTypography.bodySmall)
+            .foregroundColor(DesignTokens.Colors.primaryPurple)
             
             Spacer()
             
@@ -327,34 +335,34 @@ struct ModernLoginView: View {
                 hapticFeedback(.light)
                 onCreateAccount?()
             }
-            .font(.system(size: 15, weight: .medium))
-            .foregroundColor(Color(hex: "#8B5CF6"))
+            .font(DesignTokens.ResponsiveTypography.bodySmall)
+            .foregroundColor(DesignTokens.Colors.primaryPurple)
         }
     }
     
     private var guestAccessButton: some View {
         Button(action: handleGuestLogin) {
-            HStack(spacing: 8) {
+            HStack(spacing: DesignTokens.ResponsiveSpacing.sm) {
                 if appViewModel.isLoading {
                     ProgressView()
                         .progressViewStyle(CircularProgressViewStyle(tint: .primary))
                         .scaleEffect(0.8)
                 } else {
                     Image(systemName: "person.circle")
-                        .font(.system(size: 16))
+                        .font(.system(size: DesignTokens.IconSize.lg))
                 }
                 
                 Text(appViewModel.isLoading ? "Connecting..." : "Continue as Guest")
-                    .font(.system(size: 16, weight: .medium))
+                    .font(DesignTokens.ResponsiveTypography.bodyMedium)
             }
             .frame(maxWidth: .infinity)
-            .padding(.vertical, 14)
+            .frame(height: DesignTokens.ResponsiveContainer.buttonHeight)
             .background(
-                RoundedRectangle(cornerRadius: 16)
-                    .fill(Color(.systemBackground))
+                RoundedRectangle(cornerRadius: DesignTokens.CornerRadius.lg)
+                    .fill(DesignTokens.Colors.backgroundSurface)
                     .overlay(
-                        RoundedRectangle(cornerRadius: 16)
-                            .stroke(Color.primary.opacity(0.2), lineWidth: 1)
+                        RoundedRectangle(cornerRadius: DesignTokens.CornerRadius.lg)
+                            .stroke(DesignTokens.Colors.borderPrimary, lineWidth: 1)
                     )
             )
             .foregroundColor(.primary)
@@ -370,25 +378,24 @@ struct ModernLoginView: View {
     private var errorDisplay: some View {
         Group {
             if showError {
-                HStack(spacing: 12) {
+                HStack(spacing: DesignTokens.ResponsiveSpacing.md) {
                     Image(systemName: "exclamationmark.triangle.fill")
-                        .foregroundColor(.red)
+                        .foregroundColor(DesignTokens.Colors.primaryRed)
                     
                     Text(errorMessage)
-                        .font(.system(size: 14, weight: .medium))
-                        .foregroundColor(.red)
+                        .font(DesignTokens.ResponsiveTypography.bodySmall)
+                        .foregroundColor(DesignTokens.Colors.primaryRed)
                         .multilineTextAlignment(.leading)
                     
                     Spacer()
                 }
-                .padding(.horizontal, 16)
-                .padding(.vertical, 12)
+                .responsivePadding(12, 16, 18)
                 .background(
-                    RoundedRectangle(cornerRadius: 12)
-                        .fill(Color.red.opacity(0.1))
+                    RoundedRectangle(cornerRadius: DesignTokens.CornerRadius.md)
+                        .fill(DesignTokens.Colors.primaryRed.opacity(0.1))
                         .overlay(
-                            RoundedRectangle(cornerRadius: 12)
-                                .stroke(Color.red.opacity(0.3), lineWidth: 1)
+                            RoundedRectangle(cornerRadius: DesignTokens.CornerRadius.md)
+                                .stroke(DesignTokens.Colors.primaryRed.opacity(0.3), lineWidth: 1)
                         )
                 )
                 .transition(.opacity.combined(with: .move(edge: .top)))
@@ -400,16 +407,16 @@ struct ModernLoginView: View {
         HStack {
             Rectangle()
                 .frame(height: 1)
-                .foregroundColor(.primary.opacity(0.1))
+                .foregroundColor(DesignTokens.Colors.borderPrimary)
             
             Text("or")
-                .font(.system(size: 14, weight: .medium))
-                .foregroundColor(.secondary)
-                .padding(.horizontal, 16)
+                .font(DesignTokens.ResponsiveTypography.bodySmall)
+                .foregroundColor(DesignTokens.Colors.textSecondary)
+                .responsiveHorizontalPadding(12, 16, 20)
             
             Rectangle()
                 .frame(height: 1)
-                .foregroundColor(.primary.opacity(0.1))
+                .foregroundColor(DesignTokens.Colors.borderPrimary)
         }
     }
     
@@ -421,10 +428,10 @@ struct ModernLoginView: View {
             // Handle terms/privacy
         }) {
             Text("By continuing, you agree to our **Terms** & **Privacy Policy**")
-                .font(.system(size: 13))
-                .foregroundColor(.secondary)
+                .font(DesignTokens.ResponsiveTypography.caption)
+                .foregroundColor(DesignTokens.Colors.textSecondary)
                 .multilineTextAlignment(.center)
-                .padding(.horizontal, 40)
+                .responsiveHorizontalPadding(32, 40, 48)
         }
     }
     

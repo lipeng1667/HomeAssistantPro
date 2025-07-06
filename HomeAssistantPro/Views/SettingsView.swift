@@ -17,23 +17,13 @@ import SwiftUI
 struct SettingsView: View {
     @EnvironmentObject var tabBarVisibility: TabBarVisibilityManager
     @EnvironmentObject var appViewModel: AppViewModel
+    @EnvironmentObject var settingsStore: SettingsStore
     @StateObject private var localizationManager = LocalizationManager.shared
-    @State private var isEditingProfile = false
-    @State private var selectedProfileColor: Color = DesignTokens.Colors.primaryPurple
     @State private var showLanguageSelection = false
     @State private var showLogoutConfirmation = false
+    @State private var showThemeSelection = false
     @FocusState private var isFieldFocused: Bool
-    @Namespace private var profileTransition
     
-    // Profile color options matching MainTabView palette
-    private let profileColors: [Color] = [
-        DesignTokens.Colors.primaryPurple,
-        DesignTokens.Colors.primaryCyan,
-        DesignTokens.Colors.primaryGreen,
-        DesignTokens.Colors.primaryAmber,
-        DesignTokens.Colors.primaryRed,
-        DesignTokens.Colors.secondaryPurple
-    ]
     
     // MARK: - Dynamic Profile Properties
     
@@ -118,26 +108,24 @@ struct SettingsView: View {
     
     var body: some View {
         ZStack {
-            // Standardized background with dynamic color
-            StandardTabBackground(configuration: .settings(primaryColor: selectedProfileColor))
+            // Standardized background
+            StandardTabBackground(configuration: .settings(primaryColor: DesignTokens.Colors.primaryPurple))
             
             // Main content
             ScrollView(showsIndicators: false) {
-                VStack(spacing: 32) {
+                VStack(spacing: DesignTokens.ResponsiveSpacing.sectionSpacing) {
                     StandardTabHeader(configuration: .settings(
-                        selectedColor: selectedProfileColor,
-                        onColorPicker: {
-                            withAnimation(.spring(response: 0.6, dampingFraction: 0.8)) {
-                                isEditingProfile.toggle()
-                            }
-                        }
+                        selectedColor: DesignTokens.Colors.primaryPurple,
+                        onColorPicker: {}
                     ))
-                    profileSection
-                        .padding(.horizontal, DesignTokens.Spacing.xxl)
-                    preferencesSection
-                        .padding(.horizontal, DesignTokens.Spacing.xxl)
-                    securitySection
-                        .padding(.horizontal, DesignTokens.Spacing.xxl)
+                    
+                    VStack(spacing: DesignTokens.ResponsiveSpacing.lg) {
+                        profileSection
+                        preferencesSection  
+                        securitySection
+                    }
+                    .responsiveHorizontalPadding(6, 8, 10)
+                    .limitedContentWidth()
                 }
                 .padding(.top, DesignTokens.Spacing.xl)
                 .padding(.bottom, DesignTokens.Spacing.tabBarBottom)
@@ -154,6 +142,10 @@ struct SettingsView: View {
         .sheet(isPresented: $showLanguageSelection) {
             LanguageSelectionView()
                 .environmentObject(localizationManager)
+        }
+        .sheet(isPresented: $showThemeSelection) {
+            ThemeSelectionView()
+                .environmentObject(settingsStore)
         }
         .confirmationModal(
             isPresented: $showLogoutConfirmation,
@@ -175,137 +167,266 @@ struct SettingsView: View {
     
     // MARK: - Profile Section
     
-    /// Profile section with dynamic content based on user authentication status
+    /// Profile section with modern card-based design without profile image
     private var profileSection: some View {
-        GlassmorphismCard(configuration: .settings) {
-            VStack(spacing: 20) {
-                // Profile avatar with dynamic color
-                ZStack {
-                    Circle()
-                        .fill(
-                            LinearGradient(
-                                colors: [selectedProfileColor, selectedProfileColor.opacity(0.7)],
-                                startPoint: .topLeading,
-                                endPoint: .bottomTrailing
-                            )
-                        )
-                        .frame(width: 100, height: 100)
-                        .shadow(color: selectedProfileColor.opacity(0.3), radius: 15, x: 0, y: 8)
-                        .matchedGeometryEffect(id: "profileColor", in: profileTransition)
-                    
-                    Image(systemName: profileIconName)
-                        .font(.system(size: 40, weight: .medium))
-                        .foregroundColor(.white)
-                }
-                .onTapGesture {
-                    cycleProfileColor()
-                }
-                
-                VStack(spacing: 8) {
-                    Text(displayName)
-                        .font(.system(size: 24, weight: .bold, design: .rounded))
-                        .foregroundColor(.primary)
-                    
-                    Text(userStatusText)
-                        .font(.system(size: 14, weight: .semibold))
-                        .foregroundColor(statusColor)
-                        .padding(.horizontal, 12)
-                        .padding(.vertical, 4)
-                        .background(
-                            Capsule()
+        VStack(spacing: 16) {
+            // Main profile info card
+            GlassmorphismCard(configuration: .settings) {
+                HStack(spacing: DesignTokens.ResponsiveSpacing.lg) {
+                    // Status indicator with icon
+                    VStack(spacing: DesignTokens.ResponsiveSpacing.sm) {
+                        ZStack {
+                            RoundedRectangle(cornerRadius: DesignTokens.CornerRadius.lg)
                                 .fill(statusColor.opacity(0.15))
-                        )
-                    
-                    if let membershipText = membershipText {
-                        Text(membershipText)
-                            .font(.system(size: 13, weight: .medium))
-                            .foregroundColor(.secondary)
-                    }
-                }
-                
-                // Color picker row (when editing)
-                if isEditingProfile {
-                    colorPickerRow
-                        .transition(.scale.combined(with: .opacity))
-                }
-                
-                // Action buttons based on user status
-                HStack(spacing: 16) {
-                    Spacer()
-                    if let currentUser = appViewModel.currentUser {
-                        switch currentUser.userStatus {
-                        case .anonymous:
-                            actionButton(title: "Register Account", icon: "person.crop.circle.badge.plus", color: DesignTokens.Colors.primaryGreen)
-                        case .registered:
-                            actionButton(title: "Edit Profile", icon: "pencil", color: selectedProfileColor)
-                        case .notLoggedIn:
-                            actionButton(title: "Sign In", icon: "person.crop.circle", color: DesignTokens.Colors.primaryCyan)
+                                .frame(
+                                    width: DesignTokens.ResponsiveContainer.profileIconSize,
+                                    height: DesignTokens.ResponsiveContainer.profileIconSize
+                                )
+                            
+                            Image(systemName: profileIconName)
+                                .font(.system(
+                                    size: DesignTokens.DeviceSize.current.fontSize(24, 26, 28),
+                                    weight: .medium
+                                ))
+                                .foregroundColor(statusColor)
                         }
-                    } else {
-                        actionButton(title: "Sign In", icon: "person.crop.circle", color: DesignTokens.Colors.primaryCyan)
+                        
+                        Text(userStatusText)
+                            .font(DesignTokens.ResponsiveTypography.caption)
+                            .foregroundColor(statusColor)
+                            .multilineTextAlignment(.center)
                     }
+                    
+                    // User information
+                    VStack(alignment: .leading, spacing: DesignTokens.ResponsiveSpacing.sm) {
+                        Text(displayName)
+                            .font(DesignTokens.ResponsiveTypography.headingMedium)
+                            .foregroundColor(.primary)
+                        
+                        if let membershipText = membershipText {
+                            Text(membershipText)
+                                .font(DesignTokens.ResponsiveTypography.bodySmall)
+                                .foregroundColor(.secondary)
+                                .lineLimit(2)
+                        }
+                        
+                        // Quick stats or info based on status
+                        HStack(spacing: 16) {
+                            if let currentUser = appViewModel.currentUser {
+                                switch currentUser.userStatus {
+                                case .registered:
+                                    quickInfoItem(icon: "checkmark.shield.fill", text: "Verified", color: DesignTokens.Colors.primaryGreen)
+                                case .anonymous:
+                                    quickInfoItem(icon: "eye.fill", text: "View Only", color: DesignTokens.Colors.primaryAmber)
+                                case .notLoggedIn:
+                                    quickInfoItem(icon: "person.slash", text: "Offline", color: DesignTokens.Colors.primaryRed)
+                                }
+                            }
+                            Spacer()
+                        }
+                    }
+                    
                     Spacer()
                 }
+                .padding(.vertical, 20)
             }
-            .padding(.vertical, 24)
-        }
-        .animation(.spring(response: 0.6, dampingFraction: 0.8), value: selectedProfileColor)
-    }
-    
-    private var colorPickerRow: some View {
-        HStack(spacing: 12) {
-            ForEach(Array(profileColors.enumerated()), id: \.offset) { index, color in
-                Button(action: {
-                    withAnimation(.spring(response: 0.5, dampingFraction: 0.7)) {
-                        selectedProfileColor = color
+            
+            // Action buttons row
+            HStack(spacing: DesignTokens.ResponsiveSpacing.md) {
+                if let currentUser = appViewModel.currentUser {
+                    switch currentUser.userStatus {
+                    case .anonymous:
+                        modernActionButton(
+                            title: "Upgrade Account",
+                            icon: "arrow.up.circle.fill",
+                            color: DesignTokens.Colors.primaryGreen,
+                            style: .primary
+                        )
+                    case .registered:
+                        modernActionButton(
+                            title: "Edit Profile",
+                            icon: "pencil.circle.fill",
+                            color: DesignTokens.Colors.primaryCyan,
+                            style: .secondary
+                        )
+                        modernActionButton(
+                            title: "Account Settings",
+                            icon: "gearshape.fill",
+                            color: DesignTokens.Colors.primaryPurple,
+                            style: .secondary
+                        )
+                    case .notLoggedIn:
+                        modernActionButton(
+                            title: "Sign In",
+                            icon: "person.crop.circle.fill",
+                            color: DesignTokens.Colors.primaryCyan,
+                            style: .primary
+                        )
                     }
-                }) {
-                    Circle()
-                        .fill(
-                            LinearGradient(
-                                colors: [color, color.opacity(0.8)],
-                                startPoint: .topLeading,
-                                endPoint: .bottomTrailing
-                            )
-                        )
-                        .frame(width: selectedProfileColor == color ? 32 : 24, height: selectedProfileColor == color ? 32 : 24)
-                        .overlay(
-                            Circle()
-                                .stroke(Color.white, lineWidth: selectedProfileColor == color ? 3 : 0)
-                                .shadow(color: color.opacity(0.3), radius: 4)
-                        )
-                        .scaleEffect(selectedProfileColor == color ? 1.1 : 1.0)
+                } else {
+                    modernActionButton(
+                        title: "Get Started",
+                        icon: "arrow.right.circle.fill",
+                        color: DesignTokens.Colors.primaryCyan,
+                        style: .primary
+                    )
                 }
-                .enhancedButtonStyle()
             }
         }
-        .padding(.top, 8)
     }
     
-    private func actionButton(title: String, icon: String, color: Color) -> some View {
-        Button(action: {}) {
+    
+    /// Quick info item for status display
+    private func quickInfoItem(icon: String, text: String, color: Color) -> some View {
+        HStack(spacing: 6) {
+            Image(systemName: icon)
+                .font(.system(size: 12, weight: .semibold))
+                .foregroundColor(color)
+            
+            Text(text)
+                .font(.system(size: 12, weight: .semibold))
+                .foregroundColor(color)
+        }
+        .padding(.horizontal, 10)
+        .padding(.vertical, 4)
+        .background(
+            Capsule()
+                .fill(color.opacity(0.12))
+        )
+    }
+    
+    /// Modern action button style
+    private func modernActionButton(title: String, icon: String, color: Color, style: ButtonStyle) -> some View {
+        Button(action: {
+            HapticManager.buttonTap()
+        }) {
             HStack(spacing: 8) {
                 Image(systemName: icon)
                     .font(.system(size: 14, weight: .semibold))
+                
                 Text(title)
-                    .font(.system(size: 14, weight: .semibold))
+                    .font(DesignTokens.ResponsiveTypography.buttonMedium)
             }
-            .foregroundColor(.white)
-            .padding(.horizontal, 20)
-            .padding(.vertical, 12)
+            .foregroundColor(style == .primary ? .white : color)
+            .responsiveHorizontalPadding(12, 16, 20)
+            .responsiveVerticalPadding(10, 12, 14)
+            .frame(maxWidth: .infinity)
             .background(
-                Capsule()
+                RoundedRectangle(cornerRadius: 12)
                     .fill(
+                        style == .primary ?
                         LinearGradient(
                             colors: [color, color.opacity(0.8)],
                             startPoint: .topLeading,
                             endPoint: .bottomTrailing
+                        ) :
+                        LinearGradient(
+                            colors: [color.opacity(0.15)],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
                         )
                     )
-                    .shadow(color: color.opacity(0.4), radius: 8, x: 0, y: 4)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 12)
+                            .stroke(style == .primary ? Color.clear : color.opacity(0.3), lineWidth: 1)
+                    )
+                    .shadow(
+                        color: style == .primary ? color.opacity(0.3) : Color.clear,
+                        radius: style == .primary ? 8 : 0,
+                        x: 0,
+                        y: 4
+                    )
             )
         }
-        .buttonStyle(EnhancedButtonStyle())
+        .enhancedButtonStyle()
+    }
+    
+    enum ButtonStyle {
+        case primary
+        case secondary
+    }
+    
+    /// Theme selection row
+    private var themeSelectionRow: some View {
+        Button(action: {
+            showThemeSelection = true
+        }) {
+            HStack(spacing: 16) {
+                ZStack {
+                    Circle()
+                        .fill(DesignTokens.Colors.primaryPurple.opacity(0.15))
+                        .frame(width: 44, height: 44)
+                    
+                    Image(systemName: themeIcon)
+                        .font(.system(size: 18, weight: .semibold))
+                        .foregroundColor(DesignTokens.Colors.primaryPurple)
+                }
+                
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Theme")
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundColor(DesignTokens.Colors.textPrimary)
+                    
+                    Text(currentThemeDisplayName)
+                        .font(.system(size: 14, weight: .medium))
+                        .foregroundColor(DesignTokens.Colors.textSecondary)
+                }
+                
+                Spacer()
+                
+                HStack(spacing: 8) {
+                    Text(themeEmoji)
+                        .font(.system(size: 20))
+                    
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundColor(DesignTokens.Colors.textTertiary)
+                }
+            }.contentShape(Rectangle())
+        }
+        .cardButtonStyle()
+    }
+    
+    /// Current theme display name
+    private var currentThemeDisplayName: String {
+        switch settingsStore.selectedTheme {
+        case "light":
+            return "Light Mode"
+        case "dark":
+            return "Dark Mode"
+        case "system":
+            return "Follow System"
+        default:
+            return "Follow System"
+        }
+    }
+    
+    /// Theme icon based on current selection
+    private var themeIcon: String {
+        switch settingsStore.selectedTheme {
+        case "light":
+            return "sun.max.fill"
+        case "dark":
+            return "moon.fill"
+        case "system":
+            return "circle.lefthalf.filled"
+        default:
+            return "circle.lefthalf.filled"
+        }
+    }
+    
+    /// Theme emoji based on current selection
+    private var themeEmoji: String {
+        switch settingsStore.selectedTheme {
+        case "light":
+            return "☀️"
+        case "dark":
+            return "🌙"
+        case "system":
+            return "⚫"
+        default:
+            return "⚫"
+        }
     }
     
     // MARK: - Preferences Section
@@ -359,12 +480,9 @@ struct SettingsView: View {
                         
                         Divider().opacity(0.5)
                         
-                        settingsRow(
-                            icon: "paintpalette.fill", 
-                            title: LocalizedKeys.settingsColorTheme.localized, 
-                            subtitle: LocalizedKeys.settingsColorDescription.localized, 
-                            color: selectedProfileColor
-                        )
+                        // Theme Selection Row
+                        themeSelectionRow
+                        
                     }
                 }
                 .padding(.vertical, 20)
@@ -376,7 +494,7 @@ struct SettingsView: View {
         HStack(spacing: 12) {
             Image(systemName: icon)
                 .font(.system(size: 20, weight: .semibold))
-                .foregroundColor(selectedProfileColor)
+                .foregroundColor(DesignTokens.Colors.primaryPurple)
             
             Text(title)
                 .font(.system(size: 20, weight: .bold, design: .rounded))
@@ -480,17 +598,138 @@ struct SettingsView: View {
         }
     }
     
+}
+
+// MARK: - Theme Selection View
+
+struct ThemeSelectionView: View {
+    @EnvironmentObject var settingsStore: SettingsStore
+    @Environment(\.presentationMode) var presentationMode
     
-    private func cycleProfileColor() {
-        guard let currentIndex = profileColors.firstIndex(of: selectedProfileColor) else { return }
-        let nextIndex = (currentIndex + 1) % profileColors.count
-        
-        withAnimation(.spring(response: 0.6, dampingFraction: 0.8)) {
-            selectedProfileColor = profileColors[nextIndex]
+    private let themes: [(key: String, name: String, description: String, icon: String, emoji: String)] = [
+        ("system", "Follow System", "Matches your device settings", "circle.lefthalf.filled", "⚫"),
+        ("light", "Light Mode", "Always use light appearance", "sun.max.fill", "☀️"),
+        ("dark", "Dark Mode", "Always use dark appearance", "moon.fill", "🌙")
+    ]
+    
+    var body: some View {
+        NavigationView {
+            ZStack {
+                // Background
+                LinearGradient(
+                    colors: [
+                        DesignTokens.Colors.backgroundPrimary,
+                        DesignTokens.Colors.backgroundSecondary
+                    ],
+                    startPoint: .top,
+                    endPoint: .bottom
+                )
+                .ignoresSafeArea()
+                
+                ScrollView {
+                    VStack(spacing: DesignTokens.ResponsiveSpacing.lg) {
+                        // Header
+                        VStack(spacing: DesignTokens.ResponsiveSpacing.sm) {
+                            Text("Theme")
+                                .font(DesignTokens.ResponsiveTypography.headingLarge)
+                                .foregroundColor(DesignTokens.Colors.textPrimary)
+                            
+                            Text("Choose your preferred appearance")
+                                .font(DesignTokens.ResponsiveTypography.bodyMedium)
+                                .foregroundColor(DesignTokens.Colors.textSecondary)
+                                .multilineTextAlignment(.center)
+                        }
+                        .padding(.top, DesignTokens.ResponsiveSpacing.xl)
+                        
+                        // Theme Options
+                        GlassmorphismCard(configuration: .settings) {
+                            VStack(spacing: 0) {
+                                ForEach(themes, id: \.key) { theme in
+                                    themeRow(theme: theme)
+                                    
+                                    if theme.key != themes.last?.key {
+                                        Divider()
+                                            .padding(.horizontal, DesignTokens.ResponsiveSpacing.lg)
+                                    }
+                                }
+                            }
+                            .padding(.vertical, DesignTokens.ResponsiveSpacing.md)
+                        }
+                        .padding(.horizontal, DesignTokens.ResponsiveSpacing.lg)
+                        
+                        Spacer()
+                    }
+                }
+            }
+            .navigationBarTitleDisplayMode(.inline)
+            .navigationBarHidden(true)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button("Done") {
+                        presentationMode.wrappedValue.dismiss()
+                    }
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundColor(DesignTokens.Colors.primaryCyan)
+                }
+            }
         }
-        
-        // Haptic feedback
-        HapticManager.colorSelection()
+    }
+    
+    private func themeRow(theme: (key: String, name: String, description: String, icon: String, emoji: String)) -> some View {
+        Button(action: {
+            HapticManager.buttonTap()
+            withAnimation(.spring(response: 0.5, dampingFraction: 0.8)) {
+                settingsStore.storeSelectedTheme(theme.key)
+            }
+            
+            // Dismiss after a short delay to show the selection
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                presentationMode.wrappedValue.dismiss()
+            }
+        }) {
+            HStack(spacing: DesignTokens.ResponsiveSpacing.lg) {
+                // Theme icon
+                ZStack {
+                    Circle()
+                        .fill(DesignTokens.Colors.primaryPurple.opacity(0.15))
+                        .frame(width: 50, height: 50)
+                    
+                    Image(systemName: theme.icon)
+                        .font(.system(size: 20, weight: .semibold))
+                        .foregroundColor(DesignTokens.Colors.primaryPurple)
+                }
+                
+                // Theme Info
+                VStack(alignment: .leading, spacing: DesignTokens.ResponsiveSpacing.xs) {
+                    HStack(spacing: 8) {
+                        Text(theme.emoji)
+                            .font(.system(size: 20))
+                        
+                        Text(theme.name)
+                            .font(DesignTokens.ResponsiveTypography.bodyLarge)
+                            .foregroundColor(DesignTokens.Colors.textPrimary)
+                    }
+                    
+                    Text(theme.description)
+                        .font(DesignTokens.ResponsiveTypography.bodyMedium)
+                        .foregroundColor(DesignTokens.Colors.textSecondary)
+                }
+                
+                Spacer()
+                
+                // Selection Indicator
+                if settingsStore.selectedTheme == theme.key {
+                    Image(systemName: "checkmark.circle.fill")
+                        .font(.system(size: 20, weight: .semibold))
+                        .foregroundColor(DesignTokens.Colors.primaryCyan)
+                        .transition(.scale.combined(with: .opacity))
+                }
+            }
+            .padding(.horizontal, DesignTokens.ResponsiveSpacing.lg)
+            .padding(.vertical, DesignTokens.ResponsiveSpacing.lg)
+            .contentShape(Rectangle())
+        }
+        .scaleButtonStyle()
     }
 }
 
@@ -614,6 +853,7 @@ struct LanguageSelectionView: View {
 #Preview {
     SettingsView()
         .environmentObject(AppViewModel())
+        .environmentObject(SettingsStore())
 }
 
 
