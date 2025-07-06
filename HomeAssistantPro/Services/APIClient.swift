@@ -140,8 +140,9 @@ final class APIClient {
     ///   - endpoint: API endpoint path
     ///   - method: HTTP method
     ///   - body: Request body data
+    ///   - timestamp: Optional pre-generated timestamp (for password hashing consistency)
     /// - Returns: Configured URLRequest
-    private func createAuthenticatedRequest(endpoint: String, method: String, body: Data?) -> URLRequest {
+    private func createAuthenticatedRequest(endpoint: String, method: String, body: Data?, timestamp: String? = nil) -> URLRequest {
         guard let url = URL(string: baseURL + endpoint) else {
             fatalError("Invalid URL: \(baseURL + endpoint)")
         }
@@ -151,10 +152,10 @@ final class APIClient {
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         
         // Add authentication headers
-        let timestamp = String(Int(Date().timeIntervalSince1970 * 1000))
-        let signature = generateSignature(timestamp: timestamp)
+        let requestTimestamp = timestamp ?? String(Int(Date().timeIntervalSince1970 * 1000))
+        let signature = generateSignature(timestamp: requestTimestamp)
         
-        request.setValue(timestamp, forHTTPHeaderField: "X-Timestamp")
+        request.setValue(requestTimestamp, forHTTPHeaderField: "X-Timestamp")
         request.setValue(signature, forHTTPHeaderField: "X-Signature")
         
         if let body = body {
@@ -231,12 +232,14 @@ final class APIClient {
             let response = try JSONDecoder().decode(LoginResponse.self, from: data)
             logger.info("Registration successful for phone: \(phoneNumber)")
             
-            // Store updated user ID securely in Keychain
+            // Store updated user ID and profile data
             do {
                 try settingsStore.storeUserId(String(response.data.user.id))
-                logger.info("Updated user ID stored successfully after registration")
+                // Store profile data with registered status (2)
+                settingsStore.storeUserProfile(status: 2, accountName: accountName, phoneNumber: phoneNumber)
+                logger.info("User ID and profile data stored successfully after registration")
             } catch {
-                logger.error("Failed to store user ID after registration: \(error.localizedDescription)")
+                logger.error("Failed to store user credentials after registration: \(error.localizedDescription)")
             }
             
             return response
@@ -258,7 +261,7 @@ final class APIClient {
     /// - Returns: LoginResponse with user information
     /// - Throws: APIError for login failures
     func login(userId: String, phoneNumber: String, password: String) async throws -> LoginResponse {
-        // Get timestamp for password hashing (same as used in headers)
+        // Generate timestamp once for both password hashing and request headers
         let timestamp = String(Int(Date().timeIntervalSince1970 * 1000))
         
         let loginRequest = LoginRequest(
@@ -269,7 +272,8 @@ final class APIClient {
         )
         let body = try JSONEncoder().encode(loginRequest)
         
-        let request = createAuthenticatedRequest(endpoint: "/api/auth/login", method: "POST", body: body)
+        // Pass the same timestamp to ensure consistency between password hash and headers
+        let request = createAuthenticatedRequest(endpoint: "/api/auth/login", method: "POST", body: body, timestamp: timestamp)
         
         let (data, statusCode) = try await performRequest(request)
         
@@ -278,12 +282,16 @@ final class APIClient {
             let response = try JSONDecoder().decode(LoginResponse.self, from: data)
             logger.info("Login successful for user: \(userId)")
             
-            // Store user ID securely in Keychain (in case it changed)
+            // Store user ID and update status to registered (in case it changed)
             do {
                 try settingsStore.storeUserId(String(response.data.user.id))
-                logger.info("User ID confirmed and stored after login")
+                // Update status to registered (2) and preserve existing profile data
+                let existingAccountName = settingsStore.retrieveAccountName()
+                let existingPhoneNumber = settingsStore.retrievePhoneNumber()
+                settingsStore.storeUserProfile(status: 2, accountName: existingAccountName, phoneNumber: existingPhoneNumber ?? phoneNumber)
+                logger.info("User ID confirmed and status updated after login")
             } catch {
-                logger.error("Failed to store user ID after login: \(error.localizedDescription)")
+                logger.error("Failed to store user credentials after login: \(error.localizedDescription)")
             }
             
             return response

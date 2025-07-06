@@ -300,10 +300,7 @@ extension HeaderConfiguration {
             title: "Settings",
             topPadding: 20,
             bottomPadding: 8,
-            actionButton: ActionButton(
-                style: .circular(icon: "paintbrush.fill", color: selectedColor),
-                action: onColorPicker
-            )
+            actionButton: nil
         )
     }
 }

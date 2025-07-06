@@ -728,7 +728,7 @@ struct RegisterView: View {
                     accountName: fullName,
                     phoneNumber: cleanPhoneNumber,
                     password: password,
-                    userId: appViewModel.currentUserId // Optional: nil for direct registration, user_id for anonymous-to-registered conversion
+                    userId: nil // Optional: nil for direct registration, user_id for anonymous-to-registered conversion
                 )
                 
                 await MainActor.run {
@@ -739,9 +739,19 @@ struct RegisterView: View {
                     // Registration successful
                     HapticManager.success()
                     
-                    // Update user ID in app state
+                    // Update user state with registered status and profile data
                     appViewModel.currentUserId = String(response.data.user.id)
                     appViewModel.isLoggedIn = true
+                    appViewModel.isUserLoggedIn = true // Persist login state to UserDefaults
+                    
+                    // Create registered user with profile data (device ID will be set when user state is restored)
+                    appViewModel.currentUser = User(
+                        id: response.data.user.id,
+                        deviceId: nil, // Will be populated on next app launch
+                        status: 2, // Registered user
+                        accountName: fullName,
+                        phoneNumber: phoneNumber
+                    )
                     
                     // Show success confirmation modal
                     showSuccessModal = true

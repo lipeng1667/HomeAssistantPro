@@ -1,13 +1,25 @@
 //
-//  ModernLoginView.swift
+//  LoginView.swift
 //  HomeAssistantPro
 //
-//  Purpose: Modern, stylish login screen aligned with 2025 iOS design aesthetics
+//  Purpose: Modern login screen with glassmorphism design and user authentication
 //  Author: Michael
-//  Updated: 2025-06-25
+//  Created: 2025-06-25
+//  Modified: 2025-07-06
 //
-//  Features modern design trends: Liquid Glass effects, dynamic islands,
-//  minimalist approach, improved accessibility, and refined animations.
+//  Modification Log:
+//  - 2025-06-25: Initial creation with modern iOS design aesthetics
+//  - 2025-07-06: Added phone number validation utilities and enhanced error handling
+//
+//  Functions:
+//  - init(onCreateAccount:): Initialize view with optional create account callback
+//  - dismissKeyboard(): Removes focus from input fields
+//  - togglePasswordVisibility(): Shows/hides password field content
+//  - hapticFeedback(_:): Triggers haptic feedback with specified intensity
+//  - validatePhoneNumber(_:): Validates phone number format using utility functions
+//  - isFormValid(): Checks if all required form fields are valid
+//  - handleLogin(): Processes user login with API authentication
+//  - handleGuestLogin(): Processes anonymous login for guest access
 //
 
 import SwiftUI
@@ -28,8 +40,9 @@ struct ModernLoginView: View {
     /// Callback to navigate to registration view
     let onCreateAccount: (() -> Void)?
     
-    /// Initializer with optional create account callback
-    /// - Parameter onCreateAccount: Callback for create account navigation
+    /// Initializes the login view with optional navigation callback
+    /// - Parameter onCreateAccount: Optional callback function for create account navigation
+    /// - Returns: Configured ModernLoginView instance
     init(onCreateAccount: (() -> Void)? = nil) {
         self.onCreateAccount = onCreateAccount
     }
@@ -417,33 +430,46 @@ struct ModernLoginView: View {
     
     // MARK: - Helper Methods
     
-    
+    /// Dismisses the keyboard by removing focus from all input fields
+    /// - Side Effects: Sets both phone number and password focus states to false
     private func dismissKeyboard() {
         isPhoneNumberFocused = false
         isPasswordFocused = false
     }
     
+    /// Toggles password field visibility and provides haptic feedback
+    /// - Side Effects: Toggles showPassword state and triggers light haptic feedback
     private func togglePasswordVisibility() {
         showPassword.toggle()
         hapticFeedback(.light)
     }
     
+    /// Triggers haptic feedback with specified intensity
+    /// - Parameter style: UIImpactFeedbackGenerator.FeedbackStyle intensity level
+    /// - Side Effects: Generates device haptic feedback
     private func hapticFeedback(_ style: UIImpactFeedbackGenerator.FeedbackStyle) {
         let impactFeedback = UIImpactFeedbackGenerator(style: style)
         impactFeedback.impactOccurred()
     }
     
+    /// Validates phone number format using utility functions with animation
+    /// - Parameter phoneNumber: String containing phone number to validate
+    /// - Side Effects: Updates isPhoneNumberValid state with animation
     private func validatePhoneNumber(_ phoneNumber: String) {
         withAnimation(.easeInOut(duration: 0.3)) {
             isPhoneNumberValid = PhoneNumberUtils.validatePhoneNumber(phoneNumber)
         }
     }
     
+    /// Checks if all required form fields contain valid data
+    /// - Returns: Bool indicating whether form is ready for submission
     private func isFormValid() -> Bool {
         return !phoneNumber.isEmpty && !password.isEmpty && isPhoneNumberValid
     }
     
-    
+    /// Processes user login with API authentication and error handling
+    /// - Side Effects: Updates loading state, makes API call, updates app state on success
+    /// - Throws: Handles APIError cases and displays appropriate error messages
     private func handleLogin() {
         guard isFormValid() else { return }
         
@@ -489,7 +515,17 @@ struct ModernLoginView: View {
                     // Update user ID in app state
                     appViewModel.currentUserId = String(response.data.user.id)
                     appViewModel.isLoggedIn = true
-                    appViewModel.login()
+                    appViewModel.isUserLoggedIn = true // Persist login state to UserDefaults
+                    
+                    // Create registered user object with available data
+                    // Note: APIClient already stored the profile data in SettingsStore
+                    appViewModel.currentUser = User(
+                        id: response.data.user.id,
+                        deviceId: nil, // Will be populated from SettingsStore
+                        status: 2, // Registered user
+                        accountName: nil, // Will be restored from SettingsStore
+                        phoneNumber: cleanPhoneNumber
+                    )
                 }
             } catch {
                 await MainActor.run {
@@ -528,6 +564,8 @@ struct ModernLoginView: View {
         }
     }
     
+    /// Processes anonymous login for guest access with error handling
+    /// - Side Effects: Calls AppViewModel anonymous login, displays errors on failure
     private func handleGuestLogin() {
         hapticFeedback(.light)
         

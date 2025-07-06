@@ -59,6 +59,9 @@ final class SettingsStore: ObservableObject {
     private enum UserDefaultsKeys {
         static let isFirstLaunch = "is_first_launch"
         static let selectedTheme = "selected_theme"
+        static let userStatus = "user_status"
+        static let accountName = "account_name"
+        static let phoneNumber = "phone_number"
     }
     
     // MARK: - Initialization
@@ -157,6 +160,71 @@ final class SettingsStore: ObservableObject {
     
     // MARK: - Device ID Management (Keychain)
     
+    /// Gets or creates a persistent device identifier with auto-generation
+    /// Migrates from legacy DeviceIdentifier storage if needed
+    /// - Returns: Unique device identifier string
+    /// - Throws: SettingsStoreError for storage/retrieval failures
+    func getOrCreateDeviceId() throws -> String {
+        // First check if device ID exists in current location
+        if let existingId = try retrieveDeviceId() {
+            return existingId
+        }
+        
+        // Check for legacy DeviceIdentifier data and migrate it
+        if let legacyId = migrateLegacyDeviceId() {
+            try storeDeviceId(legacyId)
+            logger.info("Migrated device ID from legacy DeviceIdentifier storage")
+            return legacyId
+        }
+        
+        // Generate new device ID if none exists
+        let newDeviceId = generateDeviceId()
+        try storeDeviceId(newDeviceId)
+        logger.info("Generated new device ID: \(newDeviceId)")
+        return newDeviceId
+    }
+    
+    /// Generates a new UUID-based device identifier
+    /// - Returns: Device ID in format "iOS_UUID"
+    private func generateDeviceId() -> String {
+        let uuid = UUID().uuidString
+        return "iOS_\(uuid)"
+    }
+    
+    /// Migrates device ID from legacy DeviceIdentifier storage
+    /// - Returns: Legacy device ID if found, nil otherwise
+    private func migrateLegacyDeviceId() -> String? {
+        let legacyService = "com.vincenx.HomeAssistantPro"
+        let legacyAccount = "device_identifier"
+        
+        let query: [String: Any] = [
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrService as String: legacyService,
+            kSecAttrAccount as String: legacyAccount,
+            kSecReturnData as String: kCFBooleanTrue!,
+            kSecMatchLimit as String: kSecMatchLimitOne
+        ]
+        
+        var dataTypeRef: AnyObject?
+        let status = SecItemCopyMatching(query as CFDictionary, &dataTypeRef)
+        
+        guard status == errSecSuccess,
+              let data = dataTypeRef as? Data,
+              let deviceId = String(data: data, encoding: .utf8) else {
+            return nil
+        }
+        
+        // Clean up legacy storage after successful migration
+        let deleteQuery: [String: Any] = [
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrService as String: legacyService,
+            kSecAttrAccount as String: legacyAccount
+        ]
+        SecItemDelete(deleteQuery as CFDictionary)
+        
+        return deviceId
+    }
+    
     /// Securely stores device ID in Keychain
     /// - Parameter deviceId: Device ID string to store
     /// - Throws: SettingsStoreError for storage failures
@@ -244,13 +312,74 @@ final class SettingsStore: ObservableObject {
         logger.info("Selected theme stored: \(theme)")
     }
     
+    // MARK: - User Profile Management (UserDefaults)
+    
+    /// Stores user authentication status
+    /// - Parameter status: User status integer (0=not logged in, 1=anonymous, 2=registered)
+    func storeUserStatus(_ status: Int) {
+        userDefaults.set(status, forKey: UserDefaultsKeys.userStatus)
+        logger.info("User status stored: \(status)")
+    }
+    
+    /// Retrieves user authentication status
+    /// - Returns: User status integer, defaults to 0 (not logged in)
+    func retrieveUserStatus() -> Int {
+        return userDefaults.integer(forKey: UserDefaultsKeys.userStatus)
+    }
+    
+    /// Stores user account name
+    /// - Parameter accountName: User's full name
+    func storeAccountName(_ accountName: String) {
+        userDefaults.set(accountName, forKey: UserDefaultsKeys.accountName)
+        logger.info("Account name stored")
+    }
+    
+    /// Retrieves user account name
+    /// - Returns: User's account name if stored, nil otherwise
+    func retrieveAccountName() -> String? {
+        return userDefaults.string(forKey: UserDefaultsKeys.accountName)
+    }
+    
+    /// Stores user phone number
+    /// - Parameter phoneNumber: User's phone number
+    func storePhoneNumber(_ phoneNumber: String) {
+        userDefaults.set(phoneNumber, forKey: UserDefaultsKeys.phoneNumber)
+        logger.info("Phone number stored")
+    }
+    
+    /// Retrieves user phone number
+    /// - Returns: User's phone number if stored, nil otherwise
+    func retrievePhoneNumber() -> String? {
+        return userDefaults.string(forKey: UserDefaultsKeys.phoneNumber)
+    }
+    
+    /// Stores complete user profile data
+    /// - Parameters:
+    ///   - status: User authentication status
+    ///   - accountName: User's full name (optional)
+    ///   - phoneNumber: User's phone number (optional)
+    func storeUserProfile(status: Int, accountName: String? = nil, phoneNumber: String? = nil) {
+        storeUserStatus(status)
+        if let accountName = accountName {
+            storeAccountName(accountName)
+        }
+        if let phoneNumber = phoneNumber {
+            storePhoneNumber(phoneNumber)
+        }
+        logger.info("User profile stored with status: \(status)")
+    }
+    
     // MARK: - Cleanup
     
     /// Clears login session state (does NOT clear user_id or device_id - they persist across logout)
     /// This method is intentionally minimal as user_id and device_id should persist
     func clearAuthenticationSession() {
         // User ID and Device ID are NOT cleared on logout - they persist for re-login
-        // Only the login session state in AppViewModel is cleared
+        // Reset user status to not logged in
+        storeUserStatus(0)
+        // Clear profile data on logout
+        userDefaults.removeObject(forKey: UserDefaultsKeys.accountName)
+        userDefaults.removeObject(forKey: UserDefaultsKeys.phoneNumber)
         logger.info("Authentication session cleared (user_id and device_id preserved)")
     }
     
@@ -281,6 +410,9 @@ final class SettingsStore: ObservableObject {
         // Clear UserDefaults
         userDefaults.removeObject(forKey: UserDefaultsKeys.isFirstLaunch)
         userDefaults.removeObject(forKey: UserDefaultsKeys.selectedTheme)
+        userDefaults.removeObject(forKey: UserDefaultsKeys.userStatus)
+        userDefaults.removeObject(forKey: UserDefaultsKeys.accountName)
+        userDefaults.removeObject(forKey: UserDefaultsKeys.phoneNumber)
         
         // Reset published properties to defaults
         self.isFirstLaunch = true

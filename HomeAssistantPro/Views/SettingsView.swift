@@ -35,6 +35,87 @@ struct SettingsView: View {
         DesignTokens.Colors.secondaryPurple
     ]
     
+    // MARK: - Dynamic Profile Properties
+    
+    /// Display name based on user authentication status
+    private var displayName: String {
+        guard let currentUser = appViewModel.currentUser else { 
+            print("DEBUG: No currentUser found")
+            return "Not Logged In" 
+        }
+        
+        print("DEBUG: User status = \(currentUser.status), userStatus = \(currentUser.userStatus)")
+        
+        switch currentUser.userStatus {
+        case .anonymous:
+            return "Guest User"
+        case .registered:
+            return currentUser.accountName ?? "Registered User"
+        case .notLoggedIn:
+            return "Not Logged In"
+        }
+    }
+    
+    /// User status text for display
+    private var userStatusText: String {
+        guard let currentUser = appViewModel.currentUser else { return "Offline" }
+        
+        switch currentUser.userStatus {
+        case .anonymous:
+            return "Anonymous Access"
+        case .registered:
+            return "Premium Member"
+        case .notLoggedIn:
+            return "Offline"
+        }
+    }
+    
+    /// Color for status badge based on user status
+    private var statusColor: Color {
+        guard let currentUser = appViewModel.currentUser else { return DesignTokens.Colors.primaryRed }
+        
+        switch currentUser.userStatus {
+        case .anonymous:
+            return DesignTokens.Colors.primaryAmber
+        case .registered:
+            return DesignTokens.Colors.primaryGreen
+        case .notLoggedIn:
+            return DesignTokens.Colors.primaryRed
+        }
+    }
+    
+    /// Profile icon based on user status
+    private var profileIconName: String {
+        guard let currentUser = appViewModel.currentUser else { return "person.slash" }
+        
+        switch currentUser.userStatus {
+        case .anonymous:
+            return "person.crop.circle.dashed"
+        case .registered:
+            return "person.fill"
+        case .notLoggedIn:
+            return "person.slash"
+        }
+    }
+    
+    /// Optional membership text based on user status
+    private var membershipText: String? {
+        guard let currentUser = appViewModel.currentUser else { return nil }
+        
+        switch currentUser.userStatus {
+        case .anonymous:
+            return "Upgrade to unlock full features"
+        case .registered:
+            if let phoneNumber = currentUser.phoneNumber {
+                return "Phone: \(phoneNumber)"
+            } else {
+                return "Member since registration"
+            }
+        case .notLoggedIn:
+            return nil
+        }
+    }
+    
     var body: some View {
         ZStack {
             // Standardized background with dynamic color
@@ -52,8 +133,6 @@ struct SettingsView: View {
                         }
                     ))
                     profileSection
-                        .padding(.horizontal, DesignTokens.Spacing.xxl)
-                    accountSection
                         .padding(.horizontal, DesignTokens.Spacing.xxl)
                     preferencesSection
                         .padding(.horizontal, DesignTokens.Spacing.xxl)
@@ -96,6 +175,7 @@ struct SettingsView: View {
     
     // MARK: - Profile Section
     
+    /// Profile section with dynamic content based on user authentication status
     private var profileSection: some View {
         GlassmorphismCard(configuration: .settings) {
             VStack(spacing: 20) {
@@ -113,7 +193,7 @@ struct SettingsView: View {
                         .shadow(color: selectedProfileColor.opacity(0.3), radius: 15, x: 0, y: 8)
                         .matchedGeometryEffect(id: "profileColor", in: profileTransition)
                     
-                    Image(systemName: "person.fill")
+                    Image(systemName: profileIconName)
                         .font(.system(size: 40, weight: .medium))
                         .foregroundColor(.white)
                 }
@@ -122,23 +202,25 @@ struct SettingsView: View {
                 }
                 
                 VStack(spacing: 8) {
-                    Text("Ethan Carter")
+                    Text(displayName)
                         .font(.system(size: 24, weight: .bold, design: .rounded))
                         .foregroundColor(.primary)
                     
-                    Text("Premium Member")
+                    Text(userStatusText)
                         .font(.system(size: 14, weight: .semibold))
-                        .foregroundColor(selectedProfileColor)
+                        .foregroundColor(statusColor)
                         .padding(.horizontal, 12)
                         .padding(.vertical, 4)
                         .background(
                             Capsule()
-                                .fill(selectedProfileColor.opacity(0.15))
+                                .fill(statusColor.opacity(0.15))
                         )
                     
-                    Text("Member since 2021")
-                        .font(.system(size: 13, weight: .medium))
-                        .foregroundColor(.secondary)
+                    if let membershipText = membershipText {
+                        Text(membershipText)
+                            .font(.system(size: 13, weight: .medium))
+                            .foregroundColor(.secondary)
+                    }
                 }
                 
                 // Color picker row (when editing)
@@ -147,10 +229,22 @@ struct SettingsView: View {
                         .transition(.scale.combined(with: .opacity))
                 }
                 
-                // Action buttons
+                // Action buttons based on user status
                 HStack(spacing: 16) {
-                    actionButton(title: "Edit Profile", icon: "pencil", color: selectedProfileColor)
-                    actionButton(title: "Share", icon: "square.and.arrow.up", color: DesignTokens.Colors.primaryCyan)
+                    Spacer()
+                    if let currentUser = appViewModel.currentUser {
+                        switch currentUser.userStatus {
+                        case .anonymous:
+                            actionButton(title: "Register Account", icon: "person.crop.circle.badge.plus", color: DesignTokens.Colors.primaryGreen)
+                        case .registered:
+                            actionButton(title: "Edit Profile", icon: "pencil", color: selectedProfileColor)
+                        case .notLoggedIn:
+                            actionButton(title: "Sign In", icon: "person.crop.circle", color: DesignTokens.Colors.primaryCyan)
+                        }
+                    } else {
+                        actionButton(title: "Sign In", icon: "person.crop.circle", color: DesignTokens.Colors.primaryCyan)
+                    }
+                    Spacer()
                 }
             }
             .padding(.vertical, 24)
@@ -214,54 +308,6 @@ struct SettingsView: View {
         .buttonStyle(EnhancedButtonStyle())
     }
     
-    // MARK: - Account Section
-    
-    private var accountSection: some View {
-        GlassmorphismCard(configuration: .settings) {
-            VStack(alignment: .leading, spacing: 24) {
-                sectionHeader(title: "Account", icon: "person.crop.circle")
-                
-                VStack(spacing: 20) {
-                    accountRow(icon: "phone.fill", title: "Phone Number", value: "+1 (555) 123-4567", color: DesignTokens.Colors.primaryGreen)
-                    Divider().opacity(0.5)
-                    accountRow(icon: "envelope.fill", title: "Email", value: "ethan.carter@email.com", color: DesignTokens.Colors.primaryCyan)
-                    Divider().opacity(0.5)
-                    accountRow(icon: "lock.fill", title: "Password", value: "••••••••", color: DesignTokens.Colors.primaryAmber)
-                }
-            }
-            .padding(.vertical, 20)
-        }
-    }
-    
-    private func accountRow(icon: String, title: String, value: String, color: Color) -> some View {
-        HStack(spacing: 16) {
-            ZStack {
-                Circle()
-                    .fill(color.opacity(0.15))
-                    .frame(width: 44, height: 44)
-                
-                Image(systemName: icon)
-                    .font(.system(size: 18, weight: .semibold))
-                    .foregroundColor(color)
-            }
-            
-            VStack(alignment: .leading, spacing: 2) {
-                Text(title)
-                    .font(.system(size: 16, weight: .semibold))
-                    .foregroundColor(.primary)
-                Text(value)
-                    .font(.system(size: 14, weight: .medium))
-                    .foregroundColor(.secondary)
-            }
-            
-            Spacer()
-            
-            Image(systemName: "chevron.right")
-                .font(.system(size: 14, weight: .semibold))
-                .foregroundColor(.secondary.opacity(0.6))
-        }
-    }
-       
     // MARK: - Preferences Section
     
     private var preferencesSection: some View {

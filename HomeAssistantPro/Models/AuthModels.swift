@@ -3,13 +3,14 @@
 //  HomeAssistantPro
 //
 //  Purpose: Data models for authentication API requests and responses
-//  Author: Claude
+//  Author: Michael
 //  Created: 2025-07-04
-//  Modified: 2025-07-04
+//  Modified: 2025-07-06
 //
 //  Modification Log:
 //  - 2025-07-04: Initial creation with anonymous login and logout models
 //  - 2025-07-05: Added register and login request/response models
+//  - 2025-07-06: Enhanced User model with status tracking and profile data
 //
 //  Functions:
 //  - Codable models for API communication
@@ -37,7 +38,9 @@ struct AnonymousLoginRequest: Codable {
     
     /// Creates anonymous login request with secure device ID
     init() {
-        self.deviceId = DeviceIdentifier.shared.deviceId
+        // Use SettingsStore for device ID generation
+        let settingsStore = SettingsStore()
+        self.deviceId = (try? settingsStore.getOrCreateDeviceId()) ?? "iOS_\(UUID().uuidString)"
     }
     
     /// Creates anonymous login request with custom device ID (for testing)
@@ -69,7 +72,9 @@ struct RegisterRequest: Codable {
     ///   - password: Plain text password (will be hashed)
     ///   - userId: Optional user ID for existing anonymous users
     init(accountName: String, phoneNumber: String, password: String, userId: String? = nil) {
-        self.deviceId = DeviceIdentifier.shared.deviceId
+        // Use SettingsStore for device ID generation
+        let settingsStore = SettingsStore()
+        self.deviceId = (try? settingsStore.getOrCreateDeviceId()) ?? "iOS_\(UUID().uuidString)"
         self.accountName = accountName
         self.phoneNumber = phoneNumber
         self.password = Self.hashPassword(password)
@@ -140,7 +145,9 @@ struct LogoutRequest: Codable {
     /// Creates logout request with secure device ID
     init(userId: String) {
         self.userId = userId
-        self.deviceId = DeviceIdentifier.shared.deviceId
+        // Use SettingsStore for device ID generation
+        let settingsStore = SettingsStore()
+        self.deviceId = (try? settingsStore.getOrCreateDeviceId()) ?? "iOS_\(UUID().uuidString)"
     }
     
     /// Creates logout request with custom device ID (for testing)
@@ -180,13 +187,54 @@ struct ErrorResponse: Codable {
 
 // MARK: - User Data Models
 
-/// User information model
+/// User status enumeration for authentication levels
+enum UserStatus: Int, Codable {
+    case notLoggedIn = 0    // Default state, not logged in
+    case anonymous = 1      // Anonymous user, view-only access
+    case registered = 2     // Registered user, full access
+    
+    var description: String {
+        switch self {
+        case .notLoggedIn: return "Not Logged In"
+        case .anonymous: return "Anonymous User"
+        case .registered: return "Registered User"
+        }
+    }
+}
+
+/// User information model with authentication status and profile data
 struct User: Codable {
     let id: Int
     let deviceId: String?
+    let status: Int
+    let accountName: String?
+    let phoneNumber: String?
     
     enum CodingKeys: String, CodingKey {
         case id
         case deviceId = "device_id"
+        case status
+        case accountName = "account_name"
+        case phoneNumber = "phone_number"
+    }
+    
+    /// Computed property for type-safe status access
+    var userStatus: UserStatus {
+        return UserStatus(rawValue: status) ?? .notLoggedIn
+    }
+    
+    /// Initializer for creating user with specified status
+    /// - Parameters:
+    ///   - id: User ID from server
+    ///   - deviceId: Device identifier
+    ///   - status: User authentication status (0=not logged in, 1=anonymous, 2=registered)
+    ///   - accountName: User's full name (for registered users)
+    ///   - phoneNumber: User's phone number (for registered users)
+    init(id: Int, deviceId: String?, status: Int = 0, accountName: String? = nil, phoneNumber: String? = nil) {
+        self.id = id
+        self.deviceId = deviceId
+        self.status = status
+        self.accountName = accountName
+        self.phoneNumber = phoneNumber
     }
 }

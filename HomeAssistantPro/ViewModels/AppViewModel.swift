@@ -71,7 +71,7 @@ final class AppViewModel: ObservableObject {
     }
     
     // Login state stored in UserDefaults
-    private var isUserLoggedIn: Bool {
+    var isUserLoggedIn: Bool {
         get { UserDefaults.standard.bool(forKey: "is_logged_in") }
         set { UserDefaults.standard.set(newValue, forKey: "is_logged_in") }
     }
@@ -87,7 +87,11 @@ final class AppViewModel: ObservableObject {
             let response = try await apiClient.authenticateAnonymously()
             
             // Store user information (user ID is now stored securely by APIClient)
-            currentUser = User(id: response.data.user.id, deviceId: DeviceIdentifier.shared.deviceId)
+            let deviceId = try settingsStore.getOrCreateDeviceId()
+            // Create user with anonymous status (1)
+            currentUser = User(id: response.data.user.id, deviceId: deviceId, status: 1)
+            // Store user status for persistence
+            settingsStore.storeUserStatus(1)
             isLoggedIn = true
             isUserLoggedIn = true // Persist to UserDefaults
             
@@ -176,7 +180,25 @@ final class AppViewModel: ObservableObject {
     private func restoreLoginState() {
         if isUserLoggedIn, let userId = currentUserId {
             // Restore user session from stored data
-            currentUser = User(id: Int(userId) ?? 0, deviceId: DeviceIdentifier.shared.deviceId)
+            do {
+                let deviceId = try settingsStore.getOrCreateDeviceId()
+                let userStatus = settingsStore.retrieveUserStatus()
+                let accountName = settingsStore.retrieveAccountName()
+                let phoneNumber = settingsStore.retrievePhoneNumber()
+                
+                currentUser = User(
+                    id: Int(userId) ?? 0,
+                    deviceId: deviceId,
+                    status: userStatus,
+                    accountName: accountName,
+                    phoneNumber: phoneNumber
+                )
+            } catch {
+                logger.error("Failed to restore device ID: \(error.localizedDescription)")
+                // Fallback to logged out state if device ID cannot be retrieved
+                isLoggedIn = false
+                return
+            }
             isLoggedIn = true
             logger.info("Login state restored for user ID: \(userId)")
         } else {
