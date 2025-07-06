@@ -515,3 +515,10 @@ struct ChatMessage: Identifiable {
         )
     ]
 }
+
+// MARK: - Preview
+
+#Preview {
+    ChatView()
+        .environmentObject(AppViewModel())
+}

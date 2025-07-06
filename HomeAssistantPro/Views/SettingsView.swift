@@ -563,4 +563,11 @@ struct LanguageSelectionView: View {
     }
 }
 
+// MARK: - Preview
+
+#Preview {
+    SettingsView()
+        .environmentObject(AppViewModel())
+}
+
 

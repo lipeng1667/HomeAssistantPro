@@ -15,14 +15,14 @@ import SwiftUI
 /// Modern login screen with 2025 iOS design aesthetics
 struct ModernLoginView: View {
     @EnvironmentObject var appViewModel: AppViewModel
-    @State private var email: String = ""
+    @State private var phoneNumber: String = ""
     @State private var password: String = ""
     @State private var showPassword: Bool = false
-    @State private var isEmailValid = true
+    @State private var isPhoneNumberValid = true
     @State private var showError = false
     @State private var errorMessage = ""
     @State private var isLoading = false
-    @FocusState private var isEmailFocused: Bool
+    @FocusState private var isPhoneNumberFocused: Bool
     @FocusState private var isPasswordFocused: Bool
     
     /// Callback to navigate to registration view
@@ -162,26 +162,26 @@ struct ModernLoginView: View {
     
     private var inputFieldsSection: some View {
         VStack(spacing: 16) {
-            modernEmailField
+            modernPhoneNumberField
             modernPasswordField
         }
     }
     
-    private var modernEmailField: some View {
+    private var modernPhoneNumberField: some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack {
                 Image(systemName: "phone.fill")
                     .foregroundColor(.secondary)
                     .frame(width: 20)
                 
-                TextField("Phone number", text: $email)
+                TextField("Phone number", text: $phoneNumber)
                     .font(.system(size: 16, weight: .medium))
                     .keyboardType(.phonePad)
                     .autocapitalization(.none)
-                    .focused($isEmailFocused)
-                    .onChange(of: email) { newValue in
-                        email = formatPhoneNumber(newValue)
-                        validateEmail(email)
+                    .focused($isPhoneNumberFocused)
+                    .onChange(of: phoneNumber) { newValue in
+                        phoneNumber = PhoneNumberUtils.formatPhoneNumber(newValue)
+                        validatePhoneNumber(phoneNumber)
                     }
             }
             .padding(.horizontal, 20)
@@ -192,15 +192,15 @@ struct ModernLoginView: View {
                     .overlay(
                         RoundedRectangle(cornerRadius: 16)
                             .stroke(
-                                isEmailFocused ? Color(hex: "#8B5CF6") :
-                                !isEmailValid ? Color.red : Color.clear,
-                                lineWidth: isEmailFocused ? 2 : 1
+                                isPhoneNumberFocused ? Color(hex: "#8B5CF6") :
+                                !isPhoneNumberValid ? Color.red : Color.clear,
+                                lineWidth: isPhoneNumberFocused ? 2 : 1
                             )
                     )
             )
-            .animation(.easeInOut(duration: 0.2), value: isEmailFocused)
+            .animation(.easeInOut(duration: 0.2), value: isPhoneNumberFocused)
             
-            if !isEmailValid {
+            if !isPhoneNumberValid {
                 HStack {
                     Image(systemName: "exclamationmark.triangle.fill")
                         .foregroundColor(.red)
@@ -419,7 +419,7 @@ struct ModernLoginView: View {
     
     
     private func dismissKeyboard() {
-        isEmailFocused = false
+        isPhoneNumberFocused = false
         isPasswordFocused = false
     }
     
@@ -433,57 +433,16 @@ struct ModernLoginView: View {
         impactFeedback.impactOccurred()
     }
     
-    private func validateEmail(_ phoneNumber: String) {
-        // Extract digits only for validation
-        let digits = phoneNumber.replacingOccurrences(of: "[^0-9]", with: "", options: .regularExpression)
-        
+    private func validatePhoneNumber(_ phoneNumber: String) {
         withAnimation(.easeInOut(duration: 0.3)) {
-            // China mobile numbers: 11 digits starting with 1 and valid second digit
-            if phoneNumber.isEmpty {
-                isEmailValid = true
-            } else if digits.count == 11 && digits.hasPrefix("1") {
-                // Valid China mobile prefixes: 13X, 14X, 15X, 16X, 17X, 18X, 19X
-                let secondDigit = String(digits.dropFirst(1).prefix(1))
-                isEmailValid = ["3", "4", "5", "6", "7", "8", "9"].contains(secondDigit)
-            } else {
-                isEmailValid = false
-            }
+            isPhoneNumberValid = PhoneNumberUtils.validatePhoneNumber(phoneNumber)
         }
     }
     
     private func isFormValid() -> Bool {
-        return !email.isEmpty && !password.isEmpty && isEmailValid
+        return !phoneNumber.isEmpty && !password.isEmpty && isPhoneNumberValid
     }
     
-    /// Formats phone number with China mobile format (3-4-4 spacing)
-    /// - Parameter phoneNumber: Raw phone number string
-    /// - Returns: Formatted phone number string in China format
-    private func formatPhoneNumber(_ phoneNumber: String) -> String {
-        // Remove all non-numeric characters
-        let digits = phoneNumber.replacingOccurrences(of: "[^0-9]", with: "", options: .regularExpression)
-        
-        // Limit to 11 digits (China mobile standard)
-        let limitedDigits = String(digits.prefix(11))
-        
-        // Format based on length - China format: XXX XXXX XXXX
-        switch limitedDigits.count {
-        case 0:
-            return ""
-        case 1...3:
-            return limitedDigits
-        case 4...7:
-            let firstPart = String(limitedDigits.prefix(3))
-            let secondPart = String(limitedDigits.dropFirst(3))
-            return "\(firstPart) \(secondPart)"
-        case 8...11:
-            let firstPart = String(limitedDigits.prefix(3))
-            let secondPart = String(limitedDigits.dropFirst(3).prefix(4))
-            let thirdPart = String(limitedDigits.dropFirst(7))
-            return "\(firstPart) \(secondPart) \(thirdPart)"
-        default:
-            return limitedDigits
-        }
-    }
     
     private func handleLogin() {
         guard isFormValid() else { return }
@@ -509,7 +468,7 @@ struct ModernLoginView: View {
         }
         
         // Remove spaces from phone number for API
-        let cleanPhoneNumber = email.replacingOccurrences(of: " ", with: "")
+        let cleanPhoneNumber = phoneNumber.replacingOccurrences(of: " ", with: "")
         
         Task {
             do {
@@ -587,4 +546,13 @@ struct ModernLoginView: View {
             }
         }
     }
+}
+
+// MARK: - Preview
+
+#Preview {
+    ModernLoginView {
+        print("Create account")
+    }
+    .environmentObject(AppViewModel())
 }

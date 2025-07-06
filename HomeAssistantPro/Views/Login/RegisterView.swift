@@ -257,7 +257,7 @@ struct RegisterView: View {
                     .autocapitalization(.none)
                     .focused($isPhoneNumberFocused)
                     .onChange(of: phoneNumber) { newValue in
-                        phoneNumber = formatPhoneNumber(newValue)
+                        phoneNumber = PhoneNumberUtils.formatPhoneNumber(newValue)
                         validatePhoneNumber(phoneNumber)
                     }
             }
@@ -654,20 +654,8 @@ struct RegisterView: View {
     /// Validates China mobile phone number format
     /// - Parameter phoneNumber: Phone number string to validate
     private func validatePhoneNumber(_ phoneNumber: String) {
-        // Extract digits only for validation
-        let digits = phoneNumber.replacingOccurrences(of: "[^0-9]", with: "", options: .regularExpression)
-        
         withAnimation(.easeInOut(duration: 0.3)) {
-            // China mobile numbers: 11 digits starting with 1 and valid second digit
-            if phoneNumber.isEmpty {
-                isPhoneNumberValid = true
-            } else if digits.count == 11 && digits.hasPrefix("1") {
-                // Valid China mobile prefixes: 13X, 14X, 15X, 16X, 17X, 18X, 19X
-                let secondDigit = String(digits.dropFirst(1).prefix(1))
-                isPhoneNumberValid = ["3", "4", "5", "6", "7", "8", "9"].contains(secondDigit)
-            } else {
-                isPhoneNumberValid = false
-            }
+            isPhoneNumberValid = PhoneNumberUtils.validatePhoneNumber(phoneNumber)
         }
     }
     

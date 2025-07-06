@@ -544,3 +544,10 @@ struct EnhancedMainTabView: View {
         }
     }
 }
+
+// MARK: - Preview
+
+#Preview {
+    MainTabView()
+        .environmentObject(AppViewModel())
+}

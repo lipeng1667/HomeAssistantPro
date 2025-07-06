@@ -321,3 +321,21 @@ extension BackgroundConfiguration {
         ]
     )
 }
+
+// MARK: - Preview
+
+#Preview {
+    VStack(spacing: 20) {
+        Text("Home Background")
+            .font(.title)
+            .foregroundColor(.white)
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .background(StandardTabBackground(configuration: .home))
+        
+        Text("Login Background")
+            .font(.title)
+            .foregroundColor(.white)
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .background(StandardTabBackground(configuration: .login))
+    }
+}

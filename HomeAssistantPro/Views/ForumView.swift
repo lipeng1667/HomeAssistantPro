@@ -487,3 +487,10 @@ struct CreatePostView: View {
     }
 }
 
+// MARK: - Preview
+
+#Preview {
+    ForumView()
+        .environmentObject(AppViewModel())
+}
+

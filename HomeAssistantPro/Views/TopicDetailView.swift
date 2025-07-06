@@ -98,4 +98,4 @@ struct TopicDetailView: View {
         .navigationTitle("Topic")
         .navigationBarTitleDisplayMode(.inline)
     }
-} 
+}
