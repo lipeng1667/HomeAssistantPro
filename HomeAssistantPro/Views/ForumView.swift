@@ -19,6 +19,8 @@ struct ForumView: View {
     @State private var animateCards = false
     @State private var searchFocused = false
     @State private var showCreatePost = false
+    @State private var showCreateMenu = false
+    @StateObject private var draftManager = DraftManager.shared
     
     // Sample topics data
     let topics = [
@@ -44,12 +46,8 @@ struct ForumView: View {
                 StandardTabBackground(configuration: .forum)
                 
                 VStack(spacing: 0) {
-                    // Standardized header
-                    StandardTabHeader(configuration: .forum(onCreatePost: {
-                        withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
-                            showCreatePost = true
-                        }
-                    }))
+                    // Enhanced header with contextual menu
+                    enhancedHeader
                     
                     // Search bar
                     searchSection
@@ -67,11 +65,127 @@ struct ForumView: View {
             startAnimations()
         }
         .sheet(isPresented: $showCreatePost) {
-            CreatePostView()
+            EnhancedCreatePostView()
+        }
+        .confirmationDialog("Create Post", isPresented: $showCreateMenu, titleVisibility: .visible) {
+            Button("New Topic") {
+                withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
+                    showCreatePost = true
+                }
+            }
+            
+            if draftManager.currentDraft != nil {
+                Button("Continue Draft") {
+                    withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
+                        showCreatePost = true
+                    }
+                }
+            }
+            
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            if let draft = draftManager.currentDraft {
+                Text("You have an unfinished draft from \(formatDraftDate(draft.lastModified))")
+            } else {
+                Text("Choose how you'd like to contribute to the community")
+            }
         }
     }
     
     
+    // MARK: - Enhanced Header
+    
+    private var enhancedHeader: some View {
+        HStack(alignment: .center) {
+            // Left section
+            VStack(alignment: .leading, spacing: DesignTokens.ResponsiveSpacing.xs) {
+                Text("COMMUNITY")
+                    .font(DesignTokens.ResponsiveTypography.caption)
+                    .foregroundColor(DesignTokens.Colors.Forum.primary)
+                    .tracking(1.5)
+                
+                Text("Forum")
+                    .font(DesignTokens.ResponsiveTypography.headingLarge)
+                    .foregroundColor(DesignTokens.Colors.textPrimary)
+            }
+            
+            Spacer()
+            
+            // Right action button with contextual menu
+            Button(action: {
+                HapticManager.buttonTap()
+                if draftManager.currentDraft != nil {
+                    showCreateMenu = true
+                } else {
+                    withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
+                        showCreatePost = true
+                    }
+                }
+            }) {
+                ZStack {
+                    Circle()
+                        .fill(.ultraThinMaterial)
+                        .frame(
+                            width: DesignTokens.DeviceSize.current.spacing(44, 48, 52),
+                            height: DesignTokens.DeviceSize.current.spacing(44, 48, 52)
+                        )
+                        .overlay(
+                            Circle()
+                                .stroke(DesignTokens.Colors.Forum.primary.opacity(0.3), lineWidth: 1)
+                        )
+                        .standardShadowLight()
+                    
+                    // Show draft indicator if available
+                    if draftManager.currentDraft != nil {
+                        VStack(spacing: 2) {
+                            Image(systemName: "doc.text")
+                                .font(.system(size: DesignTokens.DeviceSize.current.fontSize(12, 14, 16), weight: .semibold))
+                                .foregroundColor(DesignTokens.Colors.Forum.primary)
+                            
+                            Circle()
+                                .fill(DesignTokens.Colors.primaryAmber)
+                                .frame(width: 6, height: 6)
+                        }
+                    } else {
+                        Image(systemName: "plus")
+                            .font(.system(size: DesignTokens.DeviceSize.current.fontSize(16, 18, 20), weight: .semibold))
+                            .foregroundColor(DesignTokens.Colors.Forum.primary)
+                    }
+                }
+            }
+            .scaleButtonStyle()
+            .contextMenu {
+                Button {
+                    withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
+                        showCreatePost = true
+                    }
+                } label: {
+                    Label("New Topic", systemImage: "plus.bubble")
+                }
+                
+                if draftManager.currentDraft != nil {
+                    Button {
+                        withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
+                            showCreatePost = true
+                        }
+                    } label: {
+                        Label("Continue Draft", systemImage: "doc.text")
+                    }
+                    
+                    Button(role: .destructive) {
+                        withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
+                            draftManager.clearDraft()
+                        }
+                        HapticManager.buttonTap()
+                    } label: {
+                        Label("Delete Draft", systemImage: "trash")
+                    }
+                }
+            }
+        }
+        .responsiveHorizontalPadding(20, 24, 28)
+        .responsiveVerticalPadding(16, 20, 24)
+    }
     
     // MARK: - Search Section
     
@@ -280,7 +394,15 @@ struct ForumView: View {
         withAnimation(.spring(response: 0.8, dampingFraction: 0.7).delay(0.3)) {
             animateCards = true
         }
-        
+    }
+    
+    /// Format draft date for display in confirmation dialog
+    /// - Parameter date: Draft creation/modification date
+    /// - Returns: Formatted relative date string
+    private func formatDraftDate(_ date: Date) -> String {
+        let formatter = RelativeDateTimeFormatter()
+        formatter.dateTimeStyle = .named
+        return formatter.localizedString(for: date, relativeTo: Date())
     }
 }
 

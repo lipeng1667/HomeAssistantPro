@@ -243,6 +243,7 @@ struct FullscreenVideoModal: View {
                     Image(systemName: "gobackward")
                         .font(.system(size: 20, weight: .semibold))
                         .foregroundColor(.white.opacity(0.8))
+                        .frame(width: 24, height: 24) // Fixed frame to prevent layout shifts
                 }
                 .scaleButtonStyle()
                 
@@ -285,6 +286,7 @@ struct FullscreenVideoModal: View {
                     Image(systemName: volumeIcon)
                         .font(.system(size: 20, weight: .semibold))
                         .foregroundColor(.white.opacity(0.8))
+                        .frame(width: 24, height: 24) // Fixed frame to prevent layout shifts
                 }
                 .scaleButtonStyle()
             }
