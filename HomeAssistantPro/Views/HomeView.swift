@@ -25,6 +25,7 @@
 //
 
 import SwiftUI
+import AVFoundation
 
 /// Modern home view with contemporary design aesthetics
 struct HomeView: View {
@@ -48,17 +49,17 @@ struct HomeView: View {
                         .scaleEffect(animateCards ? 1.0 : 0.95)
                         .opacity(animateCards ? 1.0 : 0.8)
                         .offset(y: featuredCardOffset)
-                        .padding(.horizontal, DesignTokens.ResponsiveSpacing.lg)
+                        .responsiveHorizontalPadding(16, 20, 24)
                     
                     // Daily tips card
                     dailyTipsCard
                         .scaleEffect(tipCardScale)
                         .opacity(animateCards ? 1.0 : 0.8)
-                        .padding(.horizontal, DesignTokens.ResponsiveSpacing.lg)
+                        .responsiveHorizontalPadding(16, 20, 24)
                     
                     // Bottom padding for tab bar
                     Spacer()
-                        .frame(height: 120)
+                        .frame(height: DesignTokens.DeviceSize.current.spacing(80, 100, 120))
                 }
             }
             .refreshable {
@@ -75,10 +76,10 @@ struct HomeView: View {
     // MARK: - Featured Case Card
     
     private var featuredCaseCard: some View {
-        VStack(alignment: .leading, spacing: 20) {
+        VStack(alignment: .leading, spacing: DesignTokens.DeviceSize.current.spacing(16, 18, 20)) {
             // Section header
             HStack {
-                VStack(alignment: .leading, spacing: 4) {
+                VStack(alignment: .leading, spacing: DesignTokens.DeviceSize.current.spacing(3, 4, 5)) {
                     Text(LocalizedKeys.homeFeaturedCase.localized)
                         .font(DesignTokens.ResponsiveTypography.headingMedium)
                         .foregroundColor(DesignTokens.Colors.textPrimary)
@@ -94,9 +95,12 @@ struct HomeView: View {
                     // Navigate to full case study
                 }) {
                     Image(systemName: "arrow.up.right")
-                        .font(.system(size: 16, weight: .semibold))
+                        .font(.system(size: DesignTokens.DeviceSize.current.fontSize(14, 16, 18), weight: .semibold))
                         .foregroundColor(DesignTokens.Colors.textSecondary)
-                        .frame(width: 32, height: 32)
+                        .frame(
+                            width: DesignTokens.DeviceSize.current.spacing(28, 32, 36),
+                            height: DesignTokens.DeviceSize.current.spacing(28, 32, 36)
+                        )
                         .background(
                             Circle()
                                 .fill(.ultraThinMaterial)
@@ -109,82 +113,59 @@ struct HomeView: View {
                 .scaleButtonStyle()
             }
             
-            // Main card content
-            ZStack(alignment: .bottomLeading) {
-                // Card background
-                RoundedRectangle(cornerRadius: 24)
-                    .fill(.ultraThinMaterial)
-                    .frame(height: 220)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 24)
-                            .stroke(DesignTokens.Colors.borderPrimary, lineWidth: 1)
+            // Hybrid video card (70% video, 30% content)
+            VStack(spacing: 0) {
+                // Video section (70% of total height) - Only top corners rounded
+                VideoPlayerView(
+                    asset: .smartHomeDemo,
+                    cornerRadius: 0 // Remove internal corner radius
+                )
+                .frame(height: DesignTokens.DeviceSize.current.spacing(126, 140, 154))
+                .clipShape(
+                    TopRoundedRectangle(
+                        topLeadingRadius: DesignTokens.DeviceSize.current.spacing(20, 22, 24),
+                        topTrailingRadius: DesignTokens.DeviceSize.current.spacing(20, 22, 24)
                     )
-                    .shadow(color: DesignTokens.Shadow.strong.color, radius: DesignTokens.Shadow.strong.radius, x: DesignTokens.Shadow.strong.x, y: DesignTokens.Shadow.strong.y)
+                )
                 
-                // Background pattern
-                RoundedRectangle(cornerRadius: 24)
-                    .fill(
-                        LinearGradient(
-                            colors: [
-                                DesignTokens.Colors.primaryPurple.opacity(0.1),
-                                DesignTokens.Colors.primaryCyan.opacity(0.05)
-                            ],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        )
-                    )
-                    .frame(height: 220)
-                
-                // Icon container
-                VStack {
-                    Spacer()
-                    HStack {
-                        Spacer()
-                        ZStack {
-                            Circle()
-                                .fill(
-                                    LinearGradient(
-                                        colors: [DesignTokens.Colors.primaryPurple.opacity(0.2), DesignTokens.Colors.primaryCyan.opacity(0.1)],
-                                        startPoint: .topLeading,
-                                        endPoint: .bottomTrailing
-                                    )
-                                )
-                                .frame(width: 100, height: 100)
-                                .blur(radius: 20)
-                            
-                            Image(systemName: "house.fill")
-                                .font(.system(size: 40, weight: .medium))
-                                .foregroundColor(DesignTokens.Colors.primaryPurple)
-                        }
-                        Spacer()
-                    }
-                    Spacer()
-                }
-                
-                // Content overlay
-                VStack(alignment: .leading, spacing: 8) {
+                // Content section (30% of total height)
+                VStack(alignment: .leading, spacing: DesignTokens.DeviceSize.current.spacing(6, 8, 10)) {
                     Text(LocalizedKeys.homeSmartHomeDesign.localized)
-                        .font(DesignTokens.ResponsiveTypography.headingMedium)
+                        .font(DesignTokens.ResponsiveTypography.bodyMedium)
                         .foregroundColor(DesignTokens.Colors.textPrimary)
                     
                     Text("A sleek, minimalist design with integrated smart lighting and security systems for the modern lifestyle.")
-                        .font(.system(size: 15, weight: .medium))
+                        .font(DesignTokens.ResponsiveTypography.bodySmall)
                         .foregroundColor(.primary.opacity(0.7))
-                        .lineLimit(2)
+                        .lineLimit(DesignTokens.DeviceSize.current.isSmallDevice ? 1 : 2)
                         .multilineTextAlignment(.leading)
                 }
-                .padding(24)
+                .padding(DesignTokens.DeviceSize.current.spacing(16, 18, 20))
                 .frame(maxWidth: .infinity, alignment: .leading)
+                .frame(height: DesignTokens.DeviceSize.current.spacing(54, 60, 66)) // 30% of 180/200/220
                 .background(
-                    LinearGradient(
-                        colors: [Color.clear, DesignTokens.Colors.textPrimary.opacity(0.02)],
-                        startPoint: .top,
-                        endPoint: .bottom
+                    BottomRoundedRectangle(
+                        bottomLeadingRadius: DesignTokens.DeviceSize.current.spacing(20, 22, 24),
+                        bottomTrailingRadius: DesignTokens.DeviceSize.current.spacing(20, 22, 24)
+                    )
+                    .fill(.ultraThinMaterial)
+                    .overlay(
+                        BottomRoundedRectangle(
+                            bottomLeadingRadius: DesignTokens.DeviceSize.current.spacing(20, 22, 24),
+                            bottomTrailingRadius: DesignTokens.DeviceSize.current.spacing(20, 22, 24)
+                        )
+                        .stroke(DesignTokens.Colors.borderPrimary, lineWidth: 1)
                     )
                 )
             }
+            .background(
+                RoundedRectangle(cornerRadius: DesignTokens.DeviceSize.current.spacing(20, 22, 24))
+                    .fill(.ultraThinMaterial)
+                    .shadow(color: DesignTokens.Shadow.strong.color, radius: DesignTokens.Shadow.strong.radius, x: DesignTokens.Shadow.strong.x, y: DesignTokens.Shadow.strong.y)
+            )
+            .clipShape(RoundedRectangle(cornerRadius: DesignTokens.DeviceSize.current.spacing(20, 22, 24)))
         }
-        .padding(DesignTokens.ResponsiveSpacing.xs)
+        .responsivePadding(6, 8, 10)
         .onTapGesture {
             withAnimation(.spring(response: 0.3, dampingFraction: 0.6)) {
                 featuredCardOffset = -5
@@ -201,10 +182,10 @@ struct HomeView: View {
     // MARK: - Daily Tips Card
     
     private var dailyTipsCard: some View {
-        VStack(alignment: .leading, spacing: 20) {
+        VStack(alignment: .leading, spacing: DesignTokens.DeviceSize.current.spacing(16, 18, 20)) {
             // Section header
             HStack {
-                VStack(alignment: .leading, spacing: 4) {
+                VStack(alignment: .leading, spacing: DesignTokens.DeviceSize.current.spacing(3, 4, 5)) {
                     Text("Daily Tips")
                         .font(DesignTokens.ResponsiveTypography.headingMedium)
                         .foregroundColor(DesignTokens.Colors.textPrimary)
@@ -222,8 +203,8 @@ struct HomeView: View {
                     Text("More")
                         .font(DesignTokens.ResponsiveTypography.bodyMedium)
                         .foregroundColor(DesignTokens.Colors.primaryAmber)
-                        .padding(.horizontal, 16)
-                        .padding(.vertical, 8)
+                        .padding(.horizontal, DesignTokens.DeviceSize.current.spacing(14, 16, 18))
+                        .padding(.vertical, DesignTokens.DeviceSize.current.spacing(6, 8, 10))
                         .background(
                             Capsule()
                                 .fill(DesignTokens.Colors.primaryAmber.opacity(0.1))
@@ -237,18 +218,18 @@ struct HomeView: View {
             }
             
             // Tip card
-            HStack(spacing: 20) {
-                VStack(alignment: .leading, spacing: 12) {
+            HStack(spacing: DesignTokens.DeviceSize.current.spacing(16, 20, 24)) {
+                VStack(alignment: .leading, spacing: DesignTokens.DeviceSize.current.spacing(10, 12, 14)) {
                     // Tip category
                     HStack {
                         Text("💡")
-                            .font(.system(size: 16))
+                            .font(.system(size: DesignTokens.DeviceSize.current.fontSize(14, 16, 18)))
                         
                         Text("Energy Saving")
-                            .font(.system(size: 12, weight: .semibold))
+                            .font(.system(size: DesignTokens.DeviceSize.current.fontSize(11, 12, 13), weight: .semibold))
                             .foregroundColor(DesignTokens.Colors.primaryAmber)
-                            .padding(.horizontal, 12)
-                            .padding(.vertical, 4)
+                            .padding(.horizontal, DesignTokens.DeviceSize.current.spacing(10, 12, 14))
+                            .padding(.vertical, DesignTokens.DeviceSize.current.spacing(3, 4, 5))
                             .background(
                                 Capsule()
                                     .fill(DesignTokens.Colors.primaryAmber.opacity(0.15))
@@ -256,7 +237,7 @@ struct HomeView: View {
                     }
                     
                     // Tip content
-                    VStack(alignment: .leading, spacing: 8) {
+                    VStack(alignment: .leading, spacing: DesignTokens.DeviceSize.current.spacing(6, 8, 10)) {
                         Text("Turn off lights in unoccupied rooms")
                             .font(DesignTokens.ResponsiveTypography.bodyLarge)
                             .foregroundColor(DesignTokens.Colors.textPrimary)
@@ -264,7 +245,7 @@ struct HomeView: View {
                         Text("Small actions can lead to significant savings on your energy bill. Make it a habit to switch off lights when leaving a room.")
                             .font(DesignTokens.ResponsiveTypography.bodyMedium)
                             .foregroundColor(DesignTokens.Colors.textSecondary)
-                            .lineLimit(3)
+                            .lineLimit(DesignTokens.DeviceSize.current.isSmallDevice ? 2 : 3)
                     }
                 }
                 
@@ -272,7 +253,7 @@ struct HomeView: View {
                 
                 // Icon container
                 ZStack {
-                    RoundedRectangle(cornerRadius: 20)
+                    RoundedRectangle(cornerRadius: DesignTokens.DeviceSize.current.spacing(16, 20, 24))
                         .fill(
                             LinearGradient(
                                 colors: [DesignTokens.Colors.primaryAmber.opacity(0.15), DesignTokens.Colors.primaryAmber.opacity(0.05)],
@@ -280,29 +261,32 @@ struct HomeView: View {
                                 endPoint: .bottomTrailing
                             )
                         )
-                        .frame(width: 90, height: 90)
+                        .frame(
+                            width: DesignTokens.DeviceSize.current.spacing(80, 90, 100),
+                            height: DesignTokens.DeviceSize.current.spacing(80, 90, 100)
+                        )
                         .overlay(
-                            RoundedRectangle(cornerRadius: 20)
+                            RoundedRectangle(cornerRadius: DesignTokens.DeviceSize.current.spacing(16, 20, 24))
                                 .stroke(DesignTokens.Colors.primaryAmber.opacity(0.2), lineWidth: 1)
                         )
                     
                     Image(systemName: "lightbulb.fill")
-                        .font(.system(size: 32, weight: .medium))
+                        .font(.system(size: DesignTokens.DeviceSize.current.fontSize(28, 32, 36), weight: .medium))
                         .foregroundColor(DesignTokens.Colors.primaryAmber)
                 }
             }
             .padding(DesignTokens.ResponsiveSpacing.cardPadding)
             .background(
-                RoundedRectangle(cornerRadius: 24)
+                RoundedRectangle(cornerRadius: DesignTokens.DeviceSize.current.spacing(20, 22, 24))
                     .fill(.ultraThinMaterial)
                     .overlay(
-                        RoundedRectangle(cornerRadius: 24)
+                        RoundedRectangle(cornerRadius: DesignTokens.DeviceSize.current.spacing(20, 22, 24))
                             .stroke(DesignTokens.Colors.borderPrimary, lineWidth: 1)
                     )
                     .shadow(color: DesignTokens.Shadow.strong.color, radius: DesignTokens.Shadow.strong.radius, x: DesignTokens.Shadow.strong.x, y: DesignTokens.Shadow.strong.y)
             )
         }
-        .padding(DesignTokens.ResponsiveSpacing.xs)
+        .responsivePadding(6, 8, 10)
         .onTapGesture {
             withAnimation(.spring(response: 0.3, dampingFraction: 0.6)) {
                 tipCardScale = 0.98
@@ -332,6 +316,104 @@ struct HomeView: View {
                 continuation.resume()
             }
         }
+    }
+}
+
+// MARK: - Custom Shapes
+
+/// Custom shape for selective corner rounding (top corners only)
+struct TopRoundedRectangle: Shape {
+    let topLeadingRadius: CGFloat
+    let topTrailingRadius: CGFloat
+    
+    func path(in rect: CGRect) -> Path {
+        var path = Path()
+        
+        let width = rect.size.width
+        let height = rect.size.height
+        
+        // Start from bottom left
+        path.move(to: CGPoint(x: 0, y: height))
+        
+        // Left edge to top left corner
+        path.addLine(to: CGPoint(x: 0, y: topLeadingRadius))
+        
+        // Top left corner curve
+        path.addArc(
+            center: CGPoint(x: topLeadingRadius, y: topLeadingRadius),
+            radius: topLeadingRadius,
+            startAngle: Angle(degrees: 180),
+            endAngle: Angle(degrees: 270),
+            clockwise: false
+        )
+        
+        // Top edge to top right corner
+        path.addLine(to: CGPoint(x: width - topTrailingRadius, y: 0))
+        
+        // Top right corner curve
+        path.addArc(
+            center: CGPoint(x: width - topTrailingRadius, y: topTrailingRadius),
+            radius: topTrailingRadius,
+            startAngle: Angle(degrees: 270),
+            endAngle: Angle(degrees: 0),
+            clockwise: false
+        )
+        
+        // Right edge to bottom right (straight corner)
+        path.addLine(to: CGPoint(x: width, y: height))
+        
+        // Bottom edge back to start
+        path.addLine(to: CGPoint(x: 0, y: height))
+        
+        return path
+    }
+}
+
+/// Custom shape for selective corner rounding (bottom corners only)
+struct BottomRoundedRectangle: Shape {
+    let bottomLeadingRadius: CGFloat
+    let bottomTrailingRadius: CGFloat
+    
+    func path(in rect: CGRect) -> Path {
+        var path = Path()
+        
+        let width = rect.size.width
+        let height = rect.size.height
+        
+        // Start from top left (straight corner)
+        path.move(to: CGPoint(x: 0, y: 0))
+        
+        // Top edge to top right (straight corner)
+        path.addLine(to: CGPoint(x: width, y: 0))
+        
+        // Right edge to bottom right corner
+        path.addLine(to: CGPoint(x: width, y: height - bottomTrailingRadius))
+        
+        // Bottom right corner curve
+        path.addArc(
+            center: CGPoint(x: width - bottomTrailingRadius, y: height - bottomTrailingRadius),
+            radius: bottomTrailingRadius,
+            startAngle: Angle(degrees: 0),
+            endAngle: Angle(degrees: 90),
+            clockwise: false
+        )
+        
+        // Bottom edge to bottom left corner
+        path.addLine(to: CGPoint(x: bottomLeadingRadius, y: height))
+        
+        // Bottom left corner curve
+        path.addArc(
+            center: CGPoint(x: bottomLeadingRadius, y: height - bottomLeadingRadius),
+            radius: bottomLeadingRadius,
+            startAngle: Angle(degrees: 90),
+            endAngle: Angle(degrees: 180),
+            clockwise: false
+        )
+        
+        // Left edge back to start
+        path.addLine(to: CGPoint(x: 0, y: 0))
+        
+        return path
     }
 }
 
