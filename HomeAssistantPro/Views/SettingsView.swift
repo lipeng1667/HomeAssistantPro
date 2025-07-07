@@ -97,7 +97,7 @@ struct SettingsView: View {
             return "Upgrade to unlock full features"
         case .registered:
             if let phoneNumber = currentUser.phoneNumber {
-                return "Phone: \(phoneNumber)"
+                return "Phone: \(PhoneNumberUtils.formatPhoneNumber(phoneNumber))"
             } else {
                 return "Member since registration"
             }
@@ -172,104 +172,69 @@ struct SettingsView: View {
         VStack(spacing: DesignTokens.DeviceSize.current.spacing(12, 14, 16)) {
             // Main profile info card
             GlassmorphismCard(configuration: .settings) {
-                HStack(spacing: DesignTokens.ResponsiveSpacing.lg) {
-                    // Status indicator with icon
-                    VStack(spacing: DesignTokens.ResponsiveSpacing.sm) {
-                        ZStack {
-                            RoundedRectangle(cornerRadius: DesignTokens.CornerRadius.lg)
-                                .fill(statusColor.opacity(0.15))
-                                .frame(
-                                    width: DesignTokens.ResponsiveContainer.profileIconSize,
-                                    height: DesignTokens.ResponsiveContainer.profileIconSize
-                                )
-                            
-                            Image(systemName: profileIconName)
-                                .font(.system(
-                                    size: DesignTokens.DeviceSize.current.fontSize(24, 26, 28),
-                                    weight: .medium
-                                ))
-                                .foregroundColor(statusColor)
-                        }
-                        
-                        Text(userStatusText)
-                            .font(DesignTokens.ResponsiveTypography.caption)
-                            .foregroundColor(statusColor)
-                            .multilineTextAlignment(.center)
-                    }
+                // User information
+                VStack(alignment: .leading, spacing: DesignTokens.ResponsiveSpacing.md) {
                     
-                    // User information
-                    VStack(alignment: .leading, spacing: DesignTokens.ResponsiveSpacing.sm) {
+                    // Quick stats or info based on status
+                    HStack(spacing: DesignTokens.DeviceSize.current.spacing(12, 14, 16)) {
                         Text(displayName)
                             .font(DesignTokens.ResponsiveTypography.headingMedium)
                             .foregroundColor(.primary)
                         
-                        if let membershipText = membershipText {
-                            Text(membershipText)
-                                .font(DesignTokens.ResponsiveTypography.bodySmall)
-                                .foregroundColor(.secondary)
-                                .lineLimit(2)
-                        }
-                        
-                        // Quick stats or info based on status
-                        HStack(spacing: DesignTokens.DeviceSize.current.spacing(12, 14, 16)) {
-                            if let currentUser = appViewModel.currentUser {
-                                switch currentUser.userStatus {
-                                case .registered:
-                                    quickInfoItem(icon: "checkmark.shield.fill", text: "Verified", color: DesignTokens.Colors.primaryGreen)
-                                case .anonymous:
-                                    quickInfoItem(icon: "eye.fill", text: "View Only", color: DesignTokens.Colors.primaryAmber)
-                                case .notLoggedIn:
-                                    quickInfoItem(icon: "person.slash", text: "Offline", color: DesignTokens.Colors.primaryRed)
-                                }
+                        if let currentUser = appViewModel.currentUser {
+                            switch currentUser.userStatus {
+                            case .registered:
+                                quickInfoItem(icon: "checkmark.shield.fill", text: "Verified", color: DesignTokens.Colors.primaryGreen)
+                            case .anonymous:
+                                quickInfoItem(icon: "eye.fill", text: "View Only", color: DesignTokens.Colors.primaryAmber)
+                            case .notLoggedIn:
+                                quickInfoItem(icon: "person.slash", text: "Offline", color: DesignTokens.Colors.primaryRed)
                             }
-                            Spacer()
                         }
+                        Spacer()
                     }
                     
-                    Spacer()
-                }
-                .padding(.vertical, DesignTokens.DeviceSize.current.spacing(16, 18, 20))
-            }
-            
-            // Action buttons row
-            HStack(spacing: DesignTokens.ResponsiveSpacing.md) {
-                if let currentUser = appViewModel.currentUser {
-                    switch currentUser.userStatus {
-                    case .anonymous:
-                        modernActionButton(
-                            title: "Upgrade Account",
-                            icon: "arrow.up.circle.fill",
-                            color: DesignTokens.Colors.primaryGreen,
-                            style: .primary
-                        )
-                    case .registered:
-                        modernActionButton(
-                            title: "Edit Profile",
-                            icon: "pencil.circle.fill",
-                            color: DesignTokens.Colors.primaryCyan,
-                            style: .secondary
-                        )
-                        modernActionButton(
-                            title: "Account Settings",
-                            icon: "gearshape.fill",
-                            color: DesignTokens.Colors.primaryPurple,
-                            style: .secondary
-                        )
-                    case .notLoggedIn:
-                        modernActionButton(
-                            title: "Sign In",
-                            icon: "person.crop.circle.fill",
-                            color: DesignTokens.Colors.primaryCyan,
-                            style: .primary
-                        )
+                    if let membershipText = membershipText {
+                        Text(membershipText)
+                            .font(DesignTokens.ResponsiveTypography.bodySmall)
+                            .foregroundColor(.secondary)
+                            .lineLimit(2)
                     }
-                } else {
-                    modernActionButton(
-                        title: "Get Started",
-                        icon: "arrow.right.circle.fill",
-                        color: DesignTokens.Colors.primaryCyan,
-                        style: .primary
-                    )
+                    // Action buttons row
+                    HStack(spacing: DesignTokens.ResponsiveSpacing.md) {
+                        if let currentUser = appViewModel.currentUser {
+                            switch currentUser.userStatus {
+                            case .anonymous:
+                                modernActionButton(
+                                    title: "Upgrade Account",
+                                    icon: "arrow.up.circle.fill",
+                                    color: DesignTokens.Colors.primaryGreen,
+                                    style: .primary
+                                )
+                            case .registered:
+                                modernActionButton(
+                                    title: "Edit Profile",
+                                    icon: "pencil.circle.fill",
+                                    color: DesignTokens.Colors.primaryCyan,
+                                    style: .secondary
+                                )
+                            case .notLoggedIn:
+                                modernActionButton(
+                                    title: "Sign In",
+                                    icon: "person.crop.circle.fill",
+                                    color: DesignTokens.Colors.primaryCyan,
+                                    style: .primary
+                                )
+                            }
+                        } else {
+                            modernActionButton(
+                                title: "Get Started",
+                                icon: "arrow.right.circle.fill",
+                                color: DesignTokens.Colors.primaryCyan,
+                                style: .primary
+                            )
+                        }
+                    }
                 }
             }
         }
@@ -346,50 +311,7 @@ struct SettingsView: View {
         case secondary
     }
     
-    /// Theme selection row
-    private var themeSelectionRow: some View {
-        Button(action: {
-            showThemeSelection = true
-        }) {
-            HStack(spacing: DesignTokens.DeviceSize.current.spacing(12, 14, 16)) {
-                ZStack {
-                    Circle()
-                        .fill(DesignTokens.Colors.primaryPurple.opacity(0.15))
-                        .frame(
-                            width: DesignTokens.DeviceSize.current.spacing(35, 39.5, 44),
-                            height: DesignTokens.DeviceSize.current.spacing(35, 39.5, 44)
-                        )
-                    
-                    Image(systemName: themeIcon)
-                        .font(.system(size: DesignTokens.DeviceSize.current.fontSize(14, 16, 18), weight: .semibold))
-                        .foregroundColor(DesignTokens.Colors.primaryPurple)
-                }
-                
-                VStack(alignment: .leading, spacing: DesignTokens.DeviceSize.current.spacing(1.5, 1.75, 2)) {
-                    Text("Theme")
-                        .font(.system(size: DesignTokens.DeviceSize.current.fontSize(12, 14, 16), weight: .semibold))
-                        .foregroundColor(DesignTokens.Colors.textPrimary)
-                    
-                    Text(currentThemeDisplayName)
-                        .font(.system(size: DesignTokens.DeviceSize.current.fontSize(11, 12.5, 14), weight: .medium))
-                        .foregroundColor(DesignTokens.Colors.textSecondary)
-                }
-                
-                Spacer()
-                
-                HStack(spacing: DesignTokens.DeviceSize.current.spacing(6, 7, 8)) {
-                    Text(themeEmoji)
-                        .font(.system(size: DesignTokens.DeviceSize.current.fontSize(16, 18, 20)))
-                    
-                    Image(systemName: "chevron.right")
-                        .font(.system(size: DesignTokens.DeviceSize.current.fontSize(10, 11, 12), weight: .semibold))
-                        .foregroundColor(DesignTokens.Colors.textTertiary)
-                }
-            }.contentShape(Rectangle())
-        }
-        .cardButtonStyle()
-    }
-    
+
     /// Current theme display name
     private var currentThemeDisplayName: String {
         switch settingsStore.selectedTheme {
@@ -487,7 +409,46 @@ struct SettingsView: View {
                         Divider().opacity(0.5)
                         
                         // Theme Selection Row
-                        themeSelectionRow
+                        Button(action: {
+                            showThemeSelection = true
+                        }) {
+                            HStack(spacing: DesignTokens.DeviceSize.current.spacing(12, 14, 16)) {
+                                ZStack {
+                                    Circle()
+                                        .fill(DesignTokens.Colors.primaryPurple.opacity(0.15))
+                                        .frame(
+                                            width: DesignTokens.DeviceSize.current.spacing(35, 39.5, 44),
+                                            height: DesignTokens.DeviceSize.current.spacing(35, 39.5, 44)
+                                        )
+                                    
+                                    Image(systemName: themeIcon)
+                                        .font(.system(size: DesignTokens.DeviceSize.current.fontSize(14, 16, 18), weight: .semibold))
+                                        .foregroundColor(DesignTokens.Colors.primaryPurple)
+                                }
+                                
+                                VStack(alignment: .leading, spacing: DesignTokens.DeviceSize.current.spacing(1.5, 1.75, 2)) {
+                                    Text("Theme")
+                                        .font(.system(size: DesignTokens.DeviceSize.current.fontSize(12, 14, 16), weight: .semibold))
+                                        .foregroundColor(DesignTokens.Colors.textPrimary)
+                                    
+                                    Text(currentThemeDisplayName)
+                                        .font(.system(size: DesignTokens.DeviceSize.current.fontSize(11, 12.5, 14), weight: .medium))
+                                        .foregroundColor(DesignTokens.Colors.textSecondary)
+                                }
+                                
+                                Spacer()
+                                
+                                HStack(spacing: DesignTokens.DeviceSize.current.spacing(6, 7, 8)) {
+                                    Text(themeEmoji)
+                                        .font(.system(size: DesignTokens.DeviceSize.current.fontSize(16, 18, 20)))
+                                    
+                                    Image(systemName: "chevron.right")
+                                        .font(.system(size: DesignTokens.DeviceSize.current.fontSize(10, 11, 12), weight: .semibold))
+                                        .foregroundColor(DesignTokens.Colors.textTertiary)
+                                }
+                            }.contentShape(Rectangle())
+                        }
+                        .cardButtonStyle()
                         
                     }
                 }
@@ -617,6 +578,7 @@ struct SettingsView: View {
 struct ThemeSelectionView: View {
     @EnvironmentObject var settingsStore: SettingsStore
     @Environment(\.presentationMode) var presentationMode
+    @State private var applyingTheme = false
     
     private let themes: [(key: String, name: String, description: String, icon: String, emoji: String)] = [
         ("system", "Follow System", "Matches your device settings", "circle.lefthalf.filled", "⚫"),
@@ -661,15 +623,13 @@ struct ThemeSelectionView: View {
                                     
                                     if theme.key != themes.last?.key {
                                         Divider()
-                                            .padding(.horizontal, DesignTokens.ResponsiveSpacing.lg)
+                                            .padding(.horizontal, DesignTokens.ResponsiveSpacing.md)
                                     }
                                 }
                             }
                             .padding(.vertical, DesignTokens.ResponsiveSpacing.md)
                         }
-                        .padding(.horizontal, DesignTokens.ResponsiveSpacing.lg)
-                        
-                        Spacer()
+                        .padding(.horizontal, DesignTokens.ResponsiveSpacing.md)
                     }
                 }
             }
@@ -689,26 +649,41 @@ struct ThemeSelectionView: View {
     
     private func themeRow(theme: (key: String, name: String, description: String, icon: String, emoji: String)) -> some View {
         Button(action: {
+            guard !applyingTheme else { return }
+            
             HapticManager.buttonTap()
-            withAnimation(.spring(response: 0.5, dampingFraction: 0.8)) {
+            applyingTheme = true
+            
+            // Apply theme immediately with animation
+            withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
                 settingsStore.storeSelectedTheme(theme.key)
             }
             
+            // Provide success feedback
+            HapticManager.success()
+            
             // Dismiss after a short delay to show the selection
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                applyingTheme = false
                 presentationMode.wrappedValue.dismiss()
             }
         }) {
-            HStack(spacing: DesignTokens.ResponsiveSpacing.lg) {
+            HStack(spacing: DesignTokens.ResponsiveSpacing.md) {
                 // Theme icon
                 ZStack {
                     Circle()
                         .fill(DesignTokens.Colors.primaryPurple.opacity(0.15))
                         .frame(width: 50, height: 50)
                     
-                    Image(systemName: theme.icon)
-                        .font(.system(size: 20, weight: .semibold))
-                        .foregroundColor(DesignTokens.Colors.primaryPurple)
+                    if applyingTheme && settingsStore.selectedTheme == theme.key {
+                        ProgressView()
+                            .progressViewStyle(CircularProgressViewStyle(tint: DesignTokens.Colors.primaryPurple))
+                            .scaleEffect(0.8)
+                    } else {
+                        Image(systemName: theme.icon)
+                            .font(.system(size: 20, weight: .semibold))
+                            .foregroundColor(DesignTokens.Colors.primaryPurple)
+                    }
                 }
                 
                 // Theme Info
@@ -716,31 +691,32 @@ struct ThemeSelectionView: View {
                     HStack(spacing: 8) {
                         Text(theme.emoji)
                             .font(.system(size: 20))
-                        
                         Text(theme.name)
-                            .font(DesignTokens.ResponsiveTypography.bodyLarge)
+                            .font(DesignTokens.ResponsiveTypography.bodyMedium)
                             .foregroundColor(DesignTokens.Colors.textPrimary)
                     }
-                    
-                    Text(theme.description)
-                        .font(DesignTokens.ResponsiveTypography.bodyMedium)
-                        .foregroundColor(DesignTokens.Colors.textSecondary)
                 }
                 
                 Spacer()
                 
                 // Selection Indicator
-                if settingsStore.selectedTheme == theme.key {
+                if settingsStore.selectedTheme == theme.key && !applyingTheme {
                     Image(systemName: "checkmark.circle.fill")
                         .font(.system(size: 20, weight: .semibold))
                         .foregroundColor(DesignTokens.Colors.primaryCyan)
                         .transition(.scale.combined(with: .opacity))
+                } else if applyingTheme && settingsStore.selectedTheme == theme.key {
+                    Text("Applying...")
+                        .font(.system(size: 12, weight: .medium))
+                        .foregroundColor(DesignTokens.Colors.primaryPurple)
+                        .transition(.opacity)
                 }
             }
-            .padding(.horizontal, DesignTokens.ResponsiveSpacing.lg)
-            .padding(.vertical, DesignTokens.ResponsiveSpacing.lg)
+            .padding(.horizontal, DesignTokens.ResponsiveSpacing.md)
+            .padding(.vertical, DesignTokens.ResponsiveSpacing.md)
             .contentShape(Rectangle())
         }
+        .disabled(applyingTheme)
         .scaleButtonStyle()
     }
 }
@@ -862,10 +838,17 @@ struct LanguageSelectionView: View {
 
 // MARK: - Preview
 
-#Preview {
+// MARK: – Preview
+#Preview("Registered user") {
+    // Build a configured AppViewModel in one expression
+    let mockVM: AppViewModel = {
+        let vm = AppViewModel()
+        vm.currentUser = User(id: 0, deviceId: "sdfs", status: 2, accountName: "Jenny", phoneNumber: "18655554444")
+        return vm
+    }()
+
+    // Pass the configured objects into the preview
     SettingsView()
-        .environmentObject(AppViewModel())
-        .environmentObject(SettingsStore())
+        .environmentObject(mockVM)
+        .environmentObject(SettingsStore())   // keep your settings store
 }
-
-

@@ -24,27 +24,44 @@ struct HomeAssistantProApp: App {
     @StateObject private var settingsStore = SettingsStore()
     @State private var showSplash = true
     
+    /// Converts stored theme preference to SwiftUI ColorScheme
+    private var preferredColorScheme: ColorScheme? {
+        switch settingsStore.selectedTheme {
+        case "light":
+            return .light
+        case "dark":
+            return .dark
+        case "system":
+            return nil
+        default:
+            return nil
+        }
+    }
+    
     var body: some Scene {
         WindowGroup {
-            if showSplash {
-                SplashView {
-                    completeSplash()
+            Group {
+                if showSplash {
+                    SplashView {
+                        completeSplash()
+                    }
+                    .environmentObject(appViewModel)
+                    .environmentObject(settingsStore)
+                } else if settingsStore.isFirstLaunch {
+                    IntroView()
+                        .environmentObject(appViewModel)
+                        .environmentObject(settingsStore)
+                } else if appViewModel.isLoggedIn {
+                    MainTabView()
+                        .environmentObject(appViewModel)
+                        .environmentObject(settingsStore)
+                } else {
+                    AuthenticationView()
+                        .environmentObject(appViewModel)
+                        .environmentObject(settingsStore)
                 }
-                .environmentObject(appViewModel)
-                .environmentObject(settingsStore)
-            } else if settingsStore.isFirstLaunch {
-                IntroView()
-                    .environmentObject(appViewModel)
-                    .environmentObject(settingsStore)
-            } else if appViewModel.isLoggedIn {
-                MainTabView()
-                    .environmentObject(appViewModel)
-                    .environmentObject(settingsStore)
-            } else {
-                AuthenticationView()
-                    .environmentObject(appViewModel)
-                    .environmentObject(settingsStore)
             }
+            .preferredColorScheme(preferredColorScheme)
         }
     }
     
