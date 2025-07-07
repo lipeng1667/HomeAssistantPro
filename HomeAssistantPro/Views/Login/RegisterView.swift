@@ -53,21 +53,22 @@ struct RegisterView: View {
                 
                 ScrollView {
                     VStack(spacing: 0) {
-                        Spacer(minLength: 20)
+                        Spacer(minLength: DesignTokens.DeviceSize.current.spacing(16, 18, 20))
                         
                         // Header section with modern styling
                         headerSection
-                            .padding(.bottom, 32)
+                            .padding(.bottom, DesignTokens.DeviceSize.current.spacing(24, 28, 32))
                         
                         // Main content card
                         mainContentCard
-                            .padding(.horizontal, 20)
+                            .padding(.horizontal, DesignTokens.DeviceSize.current.spacing(16, 18, 20))
+                            .frame(maxWidth: DesignTokens.DeviceSize.current.spacing(600, 700, 800))
                         
-                        Spacer(minLength: 20)
+                        Spacer(minLength: DesignTokens.DeviceSize.current.spacing(16, 18, 20))
                         
                         // Footer section
                         footerSection
-                            .padding(.bottom, 40)
+                            .padding(.bottom, DesignTokens.DeviceSize.current.spacing(32, 36, 40))
                     }
                 }
             }
@@ -94,27 +95,27 @@ struct RegisterView: View {
     // MARK: - Header Section
     
     private var headerSection: some View {
-        VStack(spacing: 24) {
+        VStack(spacing: DesignTokens.DeviceSize.current.spacing(20, 22, 24)) {
             // Back button
             HStack {
                 Button(action: {
                     HapticManager.buttonTap()
                     onBackToLogin()
                 }) {
-                    HStack(spacing: 8) {
+                    HStack(spacing: DesignTokens.DeviceSize.current.spacing(6, 7, 8)) {
                         Image(systemName: "chevron.left")
-                            .font(.system(size: 16, weight: .semibold))
+                            .font(.system(size: DesignTokens.DeviceSize.current.fontSize(14, 15, 16), weight: .semibold))
                         Text("Back")
-                            .font(.system(size: 16, weight: .medium))
+                            .font(.system(size: DesignTokens.DeviceSize.current.fontSize(14, 15, 16), weight: .medium))
                     }
                     .foregroundColor(DesignTokens.Colors.primaryPurple)
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 8)
+                    .padding(.horizontal, DesignTokens.DeviceSize.current.spacing(12, 14, 16))
+                    .padding(.vertical, DesignTokens.DeviceSize.current.spacing(6, 7, 8))
                     .background(
-                        RoundedRectangle(cornerRadius: 12)
+                        RoundedRectangle(cornerRadius: DesignTokens.DeviceSize.current.spacing(10, 11, 12))
                             .fill(.ultraThinMaterial)
                             .overlay(
-                                RoundedRectangle(cornerRadius: 12)
+                                RoundedRectangle(cornerRadius: DesignTokens.DeviceSize.current.spacing(10, 11, 12))
                                     .stroke(DesignTokens.Colors.borderSecondary, lineWidth: 1)
                             )
                     )
@@ -123,13 +124,13 @@ struct RegisterView: View {
                 
                 Spacer()
             }
-            .padding(.horizontal, 20)
+            .padding(.horizontal, DesignTokens.DeviceSize.current.spacing(16, 18, 20))
             
             // Modern logo with liquid glass effect
             modernLogo
             
             // Welcome text with refined typography
-            VStack(spacing: 12) {
+            VStack(spacing: DesignTokens.DeviceSize.current.spacing(10, 11, 12)) {
                 Text("Create Account")
                     .font(DesignTokens.ResponsiveTypography.headingLarge)
                     .foregroundStyle(titleGradient)
@@ -138,7 +139,7 @@ struct RegisterView: View {
                 Text("Join the smart home revolution")
                     .font(DesignTokens.ResponsiveTypography.bodyMedium)
                     .foregroundColor(DesignTokens.Colors.textSecondary)
-                    .tracking(0.5)
+                    .tracking(DesignTokens.DeviceSize.current.spacing(0.3, 0.4, 0.5))
             }
         }
     }
@@ -146,18 +147,21 @@ struct RegisterView: View {
     private var modernLogo: some View {
         ZStack {
             // Background blur effect
-            RoundedRectangle(cornerRadius: DesignTokens.CornerRadius.xxxl)
+            RoundedRectangle(cornerRadius: DesignTokens.DeviceSize.current.spacing(24, 26, 28))
                 .fill(.ultraThinMaterial)
-                .frame(width: 80, height: 80)
+                .frame(
+                    width: DesignTokens.DeviceSize.current.spacing(64, 72, 80),
+                    height: DesignTokens.DeviceSize.current.spacing(64, 72, 80)
+                )
                 .standardShadowMedium()
                 .overlay(
-                    RoundedRectangle(cornerRadius: DesignTokens.CornerRadius.xxxl)
+                    RoundedRectangle(cornerRadius: DesignTokens.DeviceSize.current.spacing(24, 26, 28))
                         .stroke(DesignTokens.Colors.borderPrimary.opacity(0.5), lineWidth: 1)
                 )
             
             // Logo content
             Image(systemName: "person.badge.plus.fill")
-                .font(.system(size: 32, weight: .medium))
+                .font(.system(size: DesignTokens.DeviceSize.current.fontSize(24, 28, 32), weight: .medium))
                 .foregroundStyle(
                     LinearGradient(
                         colors: [
@@ -168,7 +172,12 @@ struct RegisterView: View {
                         endPoint: .bottomTrailing
                     )
                 )
-                .shadow(color: DesignTokens.Colors.primaryPurple.opacity(0.3), radius: 8, x: 0, y: 4)
+                .shadow(
+                    color: DesignTokens.Colors.primaryPurple.opacity(0.3),
+                    radius: DesignTokens.DeviceSize.current.spacing(6, 7, 8),
+                    x: 0,
+                    y: DesignTokens.DeviceSize.current.spacing(3, 3.5, 4)
+                )
         }
         .accessibilityLabel("Registration icon")
     }
@@ -188,7 +197,7 @@ struct RegisterView: View {
     // MARK: - Main Content Card
     
     private var mainContentCard: some View {
-        VStack(spacing: DesignTokens.ResponsiveSpacing.lg) {
+        VStack(spacing: DesignTokens.DeviceSize.current.spacing(20, 22, 24)) {
             // Input fields section
             inputFieldsSection
             
@@ -204,14 +213,14 @@ struct RegisterView: View {
             // Alternative options
             alternativeOptions
         }
-        .padding(.vertical, DesignTokens.ResponsiveSpacing.xl)
-        .padding(.horizontal, DesignTokens.ResponsiveSpacing.cardPadding)
+        .padding(.vertical, DesignTokens.DeviceSize.current.spacing(26, 29, 32))
+        .padding(.horizontal, DesignTokens.DeviceSize.current.spacing(20, 22, 24))
         .background(
-            RoundedRectangle(cornerRadius: DesignTokens.CornerRadius.xxl)
+            RoundedRectangle(cornerRadius: DesignTokens.DeviceSize.current.spacing(20, 22, 24))
                 .fill(.ultraThinMaterial)
                 .standardShadowMedium()
                 .overlay(
-                    RoundedRectangle(cornerRadius: DesignTokens.CornerRadius.xxl)
+                    RoundedRectangle(cornerRadius: DesignTokens.DeviceSize.current.spacing(20, 22, 24))
                         .stroke(DesignTokens.Colors.borderPrimary.opacity(0.3), lineWidth: 1)
                 )
         )
@@ -220,7 +229,7 @@ struct RegisterView: View {
     // MARK: - Input Fields
     
     private var inputFieldsSection: some View {
-        VStack(spacing: DesignTokens.Spacing.lg) {
+        VStack(spacing: DesignTokens.DeviceSize.current.spacing(14, 15, 16)) {
             modernFullNameField
             modernPhoneNumberField
             modernPasswordField
@@ -229,24 +238,24 @@ struct RegisterView: View {
     }
     
     private var modernFullNameField: some View {
-        VStack(alignment: .leading, spacing: DesignTokens.Spacing.sm) {
+        VStack(alignment: .leading, spacing: DesignTokens.DeviceSize.current.spacing(6, 7, 8)) {
             HStack {
                 Image(systemName: "person.fill")
                     .foregroundColor(DesignTokens.Colors.textSecondary)
-                    .frame(width: DesignTokens.IconSize.lg)
+                    .frame(width: DesignTokens.DeviceSize.current.spacing(16, 17, 18))
                 
                 TextField("Full Name", text: $fullName)
                     .font(DesignTokens.ResponsiveTypography.bodyMedium)
                     .autocapitalization(.words)
                     .focused($isFullNameFocused)
             }
-            .padding(.horizontal, DesignTokens.Spacing.xl)
-            .padding(.vertical, DesignTokens.Spacing.lg)
+            .padding(.horizontal, DesignTokens.DeviceSize.current.spacing(16, 18, 20))
+            .padding(.vertical, DesignTokens.DeviceSize.current.spacing(14, 15, 16))
             .background(
-                RoundedRectangle(cornerRadius: DesignTokens.CornerRadius.lg)
+                RoundedRectangle(cornerRadius: DesignTokens.DeviceSize.current.spacing(14, 15, 16))
                     .fill(DesignTokens.Colors.backgroundSurface)
                     .overlay(
-                        RoundedRectangle(cornerRadius: DesignTokens.CornerRadius.lg)
+                        RoundedRectangle(cornerRadius: DesignTokens.DeviceSize.current.spacing(14, 15, 16))
                             .stroke(
                                 isFullNameFocused ? DesignTokens.Colors.primaryPurple : Color.clear,
                                 lineWidth: isFullNameFocused ? 2 : 1
@@ -259,11 +268,11 @@ struct RegisterView: View {
     }
     
     private var modernPhoneNumberField: some View {
-        VStack(alignment: .leading, spacing: DesignTokens.Spacing.sm) {
+        VStack(alignment: .leading, spacing: DesignTokens.DeviceSize.current.spacing(6, 7, 8)) {
             HStack {
                 Image(systemName: "phone.fill")
                     .foregroundColor(DesignTokens.Colors.textSecondary)
-                    .frame(width: DesignTokens.IconSize.lg)
+                    .frame(width: DesignTokens.DeviceSize.current.spacing(16, 17, 18))
                 
                 TextField("Phone Number", text: $phoneNumber)
                     .font(DesignTokens.ResponsiveTypography.bodyMedium)
@@ -275,13 +284,13 @@ struct RegisterView: View {
                         validatePhoneNumber(phoneNumber)
                     }
             }
-            .padding(.horizontal, DesignTokens.Spacing.xl)
-            .padding(.vertical, DesignTokens.Spacing.lg)
+            .padding(.horizontal, DesignTokens.DeviceSize.current.spacing(16, 18, 20))
+            .padding(.vertical, DesignTokens.DeviceSize.current.spacing(14, 15, 16))
             .background(
-                RoundedRectangle(cornerRadius: DesignTokens.CornerRadius.lg)
+                RoundedRectangle(cornerRadius: DesignTokens.DeviceSize.current.spacing(14, 15, 16))
                     .fill(DesignTokens.Colors.backgroundSurface)
                     .overlay(
-                        RoundedRectangle(cornerRadius: DesignTokens.CornerRadius.lg)
+                        RoundedRectangle(cornerRadius: DesignTokens.DeviceSize.current.spacing(14, 15, 16))
                             .stroke(
                                 isPhoneNumberFocused ? DesignTokens.Colors.primaryPurple :
                                 !isPhoneNumberValid ? DesignTokens.Colors.primaryRed : Color.clear,
@@ -295,10 +304,10 @@ struct RegisterView: View {
                 HStack {
                     Image(systemName: "exclamationmark.triangle.fill")
                         .foregroundColor(DesignTokens.Colors.primaryRed)
-                        .font(.caption)
+                        .font(.system(size: DesignTokens.DeviceSize.current.fontSize(10, 11, 12)))
                     
                     Text("Please enter a valid phone number")
-                        .font(.caption)
+                        .font(.system(size: DesignTokens.DeviceSize.current.fontSize(10, 11, 12)))
                         .foregroundColor(DesignTokens.Colors.primaryRed)
                 }
                 .transition(.opacity.combined(with: .move(edge: .top)))
@@ -308,11 +317,11 @@ struct RegisterView: View {
     }
     
     private var modernPasswordField: some View {
-        VStack(alignment: .leading, spacing: DesignTokens.Spacing.sm) {
+        VStack(alignment: .leading, spacing: DesignTokens.DeviceSize.current.spacing(6, 7, 8)) {
             HStack {
                 Image(systemName: "lock.fill")
                     .foregroundColor(DesignTokens.Colors.textSecondary)
-                    .frame(width: DesignTokens.IconSize.lg)
+                    .frame(width: DesignTokens.DeviceSize.current.spacing(16, 17, 18))
                 
                 Group {
                     if showPassword {
@@ -331,17 +340,17 @@ struct RegisterView: View {
                 Button(action: togglePasswordVisibility) {
                     Image(systemName: showPassword ? "eye.slash.fill" : "eye.fill")
                         .foregroundColor(DesignTokens.Colors.textSecondary)
-                        .font(.system(size: DesignTokens.IconSize.lg))
+                        .font(.system(size: DesignTokens.DeviceSize.current.spacing(16, 17, 18)))
                 }
                 .accessibilityLabel(showPassword ? "Hide password" : "Show password")
             }
-            .padding(.horizontal, DesignTokens.Spacing.xl)
-            .padding(.vertical, DesignTokens.Spacing.lg)
+            .padding(.horizontal, DesignTokens.DeviceSize.current.spacing(16, 18, 20))
+            .padding(.vertical, DesignTokens.DeviceSize.current.spacing(14, 15, 16))
             .background(
-                RoundedRectangle(cornerRadius: DesignTokens.CornerRadius.lg)
+                RoundedRectangle(cornerRadius: DesignTokens.DeviceSize.current.spacing(14, 15, 16))
                     .fill(DesignTokens.Colors.backgroundSurface)
                     .overlay(
-                        RoundedRectangle(cornerRadius: DesignTokens.CornerRadius.lg)
+                        RoundedRectangle(cornerRadius: DesignTokens.DeviceSize.current.spacing(14, 15, 16))
                             .stroke(
                                 isPasswordFocused ? DesignTokens.Colors.primaryPurple :
                                 !isPasswordValid ? DesignTokens.Colors.primaryRed : Color.clear,
@@ -352,26 +361,26 @@ struct RegisterView: View {
             .animation(.easeInOut(duration: 0.2), value: isPasswordFocused)
             
             if !isPasswordValid && !password.isEmpty {
-                VStack(alignment: .leading, spacing: 4) {
+                VStack(alignment: .leading, spacing: DesignTokens.DeviceSize.current.spacing(3, 3.5, 4)) {
                     Text("Password must contain:")
-                        .font(.caption)
+                        .font(.system(size: DesignTokens.DeviceSize.current.fontSize(10, 11, 12)))
                         .foregroundColor(DesignTokens.Colors.textSecondary)
                     
-                    HStack(spacing: 8) {
+                    HStack(spacing: DesignTokens.DeviceSize.current.spacing(6, 7, 8)) {
                         Image(systemName: password.count >= 7 ? "checkmark.circle.fill" : "circle")
                             .foregroundColor(password.count >= 7 ? DesignTokens.Colors.primaryGreen : DesignTokens.Colors.textTertiary)
-                            .font(.caption)
+                            .font(.system(size: DesignTokens.DeviceSize.current.fontSize(10, 11, 12)))
                         Text("At least 7 characters")
-                            .font(.caption)
+                            .font(.system(size: DesignTokens.DeviceSize.current.fontSize(10, 11, 12)))
                             .foregroundColor(DesignTokens.Colors.textSecondary)
                     }
                     
-                    HStack(spacing: 8) {
+                    HStack(spacing: DesignTokens.DeviceSize.current.spacing(6, 7, 8)) {
                         Image(systemName: password.contains(where: { $0.isNumber }) ? "checkmark.circle.fill" : "circle")
                             .foregroundColor(password.contains(where: { $0.isNumber }) ? DesignTokens.Colors.primaryGreen : DesignTokens.Colors.textTertiary)
-                            .font(.caption)
+                            .font(.system(size: DesignTokens.DeviceSize.current.fontSize(10, 11, 12)))
                         Text("One number")
-                            .font(.caption)
+                            .font(.system(size: DesignTokens.DeviceSize.current.fontSize(10, 11, 12)))
                             .foregroundColor(DesignTokens.Colors.textSecondary)
                     }
                 }
@@ -382,11 +391,11 @@ struct RegisterView: View {
     }
     
     private var modernConfirmPasswordField: some View {
-        VStack(alignment: .leading, spacing: DesignTokens.Spacing.sm) {
+        VStack(alignment: .leading, spacing: DesignTokens.DeviceSize.current.spacing(6, 7, 8)) {
             HStack {
                 Image(systemName: "lock.rectangle.fill")
                     .foregroundColor(DesignTokens.Colors.textSecondary)
-                    .frame(width: DesignTokens.IconSize.lg)
+                    .frame(width: DesignTokens.DeviceSize.current.spacing(16, 17, 18))
                 
                 Group {
                     if showConfirmPassword {
@@ -405,17 +414,17 @@ struct RegisterView: View {
                 Button(action: toggleConfirmPasswordVisibility) {
                     Image(systemName: showConfirmPassword ? "eye.slash.fill" : "eye.fill")
                         .foregroundColor(DesignTokens.Colors.textSecondary)
-                        .font(.system(size: DesignTokens.IconSize.lg))
+                        .font(.system(size: DesignTokens.DeviceSize.current.spacing(16, 17, 18)))
                 }
                 .accessibilityLabel(showConfirmPassword ? "Hide confirm password" : "Show confirm password")
             }
-            .padding(.horizontal, DesignTokens.Spacing.xl)
-            .padding(.vertical, DesignTokens.Spacing.lg)
+            .padding(.horizontal, DesignTokens.DeviceSize.current.spacing(16, 18, 20))
+            .padding(.vertical, DesignTokens.DeviceSize.current.spacing(14, 15, 16))
             .background(
-                RoundedRectangle(cornerRadius: DesignTokens.CornerRadius.lg)
+                RoundedRectangle(cornerRadius: DesignTokens.DeviceSize.current.spacing(14, 15, 16))
                     .fill(DesignTokens.Colors.backgroundSurface)
                     .overlay(
-                        RoundedRectangle(cornerRadius: DesignTokens.CornerRadius.lg)
+                        RoundedRectangle(cornerRadius: DesignTokens.DeviceSize.current.spacing(14, 15, 16))
                             .stroke(
                                 isConfirmPasswordFocused ? DesignTokens.Colors.primaryPurple :
                                 !isConfirmPasswordValid ? DesignTokens.Colors.primaryRed : Color.clear,
@@ -429,10 +438,10 @@ struct RegisterView: View {
                 HStack {
                     Image(systemName: "exclamationmark.triangle.fill")
                         .foregroundColor(DesignTokens.Colors.primaryRed)
-                        .font(.caption)
+                        .font(.system(size: DesignTokens.DeviceSize.current.fontSize(10, 11, 12)))
                     
                     Text("Passwords do not match")
-                        .font(.caption)
+                        .font(.system(size: DesignTokens.DeviceSize.current.fontSize(10, 11, 12)))
                         .foregroundColor(DesignTokens.Colors.primaryRed)
                 }
                 .transition(.opacity.combined(with: .move(edge: .top)))
@@ -444,35 +453,35 @@ struct RegisterView: View {
     // MARK: - Terms Agreement
     
     private var termsAgreementSection: some View {
-        HStack(alignment: .top, spacing: DesignTokens.Spacing.md) {
+        HStack(alignment: .top, spacing: DesignTokens.DeviceSize.current.spacing(10, 11, 12)) {
             Button(action: {
                 HapticManager.toggle()
                 agreedToTerms.toggle()
             }) {
                 Image(systemName: agreedToTerms ? "checkmark.square.fill" : "square")
                     .foregroundColor(agreedToTerms ? DesignTokens.Colors.primaryGreen : DesignTokens.Colors.textTertiary)
-                    .font(.system(size: DesignTokens.IconSize.lg))
+                    .font(.system(size: DesignTokens.DeviceSize.current.spacing(16, 17, 18)))
             }
             .accessibilityLabel(agreedToTerms ? "Terms agreed" : "Agree to terms")
             
-            VStack(alignment: .leading, spacing: 4) {
+            VStack(alignment: .leading, spacing: DesignTokens.DeviceSize.current.spacing(3, 3.5, 4)) {
                 Text("I agree to the Terms of Service and Privacy Policy")
-                    .font(.system(size: 14, weight: .medium))
+                    .font(.system(size: DesignTokens.DeviceSize.current.fontSize(12, 13, 14), weight: .medium))
                     .foregroundColor(DesignTokens.Colors.textPrimary)
                 
-                HStack(spacing: 16) {
+                HStack(spacing: DesignTokens.DeviceSize.current.spacing(12, 14, 16)) {
                     Button("Terms of Service") {
                         HapticManager.buttonTap()
                         // Handle terms viewing
                     }
-                    .font(.system(size: 13, weight: .medium))
+                    .font(.system(size: DesignTokens.DeviceSize.current.fontSize(11, 12, 13), weight: .medium))
                     .foregroundColor(DesignTokens.Colors.primaryPurple)
                     
                     Button("Privacy Policy") {
                         HapticManager.buttonTap()
                         // Handle privacy policy viewing
                     }
-                    .font(.system(size: 13, weight: .medium))
+                    .font(.system(size: DesignTokens.DeviceSize.current.fontSize(11, 12, 13), weight: .medium))
                     .foregroundColor(DesignTokens.Colors.primaryPurple)
                 }
             }
@@ -485,7 +494,7 @@ struct RegisterView: View {
     
     private var registerButton: some View {
         Button(action: handleRegistration) {
-            HStack(spacing: DesignTokens.Spacing.md) {
+            HStack(spacing: DesignTokens.DeviceSize.current.spacing(10, 11, 12)) {
                 if isLoading {
                     ProgressView()
                         .progressViewStyle(CircularProgressViewStyle(tint: .white))
@@ -496,9 +505,9 @@ struct RegisterView: View {
                     .font(DesignTokens.ResponsiveTypography.buttonLarge)
             }
             .frame(maxWidth: .infinity)
-            .padding(.vertical, DesignTokens.Spacing.lg)
+            .padding(.vertical, DesignTokens.DeviceSize.current.spacing(14, 15, 16))
             .background(
-                RoundedRectangle(cornerRadius: DesignTokens.CornerRadius.lg)
+                RoundedRectangle(cornerRadius: DesignTokens.DeviceSize.current.spacing(14, 15, 16))
                     .fill(
                         isFormValid() ?
                         LinearGradient(
@@ -517,9 +526,9 @@ struct RegisterView: View {
                     )
                     .shadow(
                         color: isFormValid() ? DesignTokens.Colors.primaryPurple.opacity(0.3) : Color.clear,
-                        radius: isFormValid() ? 12 : 0,
+                        radius: isFormValid() ? DesignTokens.DeviceSize.current.spacing(10, 11, 12) : 0,
                         x: 0,
-                        y: 6
+                        y: DesignTokens.DeviceSize.current.spacing(5, 5.5, 6)
                     )
             )
             .foregroundColor(.white)
@@ -531,7 +540,7 @@ struct RegisterView: View {
     }
     
     private var alternativeOptions: some View {
-        VStack(spacing: DesignTokens.Spacing.lg) {
+        VStack(spacing: DesignTokens.DeviceSize.current.spacing(14, 15, 16)) {
             // Divider
             HStack {
                 Rectangle()
@@ -539,9 +548,9 @@ struct RegisterView: View {
                     .foregroundColor(DesignTokens.Colors.borderPrimary)
                 
                 Text("or")
-                    .font(.system(size: 14, weight: .medium))
+                    .font(.system(size: DesignTokens.DeviceSize.current.fontSize(12, 13, 14), weight: .medium))
                     .foregroundColor(DesignTokens.Colors.textSecondary)
-                    .padding(.horizontal, DesignTokens.Spacing.lg)
+                    .padding(.horizontal, DesignTokens.DeviceSize.current.spacing(14, 15, 16))
                 
                 Rectangle()
                     .frame(height: 1)
@@ -553,13 +562,13 @@ struct RegisterView: View {
                 HapticManager.buttonTap()
                 onBackToLogin()
             }) {
-                HStack(spacing: DesignTokens.Spacing.sm) {
+                HStack(spacing: DesignTokens.DeviceSize.current.spacing(6, 7, 8)) {
                     Text("Already have an account?")
-                        .font(.system(size: 15, weight: .medium))
+                        .font(.system(size: DesignTokens.DeviceSize.current.fontSize(13, 14, 15), weight: .medium))
                         .foregroundColor(DesignTokens.Colors.textSecondary)
                     
                     Text("Sign In")
-                        .font(.system(size: 15, weight: .semibold))
+                        .font(.system(size: DesignTokens.DeviceSize.current.fontSize(13, 14, 15), weight: .semibold))
                         .foregroundColor(DesignTokens.Colors.primaryPurple)
                 }
             }
@@ -572,24 +581,24 @@ struct RegisterView: View {
     private var errorDisplay: some View {
         Group {
             if showError {
-                HStack(spacing: DesignTokens.Spacing.md) {
+                HStack(spacing: DesignTokens.DeviceSize.current.spacing(10, 11, 12)) {
                     Image(systemName: "exclamationmark.triangle.fill")
                         .foregroundColor(DesignTokens.Colors.primaryRed)
                     
                     Text(errorMessage)
-                        .font(.system(size: 14, weight: .medium))
+                        .font(.system(size: DesignTokens.DeviceSize.current.fontSize(12, 13, 14), weight: .medium))
                         .foregroundColor(DesignTokens.Colors.primaryRed)
                         .multilineTextAlignment(.leading)
                     
                     Spacer()
                 }
-                .padding(.horizontal, DesignTokens.Spacing.lg)
-                .padding(.vertical, DesignTokens.Spacing.md)
+                .padding(.horizontal, DesignTokens.DeviceSize.current.spacing(14, 15, 16))
+                .padding(.vertical, DesignTokens.DeviceSize.current.spacing(10, 11, 12))
                 .background(
-                    RoundedRectangle(cornerRadius: DesignTokens.CornerRadius.md)
+                    RoundedRectangle(cornerRadius: DesignTokens.DeviceSize.current.spacing(10, 11, 12))
                         .fill(DesignTokens.Colors.primaryRed.opacity(0.1))
                         .overlay(
-                            RoundedRectangle(cornerRadius: DesignTokens.CornerRadius.md)
+                            RoundedRectangle(cornerRadius: DesignTokens.DeviceSize.current.spacing(10, 11, 12))
                                 .stroke(DesignTokens.Colors.primaryRed.opacity(0.3), lineWidth: 1)
                         )
                 )
@@ -606,10 +615,10 @@ struct RegisterView: View {
             // Handle help/support
         }) {
             Text("Need help? Contact our support team")
-                .font(.system(size: 13))
+                .font(.system(size: DesignTokens.DeviceSize.current.fontSize(11, 12, 13)))
                 .foregroundColor(DesignTokens.Colors.textSecondary)
                 .multilineTextAlignment(.center)
-                .padding(.horizontal, 40)
+                .padding(.horizontal, DesignTokens.DeviceSize.current.spacing(32, 36, 40))
         }
     }
     

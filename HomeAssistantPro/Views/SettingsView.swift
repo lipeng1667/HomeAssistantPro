@@ -127,8 +127,8 @@ struct SettingsView: View {
                     .responsiveHorizontalPadding(6, 8, 10)
                     .limitedContentWidth()
                 }
-                .padding(.top, DesignTokens.Spacing.xl)
-                .padding(.bottom, DesignTokens.Spacing.tabBarBottom)
+                .padding(.top, DesignTokens.DeviceSize.current.spacing(16, 18, 20))
+                .padding(.bottom, DesignTokens.DeviceSize.current.spacing(96, 108, 120))
             }
         }
         .onChange(of: isFieldFocused) { focused in
@@ -169,7 +169,7 @@ struct SettingsView: View {
     
     /// Profile section with modern card-based design without profile image
     private var profileSection: some View {
-        VStack(spacing: 16) {
+        VStack(spacing: DesignTokens.DeviceSize.current.spacing(12, 14, 16)) {
             // Main profile info card
             GlassmorphismCard(configuration: .settings) {
                 HStack(spacing: DesignTokens.ResponsiveSpacing.lg) {
@@ -211,7 +211,7 @@ struct SettingsView: View {
                         }
                         
                         // Quick stats or info based on status
-                        HStack(spacing: 16) {
+                        HStack(spacing: DesignTokens.DeviceSize.current.spacing(12, 14, 16)) {
                             if let currentUser = appViewModel.currentUser {
                                 switch currentUser.userStatus {
                                 case .registered:
@@ -228,7 +228,7 @@ struct SettingsView: View {
                     
                     Spacer()
                 }
-                .padding(.vertical, 20)
+                .padding(.vertical, DesignTokens.DeviceSize.current.spacing(16, 18, 20))
             }
             
             // Action buttons row
@@ -278,17 +278,17 @@ struct SettingsView: View {
     
     /// Quick info item for status display
     private func quickInfoItem(icon: String, text: String, color: Color) -> some View {
-        HStack(spacing: 6) {
+        HStack(spacing: DesignTokens.DeviceSize.current.spacing(4, 5, 6)) {
             Image(systemName: icon)
-                .font(.system(size: 12, weight: .semibold))
+                .font(.system(size: DesignTokens.DeviceSize.current.fontSize(10, 11, 12), weight: .semibold))
                 .foregroundColor(color)
             
             Text(text)
-                .font(.system(size: 12, weight: .semibold))
+                .font(.system(size: DesignTokens.DeviceSize.current.fontSize(10, 11, 12), weight: .semibold))
                 .foregroundColor(color)
         }
-        .padding(.horizontal, 10)
-        .padding(.vertical, 4)
+        .padding(.horizontal, DesignTokens.DeviceSize.current.spacing(8, 9, 10))
+        .padding(.vertical, DesignTokens.DeviceSize.current.spacing(3, 3.5, 4))
         .background(
             Capsule()
                 .fill(color.opacity(0.12))
@@ -300,9 +300,9 @@ struct SettingsView: View {
         Button(action: {
             HapticManager.buttonTap()
         }) {
-            HStack(spacing: 8) {
+            HStack(spacing: DesignTokens.DeviceSize.current.spacing(6, 7, 8)) {
                 Image(systemName: icon)
-                    .font(.system(size: 14, weight: .semibold))
+                    .font(.system(size: DesignTokens.DeviceSize.current.fontSize(11, 12.5, 14), weight: .semibold))
                 
                 Text(title)
                     .font(DesignTokens.ResponsiveTypography.buttonMedium)
@@ -312,7 +312,7 @@ struct SettingsView: View {
             .responsiveVerticalPadding(10, 12, 14)
             .frame(maxWidth: .infinity)
             .background(
-                RoundedRectangle(cornerRadius: 12)
+                RoundedRectangle(cornerRadius: DesignTokens.DeviceSize.current.spacing(10, 11, 12))
                     .fill(
                         style == .primary ?
                         LinearGradient(
@@ -327,14 +327,14 @@ struct SettingsView: View {
                         )
                     )
                     .overlay(
-                        RoundedRectangle(cornerRadius: 12)
+                        RoundedRectangle(cornerRadius: DesignTokens.DeviceSize.current.spacing(10, 11, 12))
                             .stroke(style == .primary ? Color.clear : color.opacity(0.3), lineWidth: 1)
                     )
                     .shadow(
                         color: style == .primary ? color.opacity(0.3) : Color.clear,
-                        radius: style == .primary ? 8 : 0,
+                        radius: style == .primary ? DesignTokens.DeviceSize.current.spacing(6, 7, 8) : 0,
                         x: 0,
-                        y: 4
+                        y: DesignTokens.DeviceSize.current.spacing(3, 3.5, 4)
                     )
             )
         }
@@ -351,35 +351,38 @@ struct SettingsView: View {
         Button(action: {
             showThemeSelection = true
         }) {
-            HStack(spacing: 16) {
+            HStack(spacing: DesignTokens.DeviceSize.current.spacing(12, 14, 16)) {
                 ZStack {
                     Circle()
                         .fill(DesignTokens.Colors.primaryPurple.opacity(0.15))
-                        .frame(width: 44, height: 44)
+                        .frame(
+                            width: DesignTokens.DeviceSize.current.spacing(35, 39.5, 44),
+                            height: DesignTokens.DeviceSize.current.spacing(35, 39.5, 44)
+                        )
                     
                     Image(systemName: themeIcon)
-                        .font(.system(size: 18, weight: .semibold))
+                        .font(.system(size: DesignTokens.DeviceSize.current.fontSize(14, 16, 18), weight: .semibold))
                         .foregroundColor(DesignTokens.Colors.primaryPurple)
                 }
                 
-                VStack(alignment: .leading, spacing: 2) {
+                VStack(alignment: .leading, spacing: DesignTokens.DeviceSize.current.spacing(1.5, 1.75, 2)) {
                     Text("Theme")
-                        .font(.system(size: 16, weight: .semibold))
+                        .font(.system(size: DesignTokens.DeviceSize.current.fontSize(12, 14, 16), weight: .semibold))
                         .foregroundColor(DesignTokens.Colors.textPrimary)
                     
                     Text(currentThemeDisplayName)
-                        .font(.system(size: 14, weight: .medium))
+                        .font(.system(size: DesignTokens.DeviceSize.current.fontSize(11, 12.5, 14), weight: .medium))
                         .foregroundColor(DesignTokens.Colors.textSecondary)
                 }
                 
                 Spacer()
                 
-                HStack(spacing: 8) {
+                HStack(spacing: DesignTokens.DeviceSize.current.spacing(6, 7, 8)) {
                     Text(themeEmoji)
-                        .font(.system(size: 20))
+                        .font(.system(size: DesignTokens.DeviceSize.current.fontSize(16, 18, 20)))
                     
                     Image(systemName: "chevron.right")
-                        .font(.system(size: 12, weight: .semibold))
+                        .font(.system(size: DesignTokens.DeviceSize.current.fontSize(10, 11, 12), weight: .semibold))
                         .foregroundColor(DesignTokens.Colors.textTertiary)
                 }
             }.contentShape(Rectangle())
@@ -435,43 +438,46 @@ struct SettingsView: View {
         VStack(spacing: DesignTokens.ResponsiveSpacing.lg) {
             // Language & Preferences
             GlassmorphismCard(configuration: .settings) {
-                VStack(alignment: .leading, spacing: 24) {
+                VStack(alignment: .leading, spacing: DesignTokens.DeviceSize.current.spacing(20, 22, 24)) {
                     sectionHeader(title: LocalizedKeys.settingsPreferences.localized, icon: "gearshape.fill")
                     
-                    VStack(spacing: 20) {
+                    VStack(spacing: DesignTokens.DeviceSize.current.spacing(16, 18, 20)) {
                         // Language Selection
                         Button(action: {
                             showLanguageSelection = true
                         }) {
-                            HStack(spacing: 16) {
+                            HStack(spacing: DesignTokens.DeviceSize.current.spacing(12, 14, 16)) {
                                 ZStack {
                                     Circle()
                                         .fill(DesignTokens.Colors.primaryCyan.opacity(0.15))
-                                        .frame(width: 44, height: 44)
+                                        .frame(
+                                            width: DesignTokens.DeviceSize.current.spacing(35, 39.5, 44),
+                                            height: DesignTokens.DeviceSize.current.spacing(35, 39.5, 44)
+                                        )
                                     
                                     Image(systemName: "globe")
-                                        .font(.system(size: 18, weight: .semibold))
+                                        .font(.system(size: DesignTokens.DeviceSize.current.fontSize(14, 16, 18), weight: .semibold))
                                         .foregroundColor(DesignTokens.Colors.primaryCyan)
                                 }
                                 
-                                VStack(alignment: .leading, spacing: 2) {
+                                VStack(alignment: .leading, spacing: DesignTokens.DeviceSize.current.spacing(1.5, 1.75, 2)) {
                                     Text(LocalizedKeys.settingsLanguage.localized)
-                                        .font(.system(size: 16, weight: .semibold))
+                                        .font(.system(size: DesignTokens.DeviceSize.current.fontSize(12, 14, 16), weight: .semibold))
                                         .foregroundColor(DesignTokens.Colors.textPrimary)
                                     
                                     Text(localizationManager.currentLanguage.nativeName)
-                                        .font(.system(size: 14, weight: .medium))
+                                        .font(.system(size: DesignTokens.DeviceSize.current.fontSize(11, 12.5, 14), weight: .medium))
                                         .foregroundColor(DesignTokens.Colors.textSecondary)
                                 }
                                 
                                 Spacer()
                                 
-                                HStack(spacing: 8) {
+                                HStack(spacing: DesignTokens.DeviceSize.current.spacing(6, 7, 8)) {
                                     Text(localizationManager.currentLanguage.flag)
-                                        .font(.system(size: 20))
+                                        .font(.system(size: DesignTokens.DeviceSize.current.fontSize(16, 18, 20)))
                                     
                                     Image(systemName: "chevron.right")
-                                        .font(.system(size: 12, weight: .semibold))
+                                        .font(.system(size: DesignTokens.DeviceSize.current.fontSize(10, 11, 12), weight: .semibold))
                                         .foregroundColor(DesignTokens.Colors.textTertiary)
                                 }
                             }.contentShape(Rectangle())  // <-- Make entire area tappable
@@ -485,48 +491,51 @@ struct SettingsView: View {
                         
                     }
                 }
-                .padding(.vertical, 20)
+                .padding(.vertical, DesignTokens.DeviceSize.current.spacing(16, 18, 20))
             }
         }
     }
     
     private func sectionHeader(title: String, icon: String) -> some View {
-        HStack(spacing: 12) {
+        HStack(spacing: DesignTokens.DeviceSize.current.spacing(10, 11, 12)) {
             Image(systemName: icon)
-                .font(.system(size: 20, weight: .semibold))
+                .font(.system(size: DesignTokens.DeviceSize.current.fontSize(16, 18, 20), weight: .semibold))
                 .foregroundColor(DesignTokens.Colors.primaryPurple)
             
             Text(title)
-                .font(.system(size: 20, weight: .bold, design: .rounded))
+                .font(.system(size: DesignTokens.DeviceSize.current.fontSize(16, 18, 20), weight: .bold, design: .rounded))
                 .foregroundColor(.primary)
         }
     }
     
     private func settingsRow(icon: String, title: String, subtitle: String, color: Color) -> some View {
-        HStack(spacing: 16) {
+        HStack(spacing: DesignTokens.DeviceSize.current.spacing(12, 14, 16)) {
             ZStack {
                 Circle()
                     .fill(color.opacity(0.15))
-                    .frame(width: 44, height: 44)
+                    .frame(
+                        width: DesignTokens.DeviceSize.current.spacing(35, 39.5, 44),
+                        height: DesignTokens.DeviceSize.current.spacing(35, 39.5, 44)
+                    )
                 
                 Image(systemName: icon)
-                    .font(.system(size: 18, weight: .semibold))
+                    .font(.system(size: DesignTokens.DeviceSize.current.fontSize(14, 16, 18), weight: .semibold))
                     .foregroundColor(color)
             }
             
-            VStack(alignment: .leading, spacing: 2) {
+            VStack(alignment: .leading, spacing: DesignTokens.DeviceSize.current.spacing(1.5, 1.75, 2)) {
                 Text(title)
-                    .font(.system(size: 16, weight: .semibold))
+                    .font(.system(size: DesignTokens.DeviceSize.current.fontSize(12, 14, 16), weight: .semibold))
                     .foregroundColor(.primary)
                 Text(subtitle)
-                    .font(.system(size: 14, weight: .medium))
+                    .font(.system(size: DesignTokens.DeviceSize.current.fontSize(11, 12.5, 14), weight: .medium))
                     .foregroundColor(.secondary)
             }
             
             Spacer()
             
             Image(systemName: "chevron.right")
-                .font(.system(size: 14, weight: .semibold))
+                .font(.system(size: DesignTokens.DeviceSize.current.fontSize(11, 12.5, 14), weight: .semibold))
                 .foregroundColor(.secondary.opacity(0.6))
         }
     }
@@ -535,7 +544,7 @@ struct SettingsView: View {
     
     private var securitySection: some View {
         GlassmorphismCard(configuration: .settings) {
-            VStack(alignment: .leading, spacing: 24) {
+            VStack(alignment: .leading, spacing: DesignTokens.DeviceSize.current.spacing(20, 22, 24)) {
                 sectionHeader(title: "Security", icon: "shield.fill")
                 
                 // Logout Button
@@ -543,11 +552,14 @@ struct SettingsView: View {
                     HapticManager.buttonTap()
                     showLogoutConfirmation = true
                 }) {
-                    HStack(spacing: 16) {
+                    HStack(spacing: DesignTokens.DeviceSize.current.spacing(12, 14, 16)) {
                         ZStack {
                             Circle()
                                 .fill(DesignTokens.Colors.primaryRed.opacity(0.15))
-                                .frame(width: 44, height: 44)
+                                .frame(
+                                    width: DesignTokens.DeviceSize.current.spacing(35, 39.5, 44),
+                                    height: DesignTokens.DeviceSize.current.spacing(35, 39.5, 44)
+                                )
                             
                             if appViewModel.isLoading {
                                 ProgressView()
@@ -555,24 +567,24 @@ struct SettingsView: View {
                                     .scaleEffect(0.8)
                             } else {
                                 Image(systemName: "arrow.right.square.fill")
-                                    .font(.system(size: 18, weight: .semibold))
+                                    .font(.system(size: DesignTokens.DeviceSize.current.fontSize(14, 16, 18), weight: .semibold))
                                     .foregroundColor(DesignTokens.Colors.primaryRed)
                             }
                         }
                         
-                        VStack(alignment: .leading, spacing: 2) {
+                        VStack(alignment: .leading, spacing: DesignTokens.DeviceSize.current.spacing(1.5, 1.75, 2)) {
                             Text("Sign Out")
-                                .font(.system(size: 16, weight: .semibold))
+                                .font(.system(size: DesignTokens.DeviceSize.current.fontSize(12, 14, 16), weight: .semibold))
                                 .foregroundColor(.primary)
                             Text("End your current session")
-                                .font(.system(size: 14, weight: .medium))
+                                .font(.system(size: DesignTokens.DeviceSize.current.fontSize(11, 12.5, 14), weight: .medium))
                                 .foregroundColor(.secondary)
                         }
                         
                         Spacer()
                         
                         Image(systemName: "chevron.right")
-                            .font(.system(size: 14, weight: .semibold))
+                            .font(.system(size: DesignTokens.DeviceSize.current.fontSize(11, 12.5, 14), weight: .semibold))
                             .foregroundColor(.secondary.opacity(0.6))
                     }
                     .contentShape(Rectangle())
@@ -580,7 +592,7 @@ struct SettingsView: View {
                 .disabled(appViewModel.isLoading)
                 .cardButtonStyle()
             }
-            .padding(.vertical, 20)
+            .padding(.vertical, DesignTokens.DeviceSize.current.spacing(16, 18, 20))
         }
     }
     

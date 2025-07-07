@@ -83,13 +83,19 @@ struct SplashView: View {
                             Color.clear
                         ]),
                         center: .center,
-                        startRadius: 20,
-                        endRadius: 120
+                        startRadius: DesignTokens.DeviceSize.current.spacing(16, 18, 20),
+                        endRadius: DesignTokens.DeviceSize.current.spacing(96, 108, 120)
                     )
                 )
-                .frame(width: 200, height: 200)
-                .blur(radius: 20)
-                .offset(x: 100 + orb1Offset, y: -150 + orb1Offset * 0.5)
+                .frame(
+                    width: DesignTokens.DeviceSize.current.spacing(160, 180, 200),
+                    height: DesignTokens.DeviceSize.current.spacing(160, 180, 200)
+                )
+                .blur(radius: DesignTokens.DeviceSize.current.spacing(16, 18, 20))
+                .offset(
+                    x: DesignTokens.DeviceSize.current.spacing(80, 90, 100) + orb1Offset,
+                    y: DesignTokens.DeviceSize.current.spacing(-120, -135, -150) + orb1Offset * 0.5
+                )
             
             // Secondary orb (bottom left)
             Circle()
@@ -101,13 +107,19 @@ struct SplashView: View {
                             Color.clear
                         ]),
                         center: .center,
-                        startRadius: 30,
-                        endRadius: 100
+                        startRadius: DesignTokens.DeviceSize.current.spacing(24, 27, 30),
+                        endRadius: DesignTokens.DeviceSize.current.spacing(80, 90, 100)
                     )
                 )
-                .frame(width: 160, height: 160)
-                .blur(radius: 15)
-                .offset(x: -120 + orb2Offset, y: 200 + orb2Offset * 0.3)
+                .frame(
+                    width: DesignTokens.DeviceSize.current.spacing(128, 144, 160),
+                    height: DesignTokens.DeviceSize.current.spacing(128, 144, 160)
+                )
+                .blur(radius: DesignTokens.DeviceSize.current.spacing(12, 13.5, 15))
+                .offset(
+                    x: DesignTokens.DeviceSize.current.spacing(-96, -108, -120) + orb2Offset,
+                    y: DesignTokens.DeviceSize.current.spacing(160, 180, 200) + orb2Offset * 0.3
+                )
             
             // Accent orb (center background)
             Circle()
@@ -119,19 +131,22 @@ struct SplashView: View {
                             Color.clear
                         ]),
                         center: .center,
-                        startRadius: 40,
-                        endRadius: 140
+                        startRadius: DesignTokens.DeviceSize.current.spacing(32, 36, 40),
+                        endRadius: DesignTokens.DeviceSize.current.spacing(112, 126, 140)
                     )
                 )
-                .frame(width: 240, height: 240)
-                .blur(radius: 25)
+                .frame(
+                    width: DesignTokens.DeviceSize.current.spacing(192, 216, 240),
+                    height: DesignTokens.DeviceSize.current.spacing(192, 216, 240)
+                )
+                .blur(radius: DesignTokens.DeviceSize.current.spacing(20, 22.5, 25))
                 .offset(x: orb3Offset, y: orb3Offset * 0.4)
         }
     }
     
     /// Main content with logo and title
     private var contentView: some View {
-        VStack(spacing: DesignTokens.ResponsiveSpacing.lg) {
+        VStack(spacing: DesignTokens.DeviceSize.current.spacing(20, 22, 24)) {
             // App logo with glassmorphism container
             logoView
             
@@ -145,7 +160,7 @@ struct SplashView: View {
     private var logoView: some View {
         ZStack {
             // Glassmorphism background
-            RoundedRectangle(cornerRadius: DesignTokens.CornerRadius.xxxl)
+            RoundedRectangle(cornerRadius: DesignTokens.DeviceSize.current.spacing(24, 26, 28))
                 .fill(
                     LinearGradient(
                         gradient: Gradient(colors: [
@@ -157,7 +172,7 @@ struct SplashView: View {
                     )
                 )
                 .background(
-                    RoundedRectangle(cornerRadius: DesignTokens.CornerRadius.xxxl)
+                    RoundedRectangle(cornerRadius: DesignTokens.DeviceSize.current.spacing(24, 26, 28))
                         .stroke(
                             LinearGradient(
                                 gradient: Gradient(colors: [
@@ -171,11 +186,14 @@ struct SplashView: View {
                         )
                 )
                 .blur(radius: 1)
-                .frame(width: 120, height: 120)
+                .frame(
+                    width: DesignTokens.DeviceSize.current.spacing(96, 108, 120),
+                    height: DesignTokens.DeviceSize.current.spacing(96, 108, 120)
+                )
             
             // App icon/logo
             Image(systemName: "house.fill")
-                .font(.system(size: 50, weight: .medium))
+                .font(.system(size: DesignTokens.DeviceSize.current.fontSize(40, 45, 50), weight: .medium))
                 .foregroundStyle(
                     LinearGradient(
                         gradient: Gradient(colors: [
@@ -186,7 +204,12 @@ struct SplashView: View {
                         endPoint: .bottomTrailing
                     )
                 )
-                .shadow(color: DesignTokens.Colors.primaryPurple.opacity(0.3), radius: 10, x: 0, y: 5)
+                .shadow(
+                    color: DesignTokens.Colors.primaryPurple.opacity(0.3),
+                    radius: DesignTokens.DeviceSize.current.spacing(8, 9, 10),
+                    x: 0,
+                    y: DesignTokens.DeviceSize.current.spacing(4, 4.5, 5)
+                )
         }
         .scaleEffect(logoScale)
         .opacity(logoOpacity)
@@ -194,7 +217,7 @@ struct SplashView: View {
     
     /// App title and subtitle text
     private var titleView: some View {
-        VStack(spacing: DesignTokens.Spacing.sm) {
+        VStack(spacing: DesignTokens.DeviceSize.current.spacing(6, 7, 8)) {
             // Main title
             Text("HomeAssistant Pro")
                 .font(DesignTokens.ResponsiveTypography.headingLarge)
@@ -235,9 +258,9 @@ struct SplashView: View {
         
         // Floating orbs animation
         withAnimation(.easeInOut(duration: 8.0).repeatForever(autoreverses: true)) {
-            orb1Offset = 20
-            orb2Offset = -15
-            orb3Offset = 10
+            orb1Offset = DesignTokens.DeviceSize.current.spacing(16, 18, 20)
+            orb2Offset = DesignTokens.DeviceSize.current.spacing(-12, -13.5, -15)
+            orb3Offset = DesignTokens.DeviceSize.current.spacing(8, 9, 10)
         }
         
         // Logo animation (starts after background)

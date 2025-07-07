@@ -71,7 +71,7 @@ struct IntroView: View {
                 VStack {
                     Spacer()
                     bottomControls
-                        .padding(.bottom, 50)
+                        .padding(.bottom, DesignTokens.DeviceSize.current.spacing(40, 45, 50))
                 }
             }
         }
@@ -131,15 +131,18 @@ struct IntroView: View {
                         colors: [currentPageData.primaryColor.opacity(0.3), Color.clear],
                         center: .center,
                         startRadius: 0,
-                        endRadius: 250
+                        endRadius: DesignTokens.DeviceSize.current.spacing(200, 225, 250)
                     )
                 )
-                .frame(width: 400, height: 400)
-                .offset(
-                    x: animateOrbs ? -80 : -120,
-                    y: animateOrbs ? -150 : -100
+                .frame(
+                    width: DesignTokens.DeviceSize.current.spacing(320, 360, 400),
+                    height: DesignTokens.DeviceSize.current.spacing(320, 360, 400)
                 )
-                .blur(radius: 50)
+                .offset(
+                    x: animateOrbs ? DesignTokens.DeviceSize.current.spacing(-64, -72, -80) : DesignTokens.DeviceSize.current.spacing(-96, -108, -120),
+                    y: animateOrbs ? DesignTokens.DeviceSize.current.spacing(-120, -135, -150) : DesignTokens.DeviceSize.current.spacing(-80, -90, -100)
+                )
+                .blur(radius: DesignTokens.DeviceSize.current.spacing(40, 45, 50))
             
             // Secondary orb
             Circle()
@@ -148,15 +151,18 @@ struct IntroView: View {
                         colors: [currentPageData.secondaryColor.opacity(0.25), Color.clear],
                         center: .center,
                         startRadius: 0,
-                        endRadius: 180
+                        endRadius: DesignTokens.DeviceSize.current.spacing(144, 162, 180)
                     )
                 )
-                .frame(width: 300, height: 300)
-                .offset(
-                    x: animateOrbs ? 120 : 160,
-                    y: animateOrbs ? 200 : 160
+                .frame(
+                    width: DesignTokens.DeviceSize.current.spacing(240, 270, 300),
+                    height: DesignTokens.DeviceSize.current.spacing(240, 270, 300)
                 )
-                .blur(radius: 40)
+                .offset(
+                    x: animateOrbs ? DesignTokens.DeviceSize.current.spacing(96, 108, 120) : DesignTokens.DeviceSize.current.spacing(128, 144, 160),
+                    y: animateOrbs ? DesignTokens.DeviceSize.current.spacing(160, 180, 200) : DesignTokens.DeviceSize.current.spacing(128, 144, 160)
+                )
+                .blur(radius: DesignTokens.DeviceSize.current.spacing(32, 36, 40))
             
             // Accent orb
             Circle()
@@ -165,15 +171,18 @@ struct IntroView: View {
                         colors: [Color.white.opacity(0.2), Color.clear],
                         center: .center,
                         startRadius: 0,
-                        endRadius: 100
+                        endRadius: DesignTokens.DeviceSize.current.spacing(80, 90, 100)
                     )
                 )
-                .frame(width: 200, height: 200)
-                .offset(
-                    x: animateOrbs ? -100 : -80,
-                    y: animateOrbs ? 400 : 380
+                .frame(
+                    width: DesignTokens.DeviceSize.current.spacing(160, 180, 200),
+                    height: DesignTokens.DeviceSize.current.spacing(160, 180, 200)
                 )
-                .blur(radius: 30)
+                .offset(
+                    x: animateOrbs ? DesignTokens.DeviceSize.current.spacing(-80, -90, -100) : DesignTokens.DeviceSize.current.spacing(-64, -72, -80),
+                    y: animateOrbs ? DesignTokens.DeviceSize.current.spacing(320, 360, 400) : DesignTokens.DeviceSize.current.spacing(304, 342, 380)
+                )
+                .blur(radius: DesignTokens.DeviceSize.current.spacing(24, 27, 30))
         }
         .animation(.easeInOut(duration: 1.2), value: currentPage)
         .animation(.easeInOut(duration: 8).repeatForever(autoreverses: true), value: animateOrbs)
@@ -195,19 +204,19 @@ struct IntroView: View {
     private func pageContent(page: OnboardingPage, geometry: GeometryProxy) -> some View {
         VStack(spacing: 0) {
             Spacer()
-                .frame(height: geometry.safeAreaInsets.top + 60)
+                .frame(height: geometry.safeAreaInsets.top + DesignTokens.DeviceSize.current.spacing(48, 54, 60))
             
             // Icon section
             iconSection(page: page)
             
             Spacer()
-                .frame(height: 60)
+                .frame(height: DesignTokens.DeviceSize.current.spacing(48, 54, 60))
             
             // Content section
             contentSection(page: page)
             
             Spacer()
-                .frame(height: 80)
+                .frame(height: DesignTokens.DeviceSize.current.spacing(64, 72, 80))
             
             // Action section (only on last page)
             if currentPage == pages.count - 1 {
@@ -219,9 +228,9 @@ struct IntroView: View {
             }
             
             Spacer()
-                .frame(height: 140)
+                .frame(height: DesignTokens.DeviceSize.current.spacing(112, 126, 140))
         }
-        .padding(.horizontal, 32)
+        .padding(.horizontal, DesignTokens.DeviceSize.current.spacing(24, 28, 32))
         .offset(x: dragOffset * 0.1) // Subtle drag feedback
     }
     
@@ -230,8 +239,16 @@ struct IntroView: View {
             // Background circle with glassmorphism
             Circle()
                 .fill(.ultraThinMaterial)
-                .frame(width: 140, height: 140)
-                .shadow(color: page.primaryColor.opacity(0.3), radius: 20, x: 0, y: 10)
+                .frame(
+                    width: DesignTokens.DeviceSize.current.spacing(112, 126, 140),
+                    height: DesignTokens.DeviceSize.current.spacing(112, 126, 140)
+                )
+                .shadow(
+                    color: page.primaryColor.opacity(0.3),
+                    radius: DesignTokens.DeviceSize.current.spacing(16, 18, 20),
+                    x: 0,
+                    y: DesignTokens.DeviceSize.current.spacing(8, 9, 10)
+                )
                 .overlay(
                     Circle()
                         .stroke(Color.white.opacity(0.5), lineWidth: 2)
@@ -246,12 +263,20 @@ struct IntroView: View {
                         endPoint: .bottomTrailing
                     )
                 )
-                .frame(width: 120, height: 120)
-                .shadow(color: page.primaryColor.opacity(0.4), radius: 15, x: 0, y: 8)
+                .frame(
+                    width: DesignTokens.DeviceSize.current.spacing(96, 108, 120),
+                    height: DesignTokens.DeviceSize.current.spacing(96, 108, 120)
+                )
+                .shadow(
+                    color: page.primaryColor.opacity(0.4),
+                    radius: DesignTokens.DeviceSize.current.spacing(12, 13.5, 15),
+                    x: 0,
+                    y: DesignTokens.DeviceSize.current.spacing(6, 7, 8)
+                )
             
             // Icon
             Image(systemName: page.icon)
-                .font(.system(size: 48, weight: .medium))
+                .font(.system(size: DesignTokens.DeviceSize.current.fontSize(38, 43, 48), weight: .medium))
                 .foregroundColor(.white)
         }
         .scaleEffect(showContent ? 1.0 : 0.5)
@@ -259,36 +284,41 @@ struct IntroView: View {
     }
     
     private func contentSection(page: OnboardingPage) -> some View {
-        VStack(spacing: 24) {
+        VStack(spacing: DesignTokens.DeviceSize.current.spacing(20, 22, 24)) {
             // Title
             Text(page.title)
-                .font(.system(size: 36, weight: .bold, design: .rounded))
+                .font(.system(size: DesignTokens.DeviceSize.current.fontSize(28, 32, 36), weight: .bold, design: .rounded))
                 .foregroundColor(.primary)
                 .multilineTextAlignment(.center)
                 .lineLimit(nil)
                 .opacity(showContent ? 1.0 : 0.0)
-                .offset(y: showContent ? 0 : 30)
+                .offset(y: showContent ? 0 : DesignTokens.DeviceSize.current.spacing(24, 27, 30))
                 .animation(.spring(response: 0.8, dampingFraction: 0.7).delay(0.5), value: showContent)
             
             // Description in glass card
             Text(page.description)
-                .font(.system(size: 18, weight: .medium))
+                .font(.system(size: DesignTokens.DeviceSize.current.fontSize(14, 16, 18), weight: .medium))
                 .foregroundColor(.primary.opacity(0.8))
                 .multilineTextAlignment(.center)
-                .lineSpacing(4)
-                .padding(.horizontal, 32)
-                .padding(.vertical, 24)
+                .lineSpacing(DesignTokens.DeviceSize.current.spacing(3, 3.5, 4))
+                .padding(.horizontal, DesignTokens.DeviceSize.current.spacing(24, 28, 32))
+                .padding(.vertical, DesignTokens.DeviceSize.current.spacing(20, 22, 24))
                 .background(
-                    RoundedRectangle(cornerRadius: 20, style: .continuous)
+                    RoundedRectangle(cornerRadius: DesignTokens.DeviceSize.current.spacing(16, 18, 20), style: .continuous)
                         .fill(.ultraThinMaterial)
-                        .shadow(color: Color.black.opacity(0.06), radius: 15, x: 0, y: 6)
+                        .shadow(
+                            color: Color.black.opacity(0.06),
+                            radius: DesignTokens.DeviceSize.current.spacing(12, 13.5, 15),
+                            x: 0,
+                            y: DesignTokens.DeviceSize.current.spacing(5, 5.5, 6)
+                        )
                         .overlay(
-                            RoundedRectangle(cornerRadius: 20, style: .continuous)
+                            RoundedRectangle(cornerRadius: DesignTokens.DeviceSize.current.spacing(16, 18, 20), style: .continuous)
                                 .stroke(Color.white.opacity(0.4), lineWidth: 1)
                         )
                 )
                 .opacity(showContent ? 1.0 : 0.0)
-                .offset(y: showContent ? 0 : 30)
+                .offset(y: showContent ? 0 : DesignTokens.DeviceSize.current.spacing(24, 27, 30))
                 .animation(.spring(response: 0.8, dampingFraction: 0.7).delay(0.7), value: showContent)
         }
     }
@@ -303,17 +333,17 @@ struct IntroView: View {
             let impactFeedback = UIImpactFeedbackGenerator(style: .medium)
             impactFeedback.impactOccurred()
         }) {
-            HStack(spacing: 12) {
+            HStack(spacing: DesignTokens.DeviceSize.current.spacing(10, 11, 12)) {
                 Text("Get Started")
-                    .font(.system(size: 18, weight: .bold))
+                    .font(.system(size: DesignTokens.DeviceSize.current.fontSize(14, 16, 18), weight: .bold))
                     .foregroundColor(.white)
                 
                 Image(systemName: "arrow.right")
-                    .font(.system(size: 16, weight: .bold))
+                    .font(.system(size: DesignTokens.DeviceSize.current.fontSize(12, 14, 16), weight: .bold))
                     .foregroundColor(.white)
             }
-            .padding(.horizontal, 40)
-            .padding(.vertical, 18)
+            .padding(.horizontal, DesignTokens.DeviceSize.current.spacing(32, 36, 40))
+            .padding(.vertical, DesignTokens.DeviceSize.current.spacing(14, 16, 18))
             .background(
                 Capsule()
                     .fill(
@@ -323,7 +353,12 @@ struct IntroView: View {
                             endPoint: .bottomTrailing
                         )
                     )
-                    .shadow(color: page.primaryColor.opacity(0.4), radius: 15, x: 0, y: 8)
+                    .shadow(
+                        color: page.primaryColor.opacity(0.4),
+                        radius: DesignTokens.DeviceSize.current.spacing(12, 13.5, 15),
+                        x: 0,
+                        y: DesignTokens.DeviceSize.current.spacing(6, 7, 8)
+                    )
             )
             .overlay(
                 Capsule()
@@ -332,14 +367,14 @@ struct IntroView: View {
         }
         .buttonStyle(EnhancedButtonStyle())
         .opacity(showContent ? 1.0 : 0.0)
-        .offset(y: showContent ? 0 : 30)
+        .offset(y: showContent ? 0 : DesignTokens.DeviceSize.current.spacing(24, 27, 30))
         .animation(.spring(response: 0.8, dampingFraction: 0.7).delay(0.9), value: showContent)
     }
     
     // MARK: - Bottom Controls
     
     private var bottomControls: some View {
-        VStack(spacing: 24) {
+        VStack(spacing: DesignTokens.DeviceSize.current.spacing(20, 22, 24)) {
             // Custom page indicators
             pageIndicators
             
@@ -352,11 +387,11 @@ struct IntroView: View {
                     ))
             }
         }
-        .padding(.horizontal, 32)
+        .padding(.horizontal, DesignTokens.DeviceSize.current.spacing(24, 28, 32))
     }
     
     private var pageIndicators: some View {
-        HStack(spacing: 12) {
+        HStack(spacing: DesignTokens.DeviceSize.current.spacing(10, 11, 12)) {
             ForEach(0..<pages.count, id: \.self) { index in
                 Button(action: {
                     withAnimation(.spring(response: 0.6, dampingFraction: 0.8)) {
@@ -378,25 +413,30 @@ struct IntroView: View {
                                   )
                         )
                         .frame(
-                            width: index == currentPage ? 32 : 8,
-                            height: 8
+                            width: index == currentPage ? DesignTokens.DeviceSize.current.spacing(26, 29, 32) : DesignTokens.DeviceSize.current.spacing(6, 7, 8),
+                            height: DesignTokens.DeviceSize.current.spacing(6, 7, 8)
                         )
                         .shadow(
                             color: index == currentPage ? pages[currentPage].primaryColor.opacity(0.4) : Color.clear,
-                            radius: 4,
+                            radius: DesignTokens.DeviceSize.current.spacing(3, 3.5, 4),
                             x: 0,
-                            y: 2
+                            y: DesignTokens.DeviceSize.current.spacing(1.5, 1.75, 2)
                         )
                 }
                 .buttonStyle(EnhancedButtonStyle())
             }
         }
-        .padding(.horizontal, 20)
-        .padding(.vertical, 12)
+        .padding(.horizontal, DesignTokens.DeviceSize.current.spacing(16, 18, 20))
+        .padding(.vertical, DesignTokens.DeviceSize.current.spacing(10, 11, 12))
         .background(
             Capsule()
                 .fill(.ultraThinMaterial)
-                .shadow(color: Color.black.opacity(0.08), radius: 12, x: 0, y: 4)
+                .shadow(
+                    color: Color.black.opacity(0.08),
+                    radius: DesignTokens.DeviceSize.current.spacing(10, 11, 12),
+                    x: 0,
+                    y: DesignTokens.DeviceSize.current.spacing(3, 3.5, 4)
+                )
                 .overlay(
                     Capsule()
                         .stroke(Color.white.opacity(0.4), lineWidth: 1)
@@ -411,10 +451,10 @@ struct IntroView: View {
             }
         }) {
             Text("Skip")
-                .font(.system(size: 16, weight: .semibold))
+                .font(.system(size: DesignTokens.DeviceSize.current.fontSize(12, 14, 16), weight: .semibold))
                 .foregroundColor(.primary.opacity(0.7))
-                .padding(.horizontal, 24)
-                .padding(.vertical, 12)
+                .padding(.horizontal, DesignTokens.DeviceSize.current.spacing(20, 22, 24))
+                .padding(.vertical, DesignTokens.DeviceSize.current.spacing(10, 11, 12))
                 .background(
                     Capsule()
                         .fill(.ultraThinMaterial)
