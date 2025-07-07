@@ -27,6 +27,8 @@ struct FullscreenVideoModal: View {
     @State private var controlsTimer: Timer?
     @State private var isLoading = true
     @State private var orientation = UIDeviceOrientation.portrait
+    @State private var volume: Float = 1.0
+    @State private var isMuted = false
     
     let asset: LocalVideoAssets
     let autoPlay: Bool
@@ -143,21 +145,18 @@ struct FullscreenVideoModal: View {
                         .lineLimit(2)
                         .multilineTextAlignment(.trailing)
                 }
+                .padding(.horizontal, 16)
+                .padding(.vertical, 8)
+                .background(
+                    RoundedRectangle(cornerRadius: 8)
+                        .fill(.ultraThinMaterial)
+                )
             }
             .padding(.horizontal, DesignTokens.ResponsiveSpacing.lg)
             .padding(.top, DesignTokens.ResponsiveSpacing.xl)
             
             Spacer()
         }
-        .background(
-            LinearGradient(
-                colors: [Color.black.opacity(0.6), Color.clear],
-                startPoint: .top,
-                endPoint: .bottom
-            )
-            .frame(height: 150)
-            .allowsHitTesting(false)
-        )
     }
     
     // MARK: - Bottom Controls Overlay
@@ -167,48 +166,18 @@ struct FullscreenVideoModal: View {
             Spacer()
             
             VStack(spacing: DesignTokens.ResponsiveSpacing.lg) {
-                // Main play/pause button
-                Button(action: {
-                    videoPlayer.togglePlayPause()
-                    if videoPlayer.isPlaying {
-                        startControlsTimer()
-                    } else {
-                        showControls = true
-                        stopControlsTimer()
-                    }
-                }) {
-                    ZStack {
-                        Circle()
-                            .fill(.ultraThinMaterial)
-                            .frame(width: 80, height: 80)
-                            .overlay(
-                                Circle()
-                                    .stroke(Color.white.opacity(0.3), lineWidth: 2)
-                            )
-                        
-                        Image(systemName: videoPlayer.isPlaying ? "pause.fill" : "play.fill")
-                            .font(.system(size: 32, weight: .semibold))
-                            .foregroundColor(.white)
-                            .offset(x: videoPlayer.isPlaying ? 0 : 3) // Slight offset for play icon
-                    }
-                }
-                .scaleButtonStyle()
-                
                 // Progress and time controls
                 progressControls
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 12)
+                    .background(
+                        RoundedRectangle(cornerRadius: 12)
+                            .fill(.ultraThinMaterial)
+                    )
             }
             .padding(.horizontal, DesignTokens.ResponsiveSpacing.xl)
             .padding(.bottom, DesignTokens.ResponsiveSpacing.xl)
         }
-        .background(
-            LinearGradient(
-                colors: [Color.clear, Color.black.opacity(0.6)],
-                startPoint: .top,
-                endPoint: .bottom
-            )
-            .frame(height: 200)
-            .allowsHitTesting(false)
-        )
     }
     
     // MARK: - Progress Controls
@@ -279,17 +248,45 @@ struct FullscreenVideoModal: View {
                 
                 Spacer()
                 
-                // Volume indicator (placeholder)
-                Image(systemName: "speaker.wave.2.fill")
-                    .font(.system(size: 20, weight: .semibold))
-                    .foregroundColor(.white.opacity(0.6))
+                // Play/pause button
+                Button(action: {
+                    videoPlayer.togglePlayPause()
+                    if videoPlayer.isPlaying {
+                        startControlsTimer()
+                    } else {
+                        showControls = true
+                        stopControlsTimer()
+                    }
+                }) {
+                    ZStack {
+                        Circle()
+                            .fill(.ultraThinMaterial)
+                            .frame(width: 40, height: 40)
+                            .overlay(
+                                Circle()
+                                    .stroke(Color.white.opacity(0.3), lineWidth: 2)
+                            )
+                        
+                        Image(systemName: videoPlayer.isPlaying ? "pause.fill" : "play.fill")
+                            .font(.system(size: 24, weight: .semibold))
+                            .foregroundColor(.white)
+                            .offset(x: videoPlayer.isPlaying ? 0 : 2) // Slight offset for play icon
+                    }
+                }
+                .scaleButtonStyle()
+                
                 
                 Spacer()
                 
-                // Fullscreen toggle (already fullscreen)
-                Image(systemName: "arrow.down.right.and.arrow.up.left")
-                    .font(.system(size: 20, weight: .semibold))
-                    .foregroundColor(.white.opacity(0.6))
+                // Volume control button
+                Button(action: {
+                    toggleMute()
+                }) {
+                    Image(systemName: volumeIcon)
+                        .font(.system(size: 20, weight: .semibold))
+                        .foregroundColor(.white.opacity(0.8))
+                }
+                .scaleButtonStyle()
             }
         }
     }
@@ -305,7 +302,36 @@ struct FullscreenVideoModal: View {
                 videoPlayer.play()
                 startControlsTimer()
             }
+            
+            // Set initial volume
+            updatePlayerVolume()
         }
+    }
+    
+    // MARK: - Volume Control
+    
+    private var volumeIcon: String {
+        if isMuted || volume == 0 {
+            return "speaker.slash.fill"
+        } else if volume < 0.33 {
+            return "speaker.wave.1.fill"
+        } else if volume < 0.66 {
+            return "speaker.wave.2.fill"
+        } else {
+            return "speaker.wave.3.fill"
+        }
+    }
+    
+    private func toggleMute() {
+        isMuted.toggle()
+        updatePlayerVolume()
+        showControls = true
+        resetControlsTimer()
+    }
+    
+    private func updatePlayerVolume() {
+        guard let player = videoPlayer.player else { return }
+        player.volume = isMuted ? 0 : volume
     }
     
     private func calculateVideoScale(for size: CGSize) -> CGFloat {

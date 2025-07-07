@@ -221,10 +221,10 @@ struct VideoPlayerView: View {
                 Spacer()
                 
                 // Progress bar (only show when playing or controls visible)
-                if videoPlayer.isPlaying || showControls {
-                    progressBar
-                        .transition(.move(edge: .bottom).combined(with: .opacity))
-                }
+//                if videoPlayer.isPlaying || showControls {
+//                    progressBar
+//                        .transition(.move(edge: .bottom).combined(with: .opacity))
+//                }
             }
             .padding(DesignTokens.DeviceSize.current.spacing(12, 16, 20))
         }
