@@ -488,7 +488,7 @@ struct DesignTokens {
         
         /// Profile icon size
         static var profileIconSize: CGFloat {
-            DeviceSize.current.spacing(64, 72, 80)
+            DeviceSize.current.spacing(50, 75, 100)
         }
         
         /// Button height
@@ -813,6 +813,11 @@ extension View {
     /// Apply responsive vertical padding
     func responsiveVerticalPadding(_ compact: CGFloat, _ regular: CGFloat? = nil, _ large: CGFloat? = nil) -> some View {
         self.padding(.vertical, DesignTokens.DeviceSize.current.spacing(compact, regular, large))
+    }
+    
+    /// Apply responsive bottom padding
+    func responsiveBottomPadding(_ compact: CGFloat, _ regular: CGFloat? = nil, _ large: CGFloat? = nil) -> some View {
+        self.padding(.bottom, DesignTokens.DeviceSize.current.spacing(compact, regular, large))
     }
     
     /// Apply content margins based on device size

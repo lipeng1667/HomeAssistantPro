@@ -59,7 +59,7 @@ struct ModernLoginView: View {
                         
                         // Header section with modern styling
                         headerSection
-                            .responsiveVerticalPadding(40, 48, 56)
+                            .responsiveBottomPadding(24, 36, 48)
                         
                         // Main content card
                         mainContentCard
@@ -126,8 +126,8 @@ struct ModernLoginView: View {
                 .resizable()
                 .scaledToFit()
                 .frame(
-                    width: DesignTokens.DeviceSize.current.spacing(40, 45, 50),
-                    height: DesignTokens.DeviceSize.current.spacing(40, 45, 50)
+                    width: DesignTokens.DeviceSize.current.spacing(30, 45, 60),
+                    height: DesignTokens.DeviceSize.current.spacing(30, 45, 60)
                 )
                 .clipShape(RoundedRectangle(cornerRadius: DesignTokens.CornerRadius.lg))
         }
