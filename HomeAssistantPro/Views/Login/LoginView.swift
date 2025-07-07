@@ -65,11 +65,11 @@ struct ModernLoginView: View {
                         mainContentCard
                             .responsiveHorizontalPadding(6, 8, 10)
                         
-                        Spacer(minLength: DesignTokens.ResponsiveSpacing.lg)
+//                        Spacer(minLength: DesignTokens.DeviceSize.current.spacing(10, 15, 20))
                         
                         // Footer section
                         footerSection
-                            .responsiveVerticalPadding(32, 40, 48)
+                            .responsiveVerticalPadding(6, 8, 10)
                     }
                 }
             }
@@ -180,7 +180,7 @@ struct ModernLoginView: View {
     // MARK: - Input Fields
     
     private var inputFieldsSection: some View {
-        VStack(spacing: DesignTokens.ResponsiveSpacing.lg) {
+        VStack(spacing: DesignTokens.DeviceSize.current.spacing(8, 12, 16)) {
             modernPhoneNumberField
             modernPasswordField
         }
@@ -431,7 +431,6 @@ struct ModernLoginView: View {
                 .font(DesignTokens.ResponsiveTypography.caption)
                 .foregroundColor(DesignTokens.Colors.textSecondary)
                 .multilineTextAlignment(.center)
-                .responsiveHorizontalPadding(32, 40, 48)
         }
     }
     
