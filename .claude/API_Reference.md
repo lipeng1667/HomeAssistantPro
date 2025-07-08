@@ -18,12 +18,25 @@ This document provides a detailed reference for the Home Assistant Backend API.
 
 #### 💬 Forum
 
-| Method | Endpoint                         | Description               |Done|
-| ------ | -------------------------------- | ------------------------- |----|
-| GET    | `/api/forum/questions`           | List all questions        | ❌ |
-| POST   | `/api/forum/questions`           | Create a new question     | ❌ |
-| GET    | `/api/forum/questions/:id`       | Get details of a question | ❌ |
-| POST   | `/api/forum/questions/:id/reply` | Post a reply              | ❌ |
+| Method | Endpoint                         | Description                  |Done|
+| ------ | -------------------------------- | ---------------------------- |----|
+| GET    | `/api/forum/topics`              | List all topics with pagination | ❌ |
+| GET    | `/api/forum/topics/:id`          | Get topic details with replies  | ❌ |
+| POST   | `/api/forum/topics`              | Create a new topic           | ❌ |
+| PUT    | `/api/forum/topics/:id`          | Update topic (author only)   | ❌ |
+| DELETE | `/api/forum/topics/:id`          | Delete topic (author only)   | ❌ |
+| GET    | `/api/forum/topics/:id/replies`  | Get replies for a topic      | ❌ |
+| POST   | `/api/forum/topics/:id/replies`  | Add reply to topic           | ❌ |
+| PUT    | `/api/forum/replies/:id`         | Update reply (author only)   | ❌ |
+| DELETE | `/api/forum/replies/:id`         | Delete reply (author only)   | ❌ |
+| POST   | `/api/forum/topics/:id/like`     | Like/unlike topic            | ❌ |
+| POST   | `/api/forum/replies/:id/like`    | Like/unlike reply            | ❌ |
+| GET    | `/api/forum/search`              | Search topics and replies    | ❌ |
+| GET    | `/api/forum/categories`          | Get available categories     | ❌ |
+| POST   | `/api/forum/upload`              | Upload image attachments     | ❌ |
+| GET    | `/api/forum/drafts`              | Get user's saved drafts      | ❌ |
+| POST   | `/api/forum/drafts`              | Save/update draft            | ❌ |
+| DELETE | `/api/forum/drafts/:id`          | Delete draft                 | ❌ |
 
 #### 📩 Instant Messaging (IM)
 
@@ -350,6 +363,335 @@ curl -X POST http://localhost:10000/api/auth/logout \
   "message": "Session not found or expired"
 }
 ```
+
+---
+
+## APP : Forum API
+
+Handles forum topics, replies, and community interactions.
+
+### `GET /api/forum/topics`
+
+Retrieves a paginated list of forum topics with filtering and sorting options.
+
+**App Authentication:** Required (see headers above)
+
+**Query Parameters:**
+
+| Name | Type | Description | Required | Default |
+|---|---|---|---|---|
+| `page` | Integer | Page number (1-based) | No | 1 |
+| `limit` | Integer | Items per page (1-50) | No | 20 |
+| `category` | String | Filter by category | No | All |
+| `sort` | String | Sort order: "newest", "oldest", "popular", "trending" | No | "newest" |
+| `search` | String | Search in title and content | No | None |
+
+**Example Request:**
+
+```bash
+curl -X GET "http://localhost:10000/api/forum/topics?page=1&limit=20&category=Smart+Home&sort=popular" \
+  -H "X-Timestamp: 1672531200000" \
+  -H "X-Signature: a1b2c3d4e5f6..."
+```
+
+**Response Structure:**
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `status` | String | Request status ("success" or "error") |
+| `data` | Object | Response data container |
+| `data.topics` | Array | Array of topic objects |
+| `data.pagination` | Object | Pagination information |
+| `data.pagination.current_page` | Integer | Current page number |
+| `data.pagination.total_pages` | Integer | Total number of pages |
+| `data.pagination.total_items` | Integer | Total number of topics |
+| `data.pagination.has_next` | Boolean | Whether next page exists |
+| `data.pagination.has_previous` | Boolean | Whether previous page exists |
+
+**Topic Object Structure:**
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `id` | Integer | Topic unique ID |
+| `title` | String | Topic title |
+| `content` | String | Topic content (truncated for list view) |
+| `category` | String | Topic category |
+| `author` | Object | Author information |
+| `author.id` | Integer | Author user ID |
+| `author.name` | String | Author display name |
+| `author.avatar` | String | Author avatar URL |
+| `reply_count` | Integer | Number of replies |
+| `like_count` | Integer | Number of likes |
+| `is_liked` | Boolean | Whether current user liked this topic |
+| `is_hot` | Boolean | Whether topic is trending |
+| `has_images` | Boolean | Whether topic contains images |
+| `created_at` | String | ISO timestamp of creation |
+| `updated_at` | String | ISO timestamp of last update |
+
+**Example Response:**
+
+```json
+{
+  "status": "success",
+  "data": {
+    "topics": [
+      {
+        "id": 1,
+        "title": "How to setup motion sensors?",
+        "content": "I'm trying to configure motion sensors in my living room...",
+        "category": "Smart Home",
+        "author": {
+          "id": 123,
+          "name": "John Doe",
+          "avatar": "https://api.example.com/avatars/123.jpg"
+        },
+        "reply_count": 15,
+        "like_count": 8,
+        "is_liked": false,
+        "is_hot": true,
+        "has_images": true,
+        "created_at": "2024-01-15T10:30:00Z",
+        "updated_at": "2024-01-15T15:45:00Z"
+      }
+    ],
+    "pagination": {
+      "current_page": 1,
+      "total_pages": 5,
+      "total_items": 95,
+      "has_next": true,
+      "has_previous": false
+    }
+  }
+}
+```
+
+### `GET /api/forum/topics/:id`
+
+Retrieves detailed information about a specific topic including replies.
+
+**App Authentication:** Required (see headers above)
+
+**Path Parameters:**
+
+| Name | Type | Description | Required |
+|---|---|---|---|
+| `id` | Integer | Topic ID | Yes |
+
+**Query Parameters:**
+
+| Name | Type | Description | Required | Default |
+|---|---|---|---|---|
+| `reply_page` | Integer | Reply page number | No | 1 |
+| `reply_limit` | Integer | Replies per page (1-50) | No | 20 |
+
+**Example Request:**
+
+```bash
+curl -X GET "http://localhost:10000/api/forum/topics/1?reply_page=1&reply_limit=20" \
+  -H "X-Timestamp: 1672531200000" \
+  -H "X-Signature: a1b2c3d4e5f6..."
+```
+
+**Response Structure:**
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `status` | String | Request status ("success" or "error") |
+| `data` | Object | Response data container |
+| `data.topic` | Object | Complete topic object |
+| `data.replies` | Array | Array of reply objects |
+| `data.reply_pagination` | Object | Reply pagination information |
+
+**Reply Object Structure:**
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `id` | Integer | Reply unique ID |
+| `content` | String | Reply content |
+| `author` | Object | Author information (same as topic) |
+| `like_count` | Integer | Number of likes |
+| `is_liked` | Boolean | Whether current user liked this reply |
+| `images` | Array | Array of image URLs |
+| `created_at` | String | ISO timestamp of creation |
+| `updated_at` | String | ISO timestamp of last update |
+
+### `POST /api/forum/topics`
+
+Creates a new forum topic.
+
+**App Authentication:** Required (see headers above)
+
+**Parameters:**
+
+| Name | Type | Description | Required |
+|---|---|---|---|
+| `user_id` | Integer | Author user ID | Yes |
+| `title` | String | Topic title (3-100 characters) | Yes |
+| `content` | String | Topic content (10-2000 characters) | Yes |
+| `category` | String | Topic category | Yes |
+| `images` | Array | Array of image URLs (max 3) | No |
+
+**Example Request:**
+
+```bash
+curl -X POST http://localhost:10000/api/forum/topics \
+  -H "Content-Type: application/json" \
+  -H "X-Timestamp: 1672531200000" \
+  -H "X-Signature: a1b2c3d4e5f6..." \
+  -d '{
+    "user_id": 123,
+    "title": "Motion sensor setup help",
+    "content": "I need help configuring my new motion sensors...",
+    "category": "Smart Home",
+    "images": ["https://api.example.com/uploads/image1.jpg"]
+  }'
+```
+
+**Response Structure:**
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `status` | String | Request status ("success" or "error") |
+| `data` | Object | Response data container |
+| `data.topic` | Object | Created topic object |
+
+### `POST /api/forum/topics/:id/replies`
+
+Adds a reply to an existing topic.
+
+**App Authentication:** Required (see headers above)
+
+**Parameters:**
+
+| Name | Type | Description | Required |
+|---|---|---|---|
+| `user_id` | Integer | Reply author user ID | Yes |
+| `content` | String | Reply content (1-1000 characters) | Yes |
+| `images` | Array | Array of image URLs (max 2) | No |
+
+### `POST /api/forum/topics/:id/like`
+
+Toggles like status for a topic.
+
+**App Authentication:** Required (see headers above)
+
+**Parameters:**
+
+| Name | Type | Description | Required |
+|---|---|---|---|
+| `user_id` | Integer | User ID performing the action | Yes |
+
+**Response Structure:**
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `status` | String | Request status ("success" or "error") |
+| `data` | Object | Response data container |
+| `data.is_liked` | Boolean | New like status |
+| `data.like_count` | Integer | Updated like count |
+
+### `GET /api/forum/search`
+
+Searches topics and replies by keyword.
+
+**App Authentication:** Required (see headers above)
+
+**Query Parameters:**
+
+| Name | Type | Description | Required |
+|---|---|---|---|
+| `q` | String | Search query (min 2 characters) | Yes |
+| `type` | String | Search type: "topics", "replies", "all" | No | "all" |
+| `category` | String | Filter by category | No | All |
+| `page` | Integer | Page number | No | 1 |
+| `limit` | Integer | Results per page (1-50) | No | 20 |
+
+### `GET /api/forum/categories`
+
+Retrieves list of available forum categories.
+
+**App Authentication:** Required (see headers above)
+
+**Response Structure:**
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `status` | String | Request status ("success" or "error") |
+| `data` | Object | Response data container |
+| `data.categories` | Array | Array of category objects |
+
+**Category Object Structure:**
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `id` | String | Category identifier |
+| `name` | String | Category display name |
+| `description` | String | Category description |
+| `topic_count` | Integer | Number of topics in category |
+| `icon` | String | Category icon name |
+
+### `POST /api/forum/upload`
+
+Uploads images for forum posts and replies.
+
+**App Authentication:** Required (see headers above)
+
+**Parameters:**
+
+| Name | Type | Description | Required |
+|---|---|---|---|
+| `user_id` | Integer | Uploader user ID | Yes |
+| `image` | File | Image file (JPG, PNG, max 5MB) | Yes |
+| `type` | String | Upload type: "topic" or "reply" | Yes |
+
+**Response Structure:**
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `status` | String | Request status ("success" or "error") |
+| `data` | Object | Response data container |
+| `data.image_url` | String | Uploaded image URL |
+| `data.image_id` | String | Image identifier |
+
+### `GET /api/forum/drafts`
+
+Retrieves user's saved drafts.
+
+**App Authentication:** Required (see headers above)
+
+**Query Parameters:**
+
+| Name | Type | Description | Required |
+|---|---|---|---|
+| `user_id` | Integer | User ID | Yes |
+
+### `POST /api/forum/drafts`
+
+Saves or updates a draft.
+
+**App Authentication:** Required (see headers above)
+
+**Parameters:**
+
+| Name | Type | Description | Required |
+|---|---|---|---|
+| `user_id` | Integer | Draft owner user ID | Yes |
+| `title` | String | Draft title | No |
+| `content` | String | Draft content | No |
+| `category` | String | Draft category | No |
+| `type` | String | Draft type: "topic" or "reply" | Yes |
+| `topic_id` | Integer | Parent topic ID (for reply drafts) | No |
+
+**Forum API Error Codes:**
+
+| Status | Error Message | Cause | Solution |
+|--------|---------------|-------|----------|
+| **400** | `"Invalid parameters"` | Missing required fields or invalid format | Check required parameters |
+| **401** | `"User not authenticated"` | Invalid or missing user_id | Ensure user is logged in |
+| **403** | `"Permission denied"` | User doesn't own the content being modified | Only authors can edit/delete |
+| **404** | `"Topic not found"` | Topic ID doesn't exist | Verify topic ID |
+| **413** | `"File too large"` | Image exceeds 5MB limit | Compress image before upload |
+| **429** | `"Too many requests"` | Rate limit exceeded | Wait before making more requests |
 
 ---
 

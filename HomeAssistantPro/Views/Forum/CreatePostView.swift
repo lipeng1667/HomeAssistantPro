@@ -1,5 +1,5 @@
 //
-//  EnhancedCreatePostView.swift
+//  CreatePostView.swift
 //  HomeAssistantPro
 //
 //  Created: July 7, 2025
@@ -25,7 +25,7 @@
 import SwiftUI
 
 /// Enhanced create post view with image attachments and responsive design
-struct EnhancedCreatePostView: View {
+struct CreatePostView: View {
     @Environment(\.presentationMode) var presentationMode
     @StateObject private var draftManager = DraftManager.shared
     
@@ -633,6 +633,6 @@ struct ImagePicker: UIViewControllerRepresentable {
 // MARK: - Preview
 
 #Preview {
-    EnhancedCreatePostView()
+    CreatePostView()
         .environmentObject(AppViewModel())
 }
