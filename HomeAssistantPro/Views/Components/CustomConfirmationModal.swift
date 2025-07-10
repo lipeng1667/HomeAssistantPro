@@ -165,6 +165,7 @@ struct CustomConfirmationModal: View {
     let config: ConfirmationConfig
     @State private var scale: CGFloat = 0.8
     @State private var opacity: Double = 0
+    @State private var wasTabBarVisible: Bool = true
     @Environment(\.optionalTabBarVisibility) private var tabBarVisibility
     
     var body: some View {
@@ -275,6 +276,9 @@ struct CustomConfirmationModal: View {
             .opacity(opacity)
         }
         .onAppear {
+            // Remember current tab bar visibility state
+            wasTabBarVisible = tabBarVisibility?.isTabBarVisible ?? true
+            
             // Hide tab bar when modal appears (if available)
             tabBarVisibility?.hideTabBar()
             
@@ -284,8 +288,10 @@ struct CustomConfirmationModal: View {
             }
         }
         .onDisappear {
-            // Show tab bar when modal disappears (if available)
-            tabBarVisibility?.showTabBar()
+            // Only restore tab bar if it was visible before the modal appeared
+            if wasTabBarVisible {
+                tabBarVisibility?.showTabBar()
+            }
         }
     }
     

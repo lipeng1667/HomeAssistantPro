@@ -22,6 +22,8 @@ struct ForumView: View {
     @State private var showCreatePost = false
     @State private var showCreateMenu = false
     @StateObject private var draftManager = DraftManager.shared
+    @StateObject private var restrictionViewModel = AnonymousRestrictionViewModel()
+    @EnvironmentObject private var appViewModel: AppViewModel
     
     // Forum data state
     @State private var topics: [ForumTopic] = []
@@ -120,6 +122,26 @@ struct ForumView: View {
                 Text(errorMessage)
             }
         }
+        .overlay {
+            if restrictionViewModel.showModal {
+                CustomConfirmationModal(
+                    isPresented: $restrictionViewModel.showModal,
+                    config: ConfirmationConfig.primary(
+                        title: restrictionViewModel.restrictedAction.title,
+                        message: restrictionViewModel.restrictedAction.message,
+                        icon: "person.badge.plus",
+                        confirmText: restrictionViewModel.restrictedAction.primaryButtonText,
+                        cancelText: restrictionViewModel.restrictedAction.secondaryButtonText,
+                        onConfirm: {
+                            restrictionViewModel.navigateToRegistration()
+                        },
+                        onCancel: {
+                            restrictionViewModel.navigateToLogin()
+                        }
+                    )
+                )
+            }
+        }
     }
     
     
@@ -129,10 +151,25 @@ struct ForumView: View {
         HStack(alignment: .center) {
             // Left section
             VStack(alignment: .leading, spacing: DesignTokens.ResponsiveSpacing.xs) {
-                Text("COMMUNITY")
-                    .font(DesignTokens.ResponsiveTypography.caption)
-                    .foregroundColor(DesignTokens.Colors.Forum.primary)
-                    .tracking(1.5)
+                HStack(spacing: 8) {
+                    Text("COMMUNITY")
+                        .font(DesignTokens.ResponsiveTypography.caption)
+                        .foregroundColor(DesignTokens.Colors.Forum.primary)
+                        .tracking(1.5)
+                    
+                    // Read-only indicator for anonymous users
+                    if appViewModel.isAnonymousUser {
+                        Text("READ-ONLY")
+                            .font(.system(size: DesignTokens.DeviceSize.current.fontSize(10, 11, 12), weight: .semibold))
+                            .foregroundColor(DesignTokens.Colors.textSecondary)
+                            .padding(.horizontal, 6)
+                            .padding(.vertical, 2)
+                            .background(
+                                Capsule()
+                                    .fill(DesignTokens.Colors.textSecondary.opacity(0.15))
+                            )
+                    }
+                }
                 
                 Text("Forum")
                     .font(DesignTokens.ResponsiveTypography.headingLarge)
@@ -144,6 +181,13 @@ struct ForumView: View {
             // Right action button with contextual menu
             Button(action: {
                 HapticManager.buttonTap()
+                
+                // Check if user is anonymous
+                if appViewModel.isAnonymousUser {
+                    restrictionViewModel.showRestrictionModal(for: .createTopic)
+                    return
+                }
+                
                 if draftManager.currentDraft != nil {
                     showCreateMenu = true
                 } else {
@@ -185,30 +229,38 @@ struct ForumView: View {
             }
             .scaleButtonStyle()
             .contextMenu {
-                Button {
-                    withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
-                        showCreatePost = true
-                    }
-                } label: {
-                    Label("New Topic", systemImage: "plus.bubble")
-                }
-                
-                if draftManager.currentDraft != nil {
+                if !appViewModel.isAnonymousUser {
                     Button {
                         withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
                             showCreatePost = true
                         }
                     } label: {
-                        Label("Continue Draft", systemImage: "doc.text")
+                        Label("New Topic", systemImage: "plus.bubble")
                     }
                     
-                    Button(role: .destructive) {
-                        withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
-                            draftManager.clearDraft()
+                    if draftManager.currentDraft != nil {
+                        Button {
+                            withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
+                                showCreatePost = true
+                            }
+                        } label: {
+                            Label("Continue Draft", systemImage: "doc.text")
                         }
-                        HapticManager.buttonTap()
+                        
+                        Button(role: .destructive) {
+                            withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
+                                draftManager.clearDraft()
+                            }
+                            HapticManager.buttonTap()
+                        } label: {
+                            Label("Delete Draft", systemImage: "trash")
+                        }
+                    }
+                } else {
+                    Button {
+                        restrictionViewModel.showRestrictionModal(for: .createTopic)
                     } label: {
-                        Label("Delete Draft", systemImage: "trash")
+                        Label("New Topic", systemImage: "plus.bubble")
                     }
                 }
             }

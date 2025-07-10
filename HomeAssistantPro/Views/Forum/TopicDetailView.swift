@@ -27,6 +27,8 @@ struct TopicDetailView: View {
     
     @Environment(\.presentationMode) var presentationMode
     @Environment(\.optionalTabBarVisibility) private var tabBarVisibility
+    @EnvironmentObject private var appViewModel: AppViewModel
+    @StateObject private var restrictionViewModel = AnonymousRestrictionViewModel()
     @State private var topic: ForumTopic?
     @State private var replies: [ForumReply] = []
     @State private var currentPage = 1
@@ -134,6 +136,26 @@ struct TopicDetailView: View {
                 Text(errorMessage)
             }
         }
+        .overlay {
+            if restrictionViewModel.showModal {
+                CustomConfirmationModal(
+                    isPresented: $restrictionViewModel.showModal,
+                    config: ConfirmationConfig.primary(
+                        title: restrictionViewModel.restrictedAction.title,
+                        message: restrictionViewModel.restrictedAction.message,
+                        icon: "person.badge.plus",
+                        confirmText: restrictionViewModel.restrictedAction.primaryButtonText,
+                        cancelText: restrictionViewModel.restrictedAction.secondaryButtonText,
+                        onConfirm: {
+                            restrictionViewModel.navigateToRegistration()
+                        },
+                        onCancel: {
+                            restrictionViewModel.navigateToLogin()
+                        }
+                    )
+                )
+            }
+        }
     }
     
     // MARK: - Header Section
@@ -166,6 +188,12 @@ struct TopicDetailView: View {
             
             // Reply button
             Button(action: {
+                // Check if user is anonymous
+                if appViewModel.isAnonymousUser {
+                    restrictionViewModel.showRestrictionModal(for: .replyToTopic)
+                    return
+                }
+                
                 replyingToReply = nil // Reply to main topic
                 showReplyForm = true
             }) {
@@ -343,6 +371,12 @@ struct TopicDetailView: View {
             HStack(spacing: DesignTokens.ResponsiveSpacing.lg) {
                 // Like button
                 Button(action: {
+                    // Check if user is anonymous
+                    if appViewModel.isAnonymousUser {
+                        restrictionViewModel.showRestrictionModal(for: .likeTopic)
+                        return
+                    }
+                    
                     Task {
                         await toggleTopicLike()
                     }
@@ -479,6 +513,12 @@ struct TopicDetailView: View {
             HStack {
                 // Like button
                 Button(action: {
+                    // Check if user is anonymous
+                    if appViewModel.isAnonymousUser {
+                        restrictionViewModel.showRestrictionModal(for: .likeReply)
+                        return
+                    }
+                    
                     Task {
                         await toggleReplyLike(replyId: reply.id)
                     }
@@ -499,6 +539,12 @@ struct TopicDetailView: View {
                 
                 // Reply to this reply button
                 Button(action: {
+                    // Check if user is anonymous
+                    if appViewModel.isAnonymousUser {
+                        restrictionViewModel.showRestrictionModal(for: .replyToReply)
+                        return
+                    }
+                    
                     replyingToReply = reply
                     showReplyForm = true
                 }) {
@@ -557,6 +603,12 @@ struct TopicDetailView: View {
                 .multilineTextAlignment(.center)
             
             Button("Add Reply") {
+                // Check if user is anonymous
+                if appViewModel.isAnonymousUser {
+                    restrictionViewModel.showRestrictionModal(for: .replyToTopic)
+                    return
+                }
+                
                 replyingToReply = nil // Reply to main topic
                 showReplyForm = true
             }

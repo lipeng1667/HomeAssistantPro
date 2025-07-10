@@ -101,3 +101,27 @@ You are my pair-programmer.  Obey the global USER rules **plus** these project-s
 ### Brevity
 
 33. Unless the question demands depth, stay under 120 words.
+
+### Project-Specific Services & Infrastructure
+
+34. **SettingsStore (UserDefaults + Keychain wrapper)**:
+
+- User authentication status: `0=not logged in, 1=anonymous, 2=registered`
+- Store via `storeUserStatus(_:)`, retrieve via `retrieveUserStatus()`
+- Keychain: `user_id`, `device_id` (persistent across logout)
+- UserDefaults: `user_status`, `account_name`, `phone_number`, theme, first launch
+- Inject via `@EnvironmentObject private var settingsStore: SettingsStore`
+
+35. **BackgroundDataPreloader (Performance service)**:
+
+- Preloads forum data during 3-second splash screen
+- Uses CacheManager with 30-minute UserDefaults cache
+- Inject via `@Environment(\.backgroundDataPreloader) private var backgroundDataPreloader`
+- Methods: `startPreloading()`, `getCachedForumTopics()`, `hasValidCachedData()`
+- Always check cache first, then load fresh data in background
+
+36. **User Status Management**:
+
+- Use `settingsStore.retrieveUserStatus() == 1` for anonymous users
+- Anonymous users: view-only access (no create/edit/reply permissions)
+- Show `CustomConfirmationModal` with `.primary` theme for restricted actions

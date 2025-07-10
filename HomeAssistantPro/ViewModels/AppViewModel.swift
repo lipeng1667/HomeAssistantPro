@@ -76,6 +76,12 @@ final class AppViewModel: ObservableObject {
         set { UserDefaults.standard.set(newValue, forKey: "is_logged_in") }
     }
     
+    /// Computed property to check if current user is anonymous (view-only access)
+    /// Returns true if user status is 1 (anonymous), false otherwise
+    var isAnonymousUser: Bool {
+        return settingsStore.retrieveUserStatus() == 1
+    }
+    
     /// Performs anonymous login via API
     /// - Returns: Success/failure status
     @MainActor
