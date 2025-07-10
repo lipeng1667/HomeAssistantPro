@@ -26,6 +26,7 @@ struct TopicDetailView: View {
     let topicId: Int
     
     @Environment(\.presentationMode) var presentationMode
+    @Environment(\.optionalTabBarVisibility) private var tabBarVisibility
     @State private var topic: ForumTopic?
     @State private var replies: [ForumReply] = []
     @State private var currentPage = 1
@@ -38,33 +39,77 @@ struct TopicDetailView: View {
     @State private var showReplyForm = false
     @State private var replyContent = ""
     @State private var isSubmittingReply = false
+    @State private var replyingToReply: ForumReply? = nil
     
     // Services
     private let forumService = ForumService.shared
     private let logger = Logger(subsystem: "com.homeassistant.ios", category: "TopicDetailView")
     
-    var body: some View {
-        NavigationView {
-            ZStack {
-                // Standardized background
-                StandardTabBackground(configuration: .forum)
+    // Computed header height based on device size
+    private var headerHeight: CGFloat {
+        let baseHeight: CGFloat = 40 // Button height
+        let verticalPadding = DesignTokens.DeviceSize.current.spacing(32, 40, 48) // Top + bottom padding
+        return baseHeight + verticalPadding
+    }
+    
+    // Back swipe gesture for navigation
+    private var backSwipeGesture: some Gesture {
+        DragGesture(minimumDistance: 30, coordinateSpace: .local)
+            .onEnded { value in
+                // Check if this is a left-to-right swipe from the left edge
+                let horizontalDistance = value.translation.width
+                let verticalDistance = abs(value.translation.height)
+                let startLocation = value.startLocation.x
                 
-                VStack(spacing: 0) {
-                    // Header
-                    headerSection
-                    
-                    // Content
-                    if let topic = topic {
-                        contentSection(topic: topic)
-                    } else {
-                        loadingSection
-                    }
+                // Must be:
+                // 1. Swipe from left edge (within 50px from left)
+                // 2. Horizontal movement of at least 100px
+                // 3. Predominantly horizontal (not vertical scroll)
+                // 4. Left to right direction
+                if startLocation < 50 && 
+                   horizontalDistance > 100 && 
+                   horizontalDistance > verticalDistance * 2 {
+                    // Navigate back to ForumView
+                    presentationMode.wrappedValue.dismiss()
                 }
             }
-            .navigationBarHidden(true)
+    }
+    
+    var body: some View {
+        ZStack {
+            // Standardized background
+            StandardTabBackground(configuration: .forum)
+            
+            // Main content with top padding for header
+            VStack(spacing: 0) {
+                // Spacer for header height
+                Spacer()
+                    .frame(height: headerHeight)
+                
+                // Content
+                if let topic = topic {
+                    contentSection(topic: topic)
+                } else {
+                    loadingSection
+                }
+            }
+            
+            // Fixed header overlay
+            VStack {
+                headerSection
+                    .background(.ultraThinMaterial)
+                Spacer()
+            }
+            .zIndex(2)
         }
+        .navigationBarHidden(true)
+        .gesture(backSwipeGesture)
         .onAppear {
+            tabBarVisibility?.hideTabBar()
             loadTopicDetail()
+        }
+        .onDisappear {
+            tabBarVisibility?.showTabBar()
         }
         .refreshable {
             await refreshTopic()
@@ -72,6 +117,7 @@ struct TopicDetailView: View {
         .sheet(isPresented: $showReplyForm) {
             ReplyFormView(
                 topicId: topicId,
+                parentReply: replyingToReply,
                 onReplySubmitted: {
                     Task {
                         await refreshTopic()
@@ -120,6 +166,7 @@ struct TopicDetailView: View {
             
             // Reply button
             Button(action: {
+                replyingToReply = nil // Reply to main topic
                 showReplyForm = true
             }) {
                 Circle()
@@ -449,6 +496,23 @@ struct TopicDetailView: View {
                 .scaleButtonStyle()
                 
                 Spacer()
+                
+                // Reply to this reply button
+                Button(action: {
+                    replyingToReply = reply
+                    showReplyForm = true
+                }) {
+                    HStack(spacing: 4) {
+                        Image(systemName: "arrowshape.turn.up.left")
+                            .font(.system(size: 14, weight: .medium))
+                            .foregroundColor(DesignTokens.Colors.Forum.primary)
+                        
+                        Text("Reply")
+                            .font(DesignTokens.ResponsiveTypography.caption)
+                            .foregroundColor(DesignTokens.Colors.Forum.primary)
+                    }
+                }
+                .scaleButtonStyle()
             }
         }
         .padding(DesignTokens.ResponsiveSpacing.md)
@@ -493,6 +557,7 @@ struct TopicDetailView: View {
                 .multilineTextAlignment(.center)
             
             Button("Add Reply") {
+                replyingToReply = nil // Reply to main topic
                 showReplyForm = true
             }
             .buttonStyle(.borderedProminent)
@@ -693,6 +758,7 @@ struct TopicDetailView: View {
 /// Reply form sheet view
 struct ReplyFormView: View {
     let topicId: Int
+    let parentReply: ForumReply?
     let onReplySubmitted: () -> Void
     
     @Environment(\.presentationMode) var presentationMode
@@ -714,7 +780,7 @@ struct ReplyFormView: View {
                     
                     Spacer()
                     
-                    Text("Add Reply")
+                    Text(parentReply != nil ? "Reply to \(parentReply!.author.name)" : "Add Reply")
                         .font(DesignTokens.ResponsiveTypography.headingMedium)
                         .foregroundColor(DesignTokens.Colors.textPrimary)
                     
@@ -734,6 +800,48 @@ struct ReplyFormView: View {
                 
                 // Content
                 VStack(alignment: .leading, spacing: 16) {
+                    // Parent reply context (if replying to a reply)
+                    if let parentReply = parentReply {
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text("Replying to:")
+                                .font(DesignTokens.ResponsiveTypography.caption)
+                                .foregroundColor(DesignTokens.Colors.textSecondary)
+                            
+                            HStack(spacing: 8) {
+                                Circle()
+                                    .fill(DesignTokens.Colors.primaryPurple.opacity(0.2))
+                                    .frame(width: 24, height: 24)
+                                    .overlay(
+                                        Image(systemName: "person.crop.circle.fill")
+                                            .font(.system(size: 12, weight: .medium))
+                                            .foregroundColor(DesignTokens.Colors.primaryPurple)
+                                    )
+                                
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text(parentReply.author.name)
+                                        .font(DesignTokens.ResponsiveTypography.bodyMedium)
+                                        .foregroundColor(DesignTokens.Colors.textPrimary)
+                                    
+                                    Text(String(parentReply.content.prefix(100)) + (parentReply.content.count > 100 ? "..." : ""))
+                                        .font(DesignTokens.ResponsiveTypography.caption)
+                                        .foregroundColor(DesignTokens.Colors.textSecondary)
+                                        .lineLimit(2)
+                                }
+                                
+                                Spacer()
+                            }
+                            .padding(12)
+                            .background(
+                                RoundedRectangle(cornerRadius: 8)
+                                    .fill(DesignTokens.Colors.primaryPurple.opacity(0.05))
+                                    .overlay(
+                                        RoundedRectangle(cornerRadius: 8)
+                                            .stroke(DesignTokens.Colors.primaryPurple.opacity(0.2), lineWidth: 1)
+                                    )
+                            )
+                        }
+                    }
+                    
                     HStack {
                         Text("Your Reply")
                             .font(DesignTokens.ResponsiveTypography.bodyLarge)

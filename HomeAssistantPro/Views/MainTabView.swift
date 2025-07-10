@@ -113,7 +113,7 @@ struct MainTabView: View {
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                 .environmentObject(tabBarVisibility)
                 .environment(\.optionalTabBarVisibility, tabBarVisibility)
-                .simultaneousGesture(swipeGesture)
+                .simultaneousGesture(tabBarVisibility.isTabBarVisible ? swipeGesture : nil)
             
             // Custom tab bar with keyboard-responsive behavior
             if tabBarVisibility.isTabBarVisible {
@@ -355,7 +355,7 @@ struct EnhancedMainTabView: View {
             // Content
             contentArea
                 .environmentObject(tabBarVisibility)
-                .simultaneousGesture(enhancedSwipeGesture)
+                .simultaneousGesture(tabBarVisibility.isTabBarVisible ? enhancedSwipeGesture : nil)
             
             // Floating tab bar with keyboard-responsive behavior
             if tabBarVisibility.isTabBarVisible {
