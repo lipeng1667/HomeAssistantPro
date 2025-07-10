@@ -45,7 +45,7 @@ curl -X GET "http://localhost:10000/api/forum/topics?page=1&limit=20&category=Sm
 | `category` | String | Topic category |
 | `reply_count` | Integer | Number of replies |
 | `like_count` | Integer | Number of likes |
-| `status` | Integer | -1 = default(wait for review); 0 = published; 1 = current user liked this topic; 2 = topic is trending |
+| `status` | Integer | -1 = default(wait for review); 0 = published; 1 = deleted |
 | `created_at` | String | ISO timestamp of creation |
 | `updated_at` | String | ISO timestamp of last update |
 
@@ -208,84 +208,17 @@ see [Pagination STRUCTURE](#pagination-structure)
 }
 ```
 
-## POST /api/forum/upload
+---
 
-Uploads images for forum posts and replies. **Use this endpoint first** to upload images, then use the returned `image_url` in topic/reply creation.
-
-**App Authentication:** Required (see headers in `api_table.md`)
-
-**Parameters:**
-
-| Name | Type | Description | Required |
-|---|---|---|---|
-| `user_id` | Integer | Uploader user ID | Yes |
-| `image` | File | Image file (JPG, PNG, max 5MB) | Yes |
-| `type` | String | Upload type: "topic" or "reply" | Yes |
-
-**iOS Implementation Notes:**
-
-- Use `URLSession` with `multipart/form-data` encoding
-- Convert `UIImage` to `Data` using `jpegData(compressionQuality:)` or `pngData()`
-- Include proper Content-Type headers for file upload
-
-**Example Request (iOS Swift):**
-
-```swift
-// 1. First upload the image
-let imageData = selectedImage.jpegData(compressionQuality: 0.8)
-var request = URLRequest(url: URL(string: "http://localhost:10000/api/forum/upload")!)
-request.httpMethod = "POST"
-request.setValue("multipart/form-data; boundary=\(boundary)", forHTTPHeaderField: "Content-Type")
-request.setValue("\(timestamp)", forHTTPHeaderField: "X-Timestamp")
-request.setValue(signature, forHTTPHeaderField: "X-Signature")
-
-// Multipart form data with image
-let body = createMultipartBody(parameters: [
-    "user_id": "123",
-    "type": "topic"
-], imageData: imageData, boundary: boundary)
-request.httpBody = body
-```
-
-**Example Request (curl):**
-
-```bash
-curl -X POST http://localhost:10000/api/forum/upload \
-  -H "X-Timestamp: 1672531200000" \
-  -H "X-Signature: a1b2c3d4e5f6..." \
-  -F "user_id=123" \
-  -F "type=topic" \
-  -F "image=@/path/to/image.jpg"
-```
-
-**Response Structure:**
-
-| Field | Type | Description |
-|-------|------|-------------|
-| `status` | String | Request status ("success" or "error") |
-| `data` | Object | Response data container |
-| `data.image_url` | String | Uploaded image URL (use this in topic/reply creation) |
-| `data.image_id` | String | Image identifier |
-
-**Example Response:**
-
-```json
-{
-  "status": "success",
-  "data": {
-    "image_url": "https://api.example.com/uploads/forum/topic_image_123_1672531200.jpg",
-    "image_id": "img_123_1672531200"
-  }
-}
-```
-
-## `POST /api/forum/topics`
+## POST /api/forum/topics
 
 Creates a new forum topic.
 
+`IMPORTANT: ALL new topics should be reviewed by administrator then set the status from -1 to 0, then this topic is PUBLISHED`
+
 **App Authentication:** Required (see headers in `api_table.md`)
 
-**Parameters:**
+**Request Parameters:**
 
 | Name | Type | Description | Required |
 |---|---|---|---|
@@ -294,6 +227,8 @@ Creates a new forum topic.
 | `content` | String | Topic content (10-2000 characters) | Yes |
 | `category` | String | Topic category | Yes |
 | `images` | Array | Array of image URLs (max 3) | No |
+
+For more information about **images**, see **api_upload_file.md**.
 
 **Example Request:**
 
@@ -316,24 +251,36 @@ curl -X POST http://localhost:10000/api/forum/topics \
 | Field | Type | Description |
 |-------|------|-------------|
 | `status` | String | Request status ("success" or "error") |
-| `message` | String | SUCCESS: Waiting for review; ERROR: reason for error |
+| `data` | Object | Response data container |
+| `data.topic` | Object | Created topic object |
+| `data.topic.id` | Integer | Topic unique ID |
+| `data.topic.created_at` | String | ISO timestamp of creation |
 
-## `GET /api/forum/topics/:id/replies`
+**Example Response:**
+
+```json
+{
+  "status": "success",
+  "data": {
+    "topic": {
+      "id": 42,
+      "created_at": "2024-01-15T16:30:00Z"
+    }
+  }
+}
+```
+
+## GET /api/forum/topics/:id/replies
 
 Retrieves replies for a specific topic with pagination.
 
 **App Authentication:** Required (see headers in `api_table.md`)
 
-**Path Parameters:**
-
-| Name | Type | Description | Required |
-|---|---|---|---|
-| `id` | Integer | Topic ID | Yes |
-
 **Query Parameters:**
 
 | Name | Type | Description | Required | Default |
-|---|---|---|---|---|
+|---|---|---|---| --- |
+| `id` | Integer | Topic ID | Yes | - |
 | `page` | Integer | Page number (1-based) | No | 1 |
 | `limit` | Integer | Replies per page (1-50) | No | 20 |
 | `sort` | String | Sort order: "newest", "oldest", "popular" | No | "newest" |
@@ -354,6 +301,10 @@ curl -X GET "http://localhost:10000/api/forum/topics/1/replies?page=1&limit=20&s
 | `data` | Object | Response data container |
 | `data.replies` | Array | Array of reply objects |
 | `data.pagination` | Object | Pagination information |
+
+**Reply Pagination Structure:**
+
+see [Pagination STRUCTURE](#pagination-structure)
 
 **Reply Object Structure:**
 
@@ -402,9 +353,11 @@ curl -X GET "http://localhost:10000/api/forum/topics/1/replies?page=1&limit=20&s
 }
 ```
 
-## `POST /api/forum/topics/:id/replies`
+## POST /api/forum/topics/:id/replies
 
 Adds a reply to an existing topic.
+
+`Like the post, new reply should be review by admin then could be published, set status from -1 to 0`
 
 **App Authentication:** Required (see headers in `api_table.md`)
 
@@ -452,22 +405,13 @@ curl -X POST http://localhost:10000/api/forum/topics/1/replies \
   "data": {
     "reply": {
       "id": 25,
-      "content": "Great question! I had the same issue and solved it by...",
-      "author": {
-        "id": 456,
-        "name": "Jane Smith"
-      },
-      "like_count": 0,
-      "is_liked": false,
-      "images": ["https://api.example.com/uploads/solution_image.jpg"],
-      "created_at": "2024-01-15T16:30:00Z",
-      "updated_at": "2024-01-15T16:30:00Z"
+      "created_at": "2024-01-15T16:30:00Z"
     }
   }
 }
 ```
 
-## `PUT /api/forum/topics/:id`
+## PUT /api/forum/topics/:id
 
 Updates an existing topic (author only).
 
@@ -537,7 +481,7 @@ curl -X PUT http://localhost:10000/api/forum/topics/1 \
 }
 ```
 
-## `DELETE /api/forum/topics/:id`
+## DELETE /api/forum/topics/:id
 
 Deletes a topic (author only).
 
@@ -583,7 +527,7 @@ curl -X DELETE http://localhost:10000/api/forum/topics/1 \
 }
 ```
 
-## `PUT /api/forum/replies/:id`
+## PUT /api/forum/replies/:id
 
 Updates an existing reply (author only).
 
@@ -648,7 +592,7 @@ curl -X PUT http://localhost:10000/api/forum/replies/25 \
 }
 ```
 
-## `DELETE /api/forum/replies/:id`
+## DELETE /api/forum/replies/:id
 
 Deletes a reply (author only).
 
@@ -694,7 +638,7 @@ curl -X DELETE http://localhost:10000/api/forum/replies/25 \
 }
 ```
 
-## `POST /api/forum/replies/:id/like`
+## POST /api/forum/replies/:id/like
 
 Toggles like status for a reply.
 
@@ -745,7 +689,7 @@ curl -X POST http://localhost:10000/api/forum/replies/25/like \
 }
 ```
 
-## `POST /api/forum/topics/:id/like`
+## POST /api/forum/topics/:id/like
 
 Toggles like status for a topic.
 
@@ -757,6 +701,18 @@ Toggles like status for a topic.
 |---|---|---|---|
 | `user_id` | Integer | User ID performing the action | Yes |
 
+**Example Request:**
+
+```bash
+curl -X POST http://localhost:10000/api/forum/topics/25/like \
+  -H "Content-Type: application/json" \
+  -H "X-Timestamp: 1672531200000" \
+  -H "X-Signature: a1b2c3d4e5f6..." \
+  -d '{
+    "user_id": 789
+  }'
+```
+
 **Response Structure:**
 
 | Field | Type | Description |
@@ -766,7 +722,7 @@ Toggles like status for a topic.
 | `data.is_liked` | Boolean | New like status |
 | `data.like_count` | Integer | Updated like count |
 
-## `GET /api/forum/search`
+## GET /api/forum/search
 
 Searches topics and replies by keyword.
 
@@ -774,19 +730,135 @@ Searches topics and replies by keyword.
 
 **Query Parameters:**
 
-| Name | Type | Description | Required |
-|---|---|---|---|
-| `q` | String | Search query (min 2 characters) | Yes |
+| Name | Type | Description | Required | Default |
+|---|---|---|---|---|
+| `q` | String | Search query (min 2 characters) | Yes | - |
 | `type` | String | Search type: "topics", "replies", "all" | No | "all" |
 | `category` | String | Filter by category | No | All |
 | `page` | Integer | Page number | No | 1 |
 | `limit` | Integer | Results per page (1-50) | No | 20 |
 
-## `GET /api/forum/categories`
+**Example Request:**
+
+```bash
+curl -X GET "http://localhost:10000/api/forum/search?q=motion%20sensor&type=all&category=Smart%20Home&page=1&limit=20" \
+  -H "X-Timestamp: 1672531200000" \
+  -H "X-Signature: a1b2c3d4e5f6..."
+```
+
+**Response Structure:**
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `status` | String | Request status ("success" or "error") |
+| `data` | Object | Response data container |
+| `data.results` | Array | Array of search result objects |
+| `data.pagination` | Object | Pagination information |
+| `data.search_info` | Object | Search metadata |
+
+**Search Result Object Structure:**
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `id` | Integer | Result ID |
+| `type` | String | Result type ("topic" or "reply") |
+| `title` | String | Result title (for topics) |
+| `content` | String | Result content (highlighted with search terms) |
+| `category` | String | Result category |
+| `author` | Object | Author information |
+| `author.id` | Integer | Author user ID |
+| `author.name` | String | Author display name |
+| `topic_id` | Integer | Parent topic ID (for replies) |
+| `like_count` | Integer | Number of likes |
+| `reply_count` | Integer | Number of replies (for topics only) |
+| `relevance_score` | Float | Search relevance score (0-1) |
+| `created_at` | String | ISO timestamp of creation |
+| `updated_at` | String | ISO timestamp of last update |
+
+**Search Info Object Structure:**
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `query` | String | Original search query |
+| `total_results` | Integer | Total number of results found |
+| `search_time` | Float | Search execution time in seconds |
+| `filters_applied` | Object | Applied filters summary |
+
+**Example Response:**
+
+```json
+{
+  "status": "success",
+  "data": {
+    "results": [
+      {
+        "id": 1,
+        "type": "topic",
+        "title": "How to setup <mark>motion sensors</mark>?",
+        "content": "I'm trying to configure <mark>motion sensors</mark> in my living room...",
+        "category": "Smart Home",
+        "author": {
+          "id": 123,
+          "name": "John Doe"
+        },
+        "topic_id": 1,
+        "like_count": 8,
+        "reply_count": 15,
+        "relevance_score": 0.95,
+        "created_at": "2024-01-15T10:30:00Z",
+        "updated_at": "2024-01-15T15:45:00Z"
+      },
+      {
+        "id": 2,
+        "type": "reply",
+        "title": null,
+        "content": "I've had great success with PIR <mark>sensors</mark>. Here's what worked for me...",
+        "category": "Smart Home",
+        "author": {
+          "id": 456,
+          "name": "Jane Smith"
+        },
+        "topic_id": 1,
+        "like_count": 5,
+        "reply_count": null,
+        "relevance_score": 0.87,
+        "created_at": "2024-01-15T11:30:00Z",
+        "updated_at": "2024-01-15T11:30:00Z"
+      }
+    ],
+    "pagination": {
+      "current_page": 1,
+      "total_pages": 3,
+      "total_items": 45,
+      "has_next": true,
+      "has_previous": false
+    },
+    "search_info": {
+      "query": "motion sensor",
+      "total_results": 45,
+      "search_time": 0.023,
+      "filters_applied": {
+        "category": "Smart Home",
+        "type": "all"
+      }
+    }
+  }
+}
+```
+
+## GET /api/forum/categories
 
 Retrieves list of available forum categories.
 
 **App Authentication:** Required (see headers in `api_table.md`)
+
+**Request Example:**
+
+```bash
+curl -X GET "http://localhost:10000/api/forum/categories" \
+  -H "X-Timestamp: 1672531200000" \
+  -H "X-Signature: a1b2c3d4e5f6..."
+```
 
 **Response Structure:**
 
@@ -800,26 +872,77 @@ Retrieves list of available forum categories.
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `id` | String | Category identifier |
+| `id` | Integer | Category identifier |
 | `name` | String | Category display name |
 | `description` | String | Category description |
 | `topic_count` | Integer | Number of topics in category |
 | `icon` | String | Category icon name |
 
-### `GET /api/forum/drafts`
+**Example Response:**
+
+```json
+{
+  "status": "success",
+  "data": {
+    "categories": [
+      {
+        "id": 0,
+        "name": "Smart Home",
+        "description": "Discussions about smart home devices, automation, and setup",
+        "topic_count": 245,
+        "icon": "home"
+      },
+      {
+        "id": 1,
+        "name": "Security",
+        "description": "Home security systems, cameras, and monitoring",
+        "topic_count": 132,
+        "icon": "shield"
+      },
+      {
+        "id": 2,
+        "name": "Lighting",
+        "description": "Smart bulbs, switches, and lighting automation",
+        "topic_count": 89,
+        "icon": "lightbulb"
+      },
+      {
+        "id": 3,
+        "name": "Climate Control",
+        "description": "Thermostats, HVAC, and temperature management",
+        "topic_count": 156,
+        "icon": "thermometer"
+      }
+    ]
+  }
+}
+```
+
+## GET /api/forum/drafts
 
 Retrieves user's saved drafts.
+
+Simplified Draft System:
+
+- ONE topic draft per user - Simple, no confusion
+- Multiple reply drafts per user - One draft per topic they're replying to
+
+Logic:
+
+- Topic Draft: User can only work on one new topic at a time
+- Reply Drafts: Each tied to specific topic_id, so user can draft replies to different topics
+  simultaneously
 
 **App Authentication:** Required (see headers in `api_table.md`)
 
 **Query Parameters:**
 
-| Name | Type | Description | Required | Default |
-|---|---|---|---|---|
-| `user_id` | Integer | User ID | Yes | - |
-| `type` | String | Filter by draft type: "topic" or "reply" | No | All |
-| `page` | Integer | Page number (1-based) | No | 1 |
-| `limit` | Integer | Drafts per page (1-50) | No | 20 |
+| Name | Type | Description | Required |
+|---|---|---|---|
+| `user_id` | Integer | User ID | Yes |
+| `type` | String | Filter by draft type: "topic" or "reply" | No |
+| `page` | Integer | Page number (1-based) | No |
+| `limit` | Integer | Drafts per page (1-50) | No |
 
 **Example Request:**
 
@@ -835,20 +958,30 @@ curl -X GET "http://localhost:10000/api/forum/drafts?user_id=123&type=topic&page
 |-------|------|-------------|
 | `status` | String | Request status ("success" or "error") |
 | `data` | Object | Response data container |
-| `data.drafts` | Array | Array of draft objects |
-| `data.pagination` | Object | Pagination information |
+| `data.topic_draft` | Object | draft topic context |
+| `data.reply_drafts` | Array | Array of draft objects |
 
-**Draft Object Structure:**
+**Topic Draft Object Structure:**
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `id` | String | Draft identifier |
+| `id` | Integer | Draft unique identifier |
 | `user_id` | Integer | Draft owner user ID |
 | `title` | String | Draft title |
 | `content` | String | Draft content |
 | `category` | String | Draft category |
-| `type` | String | Draft type: "topic" or "reply" |
-| `topic_id` | Integer | Parent topic ID (for reply drafts) |
+| `created_at` | String | ISO timestamp of creation |
+| `updated_at` | String | ISO timestamp of last update |
+
+**Reply Draft Object Structure:**
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `id` | Integer | Draft unique identifier |
+| `user_id` | Integer | Draft owner user ID |
+| `content` | String | Draft content |
+| `topic_id` | Integer | Parent topic ID |
+| `topic_title` | String | Parent topic title (for reference) |
 | `created_at` | String | ISO timestamp of creation |
 | `updated_at` | String | ISO timestamp of last update |
 
@@ -858,31 +991,40 @@ curl -X GET "http://localhost:10000/api/forum/drafts?user_id=123&type=topic&page
 {
   "status": "success",
   "data": {
-    "drafts": [
+    "topic_draft": {
+      "id": 1001,
+      "user_id": 123,
+      "title": "Smart bulb recommendations",
+      "content": "I'm looking for recommendations for smart bulbs that work well with...",
+      "category": "Smart Home",
+      "created_at": "2024-01-15T19:00:00Z",
+      "updated_at": "2024-01-15T19:00:00Z"
+    },
+    "reply_drafts": [
       {
-        "id": "draft_123_1672531200",
+        "id": 1002,
         "user_id": 123,
-        "title": "Draft: Smart bulb recommendations",
-        "content": "I'm looking for recommendations for smart bulbs that work well with...",
-        "category": "Smart Home",
-        "type": "topic",
-        "topic_id": null,
-        "created_at": "2024-01-15T19:00:00Z",
-        "updated_at": "2024-01-15T19:00:00Z"
+        "content": "Thanks for the question! I had a similar issue and solved it by...",
+        "topic_id": 42,
+        "topic_title": "Motion sensor setup help",
+        "created_at": "2024-01-15T18:30:00Z",
+        "updated_at": "2024-01-15T18:30:00Z"
+      },
+      {
+        "id": 1003,
+        "user_id": 123,
+        "content": "I recommend checking the power consumption settings...",
+        "topic_id": 89,
+        "topic_title": "Smart thermostat battery drain",
+        "created_at": "2024-01-15T17:45:00Z",
+        "updated_at": "2024-01-15T17:45:00Z"
       }
-    ],
-    "pagination": {
-      "current_page": 1,
-      "total_pages": 1,
-      "total_items": 3,
-      "has_next": false,
-      "has_previous": false
-    }
+    ]
   }
 }
 ```
 
-### `POST /api/forum/drafts`
+## POST /api/forum/drafts
 
 Saves or updates a draft.
 
@@ -922,7 +1064,7 @@ curl -X POST http://localhost:10000/api/forum/drafts \
 | `status` | String | Request status ("success" or "error") |
 | `data` | Object | Response data container |
 | `data.draft` | Object | Created/updated draft object |
-| `data.draft.id` | String | Draft identifier |
+| `data.draft.id` | Integer | Draft identifier |
 
 **Example Response:**
 
@@ -931,7 +1073,7 @@ curl -X POST http://localhost:10000/api/forum/drafts \
   "status": "success",
   "data": {
     "draft": {
-      "id": "draft_123_1672531200",
+      "id": 1001,
       "user_id": 123,
       "title": "Draft: Smart bulb recommendations",
       "content": "I'm looking for recommendations for smart bulbs that work well with...",
@@ -944,7 +1086,7 @@ curl -X POST http://localhost:10000/api/forum/drafts \
 }
 ```
 
-### `DELETE /api/forum/drafts/:id`
+### DELETE /api/forum/drafts/:id
 
 Deletes a saved draft.
 

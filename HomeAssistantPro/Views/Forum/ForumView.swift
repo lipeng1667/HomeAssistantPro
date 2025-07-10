@@ -11,31 +11,47 @@
 //
 
 import SwiftUI
+import os.log
 
 /// Modern forum view with contemporary design aesthetics
 struct ForumView: View {
     @State private var searchText = ""
-    @State private var selectedTopic: Topic? = nil
+    @State private var selectedTopic: ForumTopic? = nil
     @State private var animateCards = false
     @State private var searchFocused = false
     @State private var showCreatePost = false
     @State private var showCreateMenu = false
     @StateObject private var draftManager = DraftManager.shared
     
-    // Sample topics data
-    let topics = [
-        Topic(id: 1, title: "How to connect my smart thermostat to HomeKit?", comments: 23, likes: 156, avatar: "person.crop.circle.fill", category: "Smart Home", timeAgo: "2h ago", isHot: true),
-        Topic(id: 2, title: "Best smart lighting setup for beginners", comments: 45, likes: 203, avatar: "person.crop.circle.fill", category: "Lighting", timeAgo: "4h ago", isHot: false),
-        Topic(id: 3, title: "Security camera recommendations for outdoor use", comments: 67, likes: 89, avatar: "person.crop.circle.fill", category: "Security", timeAgo: "1d ago", isHot: true),
-        Topic(id: 4, title: "Smart speakers comparison: Alexa vs Google vs Siri", comments: 102, likes: 334, avatar: "person.crop.circle.fill", category: "Voice Control", timeAgo: "2d ago", isHot: false),
-        Topic(id: 5, title: "DIY smart home automation on a budget", comments: 78, likes: 245, avatar: "person.crop.circle.fill", category: "DIY", timeAgo: "3d ago", isHot: true)
-    ]
+    // Forum data state
+    @State private var topics: [ForumTopic] = []
+    @State private var categories: [ForumCategory] = []
+    @State private var selectedCategory: String? = nil
+    @State private var sortOption: ForumSortOption = .newest
+    @State private var currentPage = 1
+    @State private var hasMorePages = true
+    @State private var isLoading = false
+    @State private var isRefreshing = false
+    @State private var errorMessage: String? = nil
+    @State private var isSearching = false
+    @State private var searchResults: [ForumTopic] = []
     
-    var filteredTopics: [Topic] {
+    // Services
+    private let forumService = ForumService.shared
+    private let logger = Logger(subsystem: "com.homeassistant.ios", category: "ForumView")
+    
+    var filteredTopics: [ForumTopic] {
         if searchText.isEmpty {
             return topics
+        } else if isSearching {
+            return searchResults
         } else {
-            return topics.filter { $0.title.lowercased().contains(searchText.lowercased()) || $0.category.lowercased().contains(searchText.lowercased()) }
+            // Local filtering as fallback
+            return topics.filter { 
+                $0.title.lowercased().contains(searchText.lowercased()) || 
+                $0.category.lowercased().contains(searchText.lowercased()) ||
+                $0.content.lowercased().contains(searchText.lowercased())
+            }
         }
     }
     
@@ -63,6 +79,10 @@ struct ForumView: View {
         .dismissKeyboardOnSwipeDown()
         .onAppear {
             startAnimations()
+            loadInitialData()
+        }
+        .refreshable {
+            await refreshTopics()
         }
         .sheet(isPresented: $showCreatePost) {
             CreatePostView()
@@ -88,6 +108,15 @@ struct ForumView: View {
                 Text("You have an unfinished draft from \(formatDraftDate(draft.lastModified))")
             } else {
                 Text("Choose how you'd like to contribute to the community")
+            }
+        }
+        .alert("Error", isPresented: .constant(errorMessage != nil)) {
+            Button("OK") {
+                errorMessage = nil
+            }
+        } message: {
+            if let errorMessage = errorMessage {
+                Text(errorMessage)
             }
         }
     }
@@ -193,9 +222,17 @@ struct ForumView: View {
         HStack(spacing: 16) {
             // Search bar
             HStack(spacing: 12) {
-                Image(systemName: "magnifyingglass")
-                    .font(.system(size: 16, weight: .medium))
-                    .foregroundColor(searchFocused ? DesignTokens.Colors.textPrimary : DesignTokens.Colors.textSecondary)
+                Group {
+                    if isSearching {
+                        ProgressView()
+                            .progressViewStyle(CircularProgressViewStyle())
+                            .scaleEffect(0.7)
+                    } else {
+                        Image(systemName: "magnifyingglass")
+                            .font(.system(size: 16, weight: .medium))
+                    }
+                }
+                .foregroundColor(searchFocused ? DesignTokens.Colors.textPrimary : DesignTokens.Colors.textSecondary)
                 
                 TextField("Search topics, categories...", text: $searchText)
                     .font(.system(size: 16, weight: .medium))
@@ -203,6 +240,11 @@ struct ForumView: View {
                     .onTapGesture {
                         withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
                             searchFocused = true
+                        }
+                    }
+                    .onChange(of: searchText) { newValue in
+                        Task {
+                            await performSearch(query: newValue)
                         }
                     }
                 
@@ -234,11 +276,20 @@ struct ForumView: View {
             
             // Filter button
             Button(action: {
-                // Show filter options
+                showFilterOptions()
             }) {
-                Image(systemName: "line.3.horizontal.decrease.circle")
-                    .font(.system(size: 20, weight: .medium))
-                    .foregroundColor(DesignTokens.Colors.textSecondary)
+                VStack(spacing: 2) {
+                    Image(systemName: selectedCategory != nil ? "line.3.horizontal.decrease.circle.fill" : "line.3.horizontal.decrease.circle")
+                        .font(.system(size: 20, weight: .medium))
+                        .foregroundColor(selectedCategory != nil ? DesignTokens.Colors.Forum.primary : DesignTokens.Colors.textSecondary)
+                    
+                    if let selectedCategory = selectedCategory {
+                        Text(selectedCategory)
+                            .font(.system(size: 8, weight: .medium))
+                            .foregroundColor(DesignTokens.Colors.Forum.primary)
+                            .lineLimit(1)
+                    }
+                }
                     .frame(width: 48, height: 48)
                     .background(
                         Circle()
@@ -264,6 +315,53 @@ struct ForumView: View {
                         .scaleEffect(animateCards ? 1.0 : 0.95)
                         .opacity(animateCards ? 1.0 : 0.0)
                         .animation(.spring(response: 0.6, dampingFraction: 0.8).delay(Double(index) * 0.1), value: animateCards)
+                        .onAppear {
+                            // Load more topics when approaching the end
+                            if index == filteredTopics.count - 3 && hasMorePages && !isLoading {
+                                Task {
+                                    await loadMoreTopics()
+                                }
+                            }
+                        }
+                }
+                
+                // Loading indicator
+                if isLoading && !isRefreshing {
+                    HStack {
+                        ProgressView()
+                            .progressViewStyle(CircularProgressViewStyle())
+                            .scaleEffect(0.8)
+                        
+                        Text("Loading more...")
+                            .font(DesignTokens.ResponsiveTypography.bodyMedium)
+                            .foregroundColor(DesignTokens.Colors.textSecondary)
+                    }
+                    .padding()
+                }
+                
+                // Empty state
+                if topics.isEmpty && !isLoading {
+                    VStack(spacing: 16) {
+                        Image(systemName: "bubble.left.and.bubble.right")
+                            .font(.system(size: 48, weight: .light))
+                            .foregroundColor(DesignTokens.Colors.textTertiary)
+                        
+                        Text("No topics yet")
+                            .font(DesignTokens.ResponsiveTypography.headingMedium)
+                            .foregroundColor(DesignTokens.Colors.textSecondary)
+                        
+                        Text("Be the first to start a conversation!")
+                            .font(DesignTokens.ResponsiveTypography.bodyMedium)
+                            .foregroundColor(DesignTokens.Colors.textTertiary)
+                            .multilineTextAlignment(.center)
+                        
+                        Button("Create Topic") {
+                            showCreatePost = true
+                        }
+                        .buttonStyle(.borderedProminent)
+                        .controlSize(.large)
+                    }
+                    .padding()
                 }
                 
                 // Bottom padding for tab bar
@@ -278,11 +376,8 @@ struct ForumView: View {
     // MARK: - Topic Card
     
     @ViewBuilder
-    private func topicCard(topic: Topic, index: Int) -> some View {
-        Button(action: {
-            // Navigate to topic detail
-            selectedTopic = topic
-        }) {
+    private func topicCard(topic: ForumTopic, index: Int) -> some View {
+        NavigationLink(destination: TopicDetailView(topicId: topic.id)) {
             HStack(spacing: 16) {
                 // Avatar with status indicator
                 ZStack(alignment: .bottomTrailing) {
@@ -296,7 +391,7 @@ struct ForumView: View {
                         )
                         .frame(width: 50, height: 50)
                         .overlay(
-                            Image(systemName: topic.avatar)
+                            Image(systemName: "person.crop.circle.fill")
                                 .font(.system(size: 22, weight: .medium))
                                 .foregroundColor(DesignTokens.Colors.primaryCyan)
                         )
@@ -349,7 +444,7 @@ struct ForumView: View {
                                 .font(.system(size: 14, weight: .medium))
                                 .foregroundColor(.primary.opacity(0.6))
                             
-                            Text("\(topic.comments)")
+                            Text("\(topic.replyCount)")
                                 .font(.system(size: 14, weight: .semibold))
                                 .foregroundColor(DesignTokens.Colors.textSecondary)
                         }
@@ -359,7 +454,7 @@ struct ForumView: View {
                                 .font(.system(size: 14, weight: .medium))
                                 .foregroundColor(DesignTokens.Colors.primaryAmber)
                             
-                            Text("\(topic.likes)")
+                            Text("\(topic.likeCount)")
                                 .font(.system(size: 14, weight: .semibold))
                                 .foregroundColor(DesignTokens.Colors.textSecondary)
                         }
@@ -385,7 +480,7 @@ struct ForumView: View {
                     .shadow(color: Color.black.opacity(0.06), radius: 16, x: 0, y: 6)
             )
         }
-        .cardButtonStyle()
+        .buttonStyle(PlainButtonStyle())
     }
     
     // MARK: - Actions & Animations
@@ -404,20 +499,158 @@ struct ForumView: View {
         formatter.dateTimeStyle = .named
         return formatter.localizedString(for: date, relativeTo: Date())
     }
+    
+    // MARK: - Data Loading
+    
+    /// Loads initial forum data (topics and categories)
+    private func loadInitialData() {
+        Task {
+            await loadTopics()
+            await loadCategories()
+        }
+    }
+    
+    /// Loads topics from API
+    /// - Parameter refresh: Whether this is a refresh operation
+    @MainActor
+    private func loadTopics(refresh: Bool = false) async {
+        if refresh {
+            isRefreshing = true
+            currentPage = 1
+            hasMorePages = true
+        } else {
+            isLoading = true
+        }
+        
+        do {
+            let response = try await forumService.fetchTopics(
+                page: currentPage,
+                limit: 20,
+                category: selectedCategory,
+                sort: sortOption,
+                search: searchText.isEmpty ? nil : searchText
+            )
+            
+            if refresh {
+                topics = response.data.topics
+            } else {
+                topics.append(contentsOf: response.data.topics)
+            }
+            
+            hasMorePages = response.data.pagination.hasNext
+            logger.info("Loaded \(response.data.topics.count) topics")
+            
+        } catch {
+            logger.error("Failed to load topics: \(error.localizedDescription)")
+            errorMessage = error.localizedDescription
+        }
+        
+        isLoading = false
+        isRefreshing = false
+    }
+    
+    /// Loads categories from API
+    @MainActor
+    private func loadCategories() async {
+        do {
+            let response = try await forumService.fetchCategories()
+            categories = response.data.categories
+            logger.info("Loaded \(categories.count) categories")
+        } catch {
+            logger.error("Failed to load categories: \(error.localizedDescription)")
+        }
+    }
+    
+    /// Refreshes topics list
+    @MainActor
+    private func refreshTopics() async {
+        await loadTopics(refresh: true)
+    }
+    
+    /// Loads more topics for pagination
+    @MainActor
+    private func loadMoreTopics() async {
+        guard hasMorePages && !isLoading else { return }
+        
+        currentPage += 1
+        await loadTopics()
+    }
+    
+    /// Performs search with API
+    @MainActor
+    private func performSearch(query: String) async {
+        // Cancel previous search if query is empty
+        if query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            isSearching = false
+            searchResults.removeAll()
+            return
+        }
+        
+        // Only search if query is at least 2 characters
+        guard query.count >= 2 else { return }
+        
+        isSearching = true
+        
+        do {
+            let response = try await forumService.searchForum(
+                query: query,
+                type: .topics,
+                category: selectedCategory,
+                page: 1,
+                limit: 20
+            )
+            
+            // Convert search results to ForumTopic objects
+            searchResults = response.data.results.compactMap { result in
+                guard result.type == "topic" else { return nil }
+                
+                return ForumTopic(
+                    id: result.id,
+                    title: result.title ?? "Untitled",
+                    content: result.content,
+                    category: result.category,
+                    author: result.author,
+                    replyCount: result.replyCount ?? 0,
+                    likeCount: result.likeCount,
+                    isLiked: false, // Search results don't include like status
+                    status: 0, // Assume published
+                    images: [],
+                    createdAt: result.createdAt,
+                    updatedAt: result.updatedAt
+                )
+            }
+            
+            logger.info("Search returned \(searchResults.count) results for query: \(query)")
+            
+        } catch {
+            logger.error("Search failed: \(error.localizedDescription)")
+            isSearching = false
+            searchResults.removeAll()
+        }
+    }
+    
+    /// Shows filter options (category and sort)
+    private func showFilterOptions() {
+        // For now, cycle through categories
+        let allCategories = ["All"] + categories.map { $0.name }
+        
+        if let currentIndex = allCategories.firstIndex(of: selectedCategory ?? "All") {
+            let nextIndex = (currentIndex + 1) % allCategories.count
+            let newCategory = allCategories[nextIndex]
+            
+            withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                selectedCategory = newCategory == "All" ? nil : newCategory
+            }
+            
+            // Reload topics with new filter
+            Task {
+                await loadTopics(refresh: true)
+            }
+        }
+    }
 }
 
-// MARK: - Topic Model
-
-struct Topic: Identifiable {
-    let id: Int
-    let title: String
-    let comments: Int
-    let likes: Int
-    let avatar: String
-    let category: String
-    let timeAgo: String
-    let isHot: Bool
-}
+// Note: Topic model is now replaced by ForumTopic in ForumModels.swift
 
 
 // MARK: - Preview

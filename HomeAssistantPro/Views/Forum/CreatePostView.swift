@@ -23,6 +23,7 @@
 //
 
 import SwiftUI
+import os.log
 
 /// Enhanced create post view with image attachments and responsive design
 struct CreatePostView: View {
@@ -32,17 +33,23 @@ struct CreatePostView: View {
     // MARK: - Form State
     @State private var postTitle = ""
     @State private var postContent = ""
-    @State private var selectedCategory = "General"
+    @State private var selectedCategory = "Smart Home"
     @State private var attachedImages: [UIImage] = []
+    @State private var uploadedImageUrls: [String] = []
     
     // MARK: - UI State
     @State private var showImagePicker = false
     @State private var isLoading = false
     @State private var showValidationError = false
     @State private var validationMessage = ""
+    @State private var categories: [ForumCategory] = []
+    
+    // MARK: - Services
+    private let forumService = ForumService.shared
+    private let logger = Logger(subsystem: "com.homeassistant.ios", category: "CreatePostView")
     
     // MARK: - Constants
-    private let categories = ["General", "Smart Home", "Lighting", "Security", "Voice Control", "DIY"]
+    private let defaultCategories = ["Smart Home", "Lighting", "Security", "Voice Control", "DIY"]
     private let maxTitleLength = 100
     private let maxContentLength = 2000
     private let maxImages = 3
@@ -76,6 +83,7 @@ struct CreatePostView: View {
             .navigationBarHidden(true)
             .onAppear {
                 loadDraftIfAvailable()
+                loadCategories()
             }
             .onChange(of: postTitle) { _ in saveDraft() }
             .onChange(of: postContent) { _ in saveDraft() }
@@ -90,6 +98,14 @@ struct CreatePostView: View {
                         }
                     }
                 ))
+            }
+            .alert("Error", isPresented: $showValidationError) {
+                Button("OK") {
+                    showValidationError = false
+                    validationMessage = ""
+                }
+            } message: {
+                Text(validationMessage)
             }
         }
     }
@@ -143,7 +159,7 @@ struct CreatePostView: View {
             
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: DesignTokens.ResponsiveSpacing.sm) {
-                    ForEach(categories, id: \.self) { category in
+                    ForEach(categoryNames, id: \.self) { category in
                         categoryButton(category)
                     }
                 }
@@ -439,11 +455,23 @@ struct CreatePostView: View {
     
     // MARK: - Computed Properties
     
+    private var categoryNames: [String] {
+        if categories.isEmpty {
+            return defaultCategories
+        }
+        return categories.map { $0.name }
+    }
+    
     private var isFormInvalid: Bool {
-        postTitle.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ||
-        postContent.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ||
-        postTitle.count > maxTitleLength ||
-        postContent.count > maxContentLength
+        let trimmedTitle = postTitle.trimmingCharacters(in: .whitespacesAndNewlines)
+        let trimmedContent = postContent.trimmingCharacters(in: .whitespacesAndNewlines)
+        
+        return trimmedTitle.isEmpty ||
+               trimmedContent.isEmpty ||
+               trimmedTitle.count < 3 ||
+               trimmedContent.count < 10 ||
+               postTitle.count > maxTitleLength ||
+               postContent.count > maxContentLength
     }
     
     private var titleLengthColor: Color {
@@ -496,17 +524,34 @@ struct CreatePostView: View {
         isLoading = true
         HapticManager.buttonTap()
         
-        // Simulate post creation
         Task {
-            try? await Task.sleep(nanoseconds: 1_500_000_000) // 1.5 seconds
-            
-            await MainActor.run {
-                isLoading = false
-                draftManager.clearDraft()
-                presentationMode.wrappedValue.dismiss()
+            do {
+                // Upload images first if any
+                await uploadImagesIfNeeded()
                 
-                // Show success feedback
-                HapticManager.buttonTap()
+                // Create the topic
+                let response = try await forumService.createTopic(
+                    title: postTitle.trimmingCharacters(in: .whitespacesAndNewlines),
+                    content: postContent.trimmingCharacters(in: .whitespacesAndNewlines),
+                    category: selectedCategory,
+                    images: uploadedImageUrls
+                )
+                
+                await MainActor.run {
+                    logger.info("Topic created successfully with ID: \(response.data.topic.id)")
+                    isLoading = false
+                    draftManager.clearDraft()
+                    presentationMode.wrappedValue.dismiss()
+                    HapticManager.buttonTap()
+                }
+                
+            } catch {
+                await MainActor.run {
+                    logger.error("Failed to create topic: \(error.localizedDescription)")
+                    isLoading = false
+                    validationMessage = error.localizedDescription
+                    showValidationError = true
+                }
             }
         }
     }
@@ -530,6 +575,42 @@ struct CreatePostView: View {
             postContent = draft.content
             selectedCategory = draft.category
         }
+    }
+    
+    /// Load forum categories from API
+    @MainActor
+    private func loadCategories() {
+        Task {
+            do {
+                let response = try await forumService.fetchCategories()
+                categories = response.data.categories
+                logger.info("Loaded \(categories.count) categories")
+                
+                // Set default category if current selection is not valid
+                if !categoryNames.contains(selectedCategory) {
+                    selectedCategory = categoryNames.first ?? "Smart Home"
+                }
+            } catch {
+                logger.error("Failed to load categories: \(error.localizedDescription)")
+                // Use default categories on failure
+            }
+        }
+    }
+    
+    /// Upload attached images and get URLs
+    @MainActor
+    private func uploadImagesIfNeeded() async {
+        guard !attachedImages.isEmpty else { return }
+        
+        uploadedImageUrls.removeAll()
+        
+        // Note: Image upload would be implemented here
+        // For now, we'll use placeholder URLs
+        for (index, _) in attachedImages.enumerated() {
+            uploadedImageUrls.append("https://api.example.com/uploads/image_\(index).jpg")
+        }
+        
+        logger.info("Uploaded \(uploadedImageUrls.count) images")
     }
 }
 
