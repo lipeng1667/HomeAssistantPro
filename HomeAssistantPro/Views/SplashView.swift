@@ -34,6 +34,8 @@ struct SplashView: View {
     /// Callback when splash screen completes
     let onComplete: () -> Void
     
+    // Services
+    @Environment(\.backgroundDataPreloader) private var backgroundDataPreloader
     private let logger = Logger(subsystem: "com.homeassistant.ios", category: "SplashView")
     
     var body: some View {
@@ -247,6 +249,10 @@ struct SplashView: View {
     /// Coordinates background, logo, and title animations with proper timing
     private func startAnimations() {
         logger.info("Starting splash screen animations")
+        
+        // Start background data preloading immediately
+        backgroundDataPreloader.startPreloading()
+        logger.info("Background data preloading initiated")
         
         // Haptic feedback for app launch
         HapticManager.soft()

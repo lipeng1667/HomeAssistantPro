@@ -38,6 +38,7 @@ struct ForumView: View {
     
     // Services
     private let forumService = ForumService.shared
+    @Environment(\.backgroundDataPreloader) private var backgroundDataPreloader
     private let logger = Logger(subsystem: "com.homeassistant.ios", category: "ForumView")
     
     var filteredTopics: [ForumTopic] {
@@ -503,10 +504,36 @@ struct ForumView: View {
     // MARK: - Data Loading
     
     /// Loads initial forum data (topics and categories)
+    /// Checks cache first for instant display, then loads from API if needed
     private func loadInitialData() {
+        // Check cache first for instant display
+        loadCachedDataIfAvailable()
+        
+        // Always load fresh data from API (in background if cache exists)
         Task {
             await loadTopics()
             await loadCategories()
+        }
+    }
+    
+    /// Loads cached data if available for instant display
+    private func loadCachedDataIfAvailable() {
+        let cachedTopics = backgroundDataPreloader.getCachedForumTopics()
+        let cachedCategories = backgroundDataPreloader.getCachedCategories()
+        
+        if !cachedTopics.isEmpty {
+            topics = cachedTopics
+            logger.info("Loaded \(cachedTopics.count) topics from cache")
+        }
+        
+        if !cachedCategories.isEmpty {
+            categories = cachedCategories
+            logger.info("Loaded \(cachedCategories.count) categories from cache")
+        }
+        
+        // If we have cached data, don't show loading state
+        if !cachedTopics.isEmpty || !cachedCategories.isEmpty {
+            isLoading = false
         }
     }
     
@@ -514,11 +541,14 @@ struct ForumView: View {
     /// - Parameter refresh: Whether this is a refresh operation
     @MainActor
     private func loadTopics(refresh: Bool = false) async {
+        // Only show loading if we don't have cached data
+        let hasCachedData = !topics.isEmpty
+        
         if refresh {
             isRefreshing = true
             currentPage = 1
             hasMorePages = true
-        } else {
+        } else if !hasCachedData {
             isLoading = true
         }
         
@@ -533,16 +563,29 @@ struct ForumView: View {
             
             if refresh {
                 topics = response.data.topics
+            } else if currentPage == 1 {
+                // First page load - replace cached data with fresh data
+                topics = response.data.topics
             } else {
+                // Pagination - append to existing data
                 topics.append(contentsOf: response.data.topics)
             }
             
             hasMorePages = response.data.pagination.hasNext
-            logger.info("Loaded \(response.data.topics.count) topics")
+            logger.info("Loaded \(response.data.topics.count) topics from API")
+            
+            // Cache fresh data for future use (only for first page)
+            if currentPage == 1 && selectedCategory == nil && searchText.isEmpty {
+                backgroundDataPreloader.getCachedForumTopics() // This triggers caching in the preloader
+            }
             
         } catch {
             logger.error("Failed to load topics: \(error.localizedDescription)")
-            errorMessage = error.localizedDescription
+            
+            // Only show error if we don't have cached data to fall back on
+            if !hasCachedData {
+                errorMessage = error.localizedDescription
+            }
         }
         
         isLoading = false
@@ -555,9 +598,19 @@ struct ForumView: View {
         do {
             let response = try await forumService.fetchCategories()
             categories = response.data.categories
-            logger.info("Loaded \(categories.count) categories")
+            logger.info("Loaded \(categories.count) categories from API")
+            
         } catch {
             logger.error("Failed to load categories: \(error.localizedDescription)")
+            
+            // Keep cached categories if API fails and we don't have current data
+            if categories.isEmpty {
+                let cachedCategories = backgroundDataPreloader.getCachedCategories()
+                if !cachedCategories.isEmpty {
+                    categories = cachedCategories
+                    logger.info("Using cached categories as fallback")
+                }
+            }
         }
     }
     

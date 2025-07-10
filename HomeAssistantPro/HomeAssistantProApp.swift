@@ -22,6 +22,7 @@ import SwiftUI
 struct HomeAssistantProApp: App {
     @StateObject private var appViewModel = AppViewModel()
     @StateObject private var settingsStore = SettingsStore()
+    @StateObject private var backgroundDataPreloader = BackgroundDataPreloader.shared
     @State private var showSplash = true
     
     /// Converts stored theme preference to SwiftUI ColorScheme
@@ -47,18 +48,22 @@ struct HomeAssistantProApp: App {
                     }
                     .environmentObject(appViewModel)
                     .environmentObject(settingsStore)
+                    .environment(\.backgroundDataPreloader, backgroundDataPreloader)
                 } else if settingsStore.isFirstLaunch {
                     IntroView()
                         .environmentObject(appViewModel)
                         .environmentObject(settingsStore)
+                        .environment(\.backgroundDataPreloader, backgroundDataPreloader)
                 } else if appViewModel.isLoggedIn {
                     MainTabView()
                         .environmentObject(appViewModel)
                         .environmentObject(settingsStore)
+                        .environment(\.backgroundDataPreloader, backgroundDataPreloader)
                 } else {
                     AuthenticationView()
                         .environmentObject(appViewModel)
                         .environmentObject(settingsStore)
+                        .environment(\.backgroundDataPreloader, backgroundDataPreloader)
                 }
             }
             .preferredColorScheme(preferredColorScheme)
