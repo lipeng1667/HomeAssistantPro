@@ -49,6 +49,11 @@ struct TopicDetailView: View {
     @State private var selectedSortOption: ForumSortOption = .newest
     @State private var showSortOptions = false
     
+    // Image viewer state
+    @State private var showImageViewer = false
+    @State private var selectedImageIndex = 0
+    @State private var currentImageUrls: [String] = []
+    
     // Services
     private let forumService = ForumService.shared
     private let logger = Logger(subsystem: "com.homeassistant.ios", category: "TopicDetailView")
@@ -121,6 +126,13 @@ struct TopicDetailView: View {
         }
         .refreshable {
             await refreshTopic()
+        }
+        .fullScreenCover(isPresented: $showImageViewer) {
+            ImageViewerModal(
+                images: currentImageUrls,
+                selectedIndex: selectedImageIndex,
+                isPresented: $showImageViewer
+            )
         }
         .sheet(isPresented: $showReplyForm) {
             ReplyFormView(
@@ -359,7 +371,7 @@ struct TopicDetailView: View {
             if !topic.images.isEmpty {
                 ScrollView(.horizontal, showsIndicators: false) {
                     HStack(spacing: DesignTokens.ResponsiveSpacing.sm) {
-                        ForEach(topic.images, id: \.self) { imageUrl in
+                        ForEach(Array(topic.images.enumerated()), id: \.offset) { index, imageUrl in
                             AsyncImage(url: URL(string: imageUrl)) { image in
                                 image
                                     .resizable()
@@ -374,6 +386,11 @@ struct TopicDetailView: View {
                             }
                             .frame(width: 120, height: 120)
                             .clipShape(RoundedRectangle(cornerRadius: 12))
+                            .onTapGesture {
+                                currentImageUrls = topic.images
+                                selectedImageIndex = index
+                                showImageViewer = true
+                            }
                         }
                     }
                     .padding(.horizontal, 4)
@@ -682,7 +699,7 @@ struct TopicDetailView: View {
                 if !reply.images.isEmpty {
                     ScrollView(.horizontal, showsIndicators: false) {
                         HStack(spacing: DesignTokens.ResponsiveSpacing.sm) {
-                            ForEach(reply.images, id: \.self) { imageUrl in
+                            ForEach(Array(reply.images.enumerated()), id: \.offset) { index, imageUrl in
                                 AsyncImage(url: URL(string: imageUrl)) { image in
                                     image
                                         .resizable()
@@ -697,6 +714,11 @@ struct TopicDetailView: View {
                                 }
                                 .frame(width: 100, height: 100)
                                 .clipShape(RoundedRectangle(cornerRadius: 8))
+                                .onTapGesture {
+                                    currentImageUrls = reply.images
+                                    selectedImageIndex = index
+                                    showImageViewer = true
+                                }
                             }
                         }
                         .padding(.horizontal, 4)
