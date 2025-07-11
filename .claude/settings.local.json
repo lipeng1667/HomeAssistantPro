@@ -6,7 +6,9 @@
       "Bash(rg:*)",
       "Bash(git add:*)",
       "Bash(git push:*)",
-      "Bash(mkdir:*)"
+      "Bash(mkdir:*)",
+      "WebFetch(domain:ux.stackexchange.com)",
+      "WebFetch(domain:www.subframe.com)"
     ],
     "deny": []
   }

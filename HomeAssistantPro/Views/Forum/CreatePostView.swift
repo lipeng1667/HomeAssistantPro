@@ -526,15 +526,15 @@ struct CreatePostView: View {
         
         Task {
             do {
-                // Upload images first if any
-                await uploadImagesIfNeeded()
+                // Convert UIImages to FileUploadRequest objects
+                let imageFiles = await convertImagesToUploadRequests()
                 
-                // Create the topic
+                // Create the topic with image files (upload will happen automatically)
                 let response = try await forumService.createTopic(
                     title: postTitle.trimmingCharacters(in: .whitespacesAndNewlines),
                     content: postContent.trimmingCharacters(in: .whitespacesAndNewlines),
                     category: selectedCategory,
-                    images: uploadedImageUrls
+                    imageFiles: imageFiles
                 )
                 
                 await MainActor.run {
@@ -597,20 +597,47 @@ struct CreatePostView: View {
         }
     }
     
-    /// Upload attached images and get URLs
+    /// Convert UIImages to FileUploadRequest objects for API upload
     @MainActor
-    private func uploadImagesIfNeeded() async {
-        guard !attachedImages.isEmpty else { return }
-        
-        uploadedImageUrls.removeAll()
-        
-        // Note: Image upload would be implemented here
-        // For now, we'll use placeholder URLs
-        for (index, _) in attachedImages.enumerated() {
-            uploadedImageUrls.append("https://api.example.com/uploads/image_\(index).jpg")
+    private func convertImagesToUploadRequests() async -> [FileUploadRequest] {
+        guard !attachedImages.isEmpty else { 
+            logger.info("No images to convert")
+            return []
         }
         
-        logger.info("Uploaded \(uploadedImageUrls.count) images")
+        var fileRequests: [FileUploadRequest] = []
+        
+        // Get current user ID for upload requests
+        guard let userIdString = try? SettingsStore().retrieveUserId(),
+              let userId = Int(userIdString) else {
+            logger.error("Failed to get user ID for image upload")
+            return []
+        }
+        
+        for (index, image) in attachedImages.enumerated() {
+            // Convert UIImage to JPEG data
+            guard let imageData = image.jpegData(compressionQuality: 0.8) else {
+                logger.error("Failed to convert image \(index) to JPEG data")
+                continue
+            }
+            
+            let fileName = "image_\(index)_\(Date().timeIntervalSince1970).jpg"
+            
+            let fileRequest = FileUploadRequest(
+                file: imageData,
+                fileName: fileName,
+                mimeType: "image/jpeg",
+                userId: userId,
+                type: "topic",
+                postId: nil
+            )
+            
+            fileRequests.append(fileRequest)
+            logger.info("Prepared image \(index + 1) for upload - fileName: \(fileName), size: \(imageData.count) bytes")
+        }
+        
+        logger.info("Converted \(fileRequests.count) images to upload requests")
+        return fileRequests
     }
 }
 

@@ -43,6 +43,12 @@ struct TopicDetailView: View {
     @State private var isSubmittingReply = false
     @State private var replyingToReply: ForumReply? = nil
     
+    // UI state for Reddit-inspired features
+    @State private var isTopicHeaderCollapsed = false
+    @State private var scrollOffset: CGFloat = 0
+    @State private var selectedSortOption: ForumSortOption = .newest
+    @State private var showSortOptions = false
+    
     // Services
     private let forumService = ForumService.shared
     private let logger = Logger(subsystem: "com.homeassistant.ios", category: "TopicDetailView")
@@ -219,8 +225,15 @@ struct TopicDetailView: View {
     private func contentSection(topic: ForumTopic) -> some View {
         ScrollView(showsIndicators: false) {
             LazyVStack(spacing: DesignTokens.ResponsiveSpacing.lg) {
-                // Topic content
-                topicCard(topic: topic)
+                // Collapsible topic header - Reddit inspired
+                if !isTopicHeaderCollapsed {
+                    topicCard(topic: topic)
+                        .transition(.asymmetric(insertion: .move(edge: .top), removal: .move(edge: .top)))
+                } else {
+                    // Collapsed topic context bar
+                    collapsedTopicHeader(topic: topic)
+                        .transition(.asymmetric(insertion: .move(edge: .top), removal: .move(edge: .top)))
+                }
                 
                 // Replies header
                 if !replies.isEmpty {
@@ -405,6 +418,27 @@ struct TopicDetailView: View {
                 }
                 
                 Spacer()
+                
+                // Collapse button - Reddit inspired
+                Button(action: {
+                    // Haptic feedback
+                    let impactFeedback = UIImpactFeedbackGenerator(style: .light)
+                    impactFeedback.impactOccurred()
+                    
+                    withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
+                        isTopicHeaderCollapsed = true
+                    }
+                }) {
+                    Image(systemName: "chevron.up")
+                        .font(.system(size: 14, weight: .medium))
+                        .foregroundColor(DesignTokens.Colors.Forum.primary)
+                        .padding(8)
+                        .background(
+                            Circle()
+                                .fill(DesignTokens.Colors.Forum.primary.opacity(0.1))
+                        )
+                }
+                .scaleButtonStyle()
             }
         }
         .padding(DesignTokens.ResponsiveSpacing.lg)
@@ -438,138 +472,307 @@ struct TopicDetailView: View {
                 )
             
             Spacer()
+            
+            // Sort options button - Reddit inspired
+            Button(action: {
+                // Haptic feedback
+                let impactFeedback = UIImpactFeedbackGenerator(style: .light)
+                impactFeedback.impactOccurred()
+                
+                showSortOptions = true
+            }) {
+                HStack(spacing: 4) {
+                    Image(systemName: "arrow.up.arrow.down")
+                        .font(.system(size: 14, weight: .medium))
+                        .foregroundColor(DesignTokens.Colors.Forum.primary)
+                    
+                    Text(selectedSortOption.displayName)
+                        .font(DesignTokens.ResponsiveTypography.caption)
+                        .foregroundColor(DesignTokens.Colors.Forum.primary)
+                }
+                .padding(.horizontal, 8)
+                .padding(.vertical, 4)
+                .background(
+                    RoundedRectangle(cornerRadius: 6)
+                        .fill(DesignTokens.Colors.Forum.primary.opacity(0.1))
+                )
+            }
+            .actionSheet(isPresented: $showSortOptions) {
+                ActionSheet(
+                    title: Text("Sort Comments"),
+                    buttons: ForumSortOption.allCases.map { option in
+                        .default(Text(option.displayName)) {
+                            selectedSortOption = option
+                            Task {
+                                await refreshWithSort(option)
+                            }
+                        }
+                    } + [.cancel()]
+                )
+            }
         }
         .padding(.horizontal, DesignTokens.ResponsiveSpacing.sm)
+    }
+    
+    // MARK: - Collapsed Topic Header
+    
+    @ViewBuilder
+    private func collapsedTopicHeader(topic: ForumTopic) -> some View {
+        HStack(spacing: DesignTokens.ResponsiveSpacing.sm) {
+            // Expand button
+            Button(action: {
+                // Haptic feedback
+                let impactFeedback = UIImpactFeedbackGenerator(style: .light)
+                impactFeedback.impactOccurred()
+                
+                withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
+                    isTopicHeaderCollapsed = false
+                }
+            }) {
+                Image(systemName: "chevron.down")
+                    .font(.system(size: 14, weight: .medium))
+                    .foregroundColor(DesignTokens.Colors.Forum.primary)
+            }
+            
+            VStack(alignment: .leading, spacing: 4) {
+                Text(topic.title)
+                    .font(DesignTokens.ResponsiveTypography.bodyMedium)
+                    .foregroundColor(DesignTokens.Colors.textPrimary)
+                    .lineLimit(1)
+                
+                HStack(spacing: 8) {
+                    Text(topic.category)
+                        .font(DesignTokens.ResponsiveTypography.caption)
+                        .foregroundColor(DesignTokens.Colors.Forum.primary)
+                    
+                    Text("•")
+                        .font(DesignTokens.ResponsiveTypography.caption)
+                        .foregroundColor(DesignTokens.Colors.textTertiary)
+                    
+                    Text("\(topic.replyCount) replies")
+                        .font(DesignTokens.ResponsiveTypography.caption)
+                        .foregroundColor(DesignTokens.Colors.textTertiary)
+                }
+            }
+            
+            Spacer()
+        }
+        .padding(.horizontal, DesignTokens.ResponsiveSpacing.md)
+        .padding(.vertical, DesignTokens.ResponsiveSpacing.sm)
+        .background(
+            RoundedRectangle(cornerRadius: 12)
+                .fill(DesignTokens.Colors.Forum.primary.opacity(0.08))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 12)
+                        .stroke(DesignTokens.Colors.Forum.primary.opacity(0.2), lineWidth: 1)
+                )
+        )
+        .contentMargins()
     }
     
     // MARK: - Reply Card
     
     @ViewBuilder
     private func replyCard(reply: ForumReply) -> some View {
-        VStack(alignment: .leading, spacing: DesignTokens.ResponsiveSpacing.md) {
-            // Author and metadata
-            HStack {
-                // Author avatar
-                Circle()
-                    .fill(
-                        LinearGradient(
-                            colors: [DesignTokens.Colors.primaryPurple.opacity(0.2), DesignTokens.Colors.primaryCyan.opacity(0.1)],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        )
-                    )
-                    .frame(width: 32, height: 32)
-                    .overlay(
-                        Image(systemName: "person.crop.circle.fill")
-                            .font(.system(size: 16, weight: .medium))
-                            .foregroundColor(DesignTokens.Colors.primaryPurple)
-                    )
-                
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(reply.author.name)
-                        .font(DesignTokens.ResponsiveTypography.bodyMedium)
-                        .foregroundColor(DesignTokens.Colors.textPrimary)
-                    
-                    Text(reply.timeAgo)
-                        .font(DesignTokens.ResponsiveTypography.caption)
-                        .foregroundColor(DesignTokens.Colors.textTertiary)
-                }
-                
-                Spacer()
-            }
-            
-            // Content
-            Text(reply.content)
-                .font(DesignTokens.ResponsiveTypography.bodyMedium)
-                .foregroundColor(DesignTokens.Colors.textSecondary)
-                .lineSpacing(4)
-            
-            // Images
-            if !reply.images.isEmpty {
-                ScrollView(.horizontal, showsIndicators: false) {
-                    HStack(spacing: DesignTokens.ResponsiveSpacing.sm) {
-                        ForEach(reply.images, id: \.self) { imageUrl in
-                            AsyncImage(url: URL(string: imageUrl)) { image in
-                                image
-                                    .resizable()
-                                    .aspectRatio(contentMode: .fill)
-                            } placeholder: {
-                                Rectangle()
-                                    .fill(DesignTokens.Colors.backgroundSecondary)
-                                    .overlay(
-                                        ProgressView()
-                                            .progressViewStyle(CircularProgressViewStyle())
-                                    )
-                            }
-                            .frame(width: 100, height: 100)
-                            .clipShape(RoundedRectangle(cornerRadius: 8))
-                        }
-                    }
-                    .padding(.horizontal, 4)
-                }
-            }
-            
-            // Actions
-            HStack {
-                // Like button
-                Button(action: {
-                    // Check if user is anonymous
-                    if appViewModel.isAnonymousUser {
-                        restrictionViewModel.showRestrictionModal(for: .likeReply)
-                        return
-                    }
-                    
-                    Task {
-                        await toggleReplyLike(replyId: reply.id)
-                    }
-                }) {
-                    HStack(spacing: 4) {
-                        Image(systemName: reply.isLiked ? "heart.fill" : "heart")
-                            .font(.system(size: 14, weight: .medium))
-                            .foregroundColor(reply.isLiked ? DesignTokens.Colors.primaryAmber : DesignTokens.Colors.textSecondary)
+        HStack(alignment: .top, spacing: 0) {
+            // Nested reply indentation with connection lines
+            if reply.isNestedReply {
+                // Threading line with connection
+                VStack(spacing: 0) {
+                    // Connection line to parent
+                    HStack(spacing: 0) {
+                        Rectangle()
+                            .fill(DesignTokens.Colors.Forum.primary.opacity(0.4))
+                            .frame(width: 2)
                         
-                        Text("\(reply.likeCount)")
+                        // Horizontal connector
+                        Rectangle()
+                            .fill(DesignTokens.Colors.Forum.primary.opacity(0.4))
+                            .frame(height: 2)
+                            .frame(width: DesignTokens.ResponsiveSpacing.sm)
+                    }
+                    .frame(height: DesignTokens.ResponsiveSpacing.md)
+                    
+                    // Vertical connection line
+                    Rectangle()
+                        .fill(DesignTokens.Colors.Forum.primary.opacity(0.2))
+                        .frame(width: 2)
+                    
+                    Spacer()
+                }
+                .frame(width: DesignTokens.ResponsiveSpacing.xl)
+            }
+            
+            // Reply content
+            VStack(alignment: .leading, spacing: DesignTokens.ResponsiveSpacing.md) {
+                // Parent reply context (for nested replies) - Enhanced
+                if let parentReply = reply.parentReply {
+                    VStack(alignment: .leading, spacing: 6) {
+                        // Parent author info
+                        HStack(spacing: 8) {
+                            Image(systemName: "arrowshape.turn.up.left")
+                                .font(.system(size: 12, weight: .medium))
+                                .foregroundColor(DesignTokens.Colors.Forum.primary)
+                            
+                            Text("Replying to \(parentReply.author.name)")
+                                .font(DesignTokens.ResponsiveTypography.caption)
+                                .foregroundColor(DesignTokens.Colors.Forum.primary)
+                                .fontWeight(.medium)
+                            
+                            Spacer()
+                        }
+                        
+                        // Parent reply preview
+                        Text(parentReply.contentPreview)
                             .font(DesignTokens.ResponsiveTypography.caption)
                             .foregroundColor(DesignTokens.Colors.textSecondary)
+                            .lineLimit(2)
+                            .padding(.leading, 20) // Indent to align with arrow
                     }
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 8)
+                    .background(
+                        RoundedRectangle(cornerRadius: 8)
+                            .fill(DesignTokens.Colors.Forum.primary.opacity(0.06))
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 8)
+                                    .stroke(DesignTokens.Colors.Forum.primary.opacity(0.2), lineWidth: 1)
+                            )
+                    )
                 }
-                .scaleButtonStyle()
                 
-                Spacer()
-                
-                // Reply to this reply button
-                Button(action: {
-                    // Check if user is anonymous
-                    if appViewModel.isAnonymousUser {
-                        restrictionViewModel.showRestrictionModal(for: .replyToReply)
-                        return
+                // Author and metadata
+                HStack {
+                    // Author avatar
+                    Circle()
+                        .fill(
+                            LinearGradient(
+                                colors: [DesignTokens.Colors.primaryPurple.opacity(0.2), DesignTokens.Colors.primaryCyan.opacity(0.1)],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            )
+                        )
+                        .frame(width: reply.isNestedReply ? 28 : 32, height: reply.isNestedReply ? 28 : 32)
+                        .overlay(
+                            Image(systemName: "person.crop.circle.fill")
+                                .font(.system(size: reply.isNestedReply ? 14 : 16, weight: .medium))
+                                .foregroundColor(DesignTokens.Colors.primaryPurple)
+                        )
+                    
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(reply.author.name)
+                            .font(reply.isNestedReply ? DesignTokens.ResponsiveTypography.bodySmall : DesignTokens.ResponsiveTypography.bodyMedium)
+                            .foregroundColor(DesignTokens.Colors.textPrimary)
+                        
+                        Text(reply.timeAgo)
+                            .font(DesignTokens.ResponsiveTypography.caption)
+                            .foregroundColor(DesignTokens.Colors.textTertiary)
                     }
                     
-                    replyingToReply = reply
-                    showReplyForm = true
-                }) {
-                    HStack(spacing: 4) {
-                        Image(systemName: "arrowshape.turn.up.left")
-                            .font(.system(size: 14, weight: .medium))
-                            .foregroundColor(DesignTokens.Colors.Forum.primary)
-                        
-                        Text("Reply")
-                            .font(DesignTokens.ResponsiveTypography.caption)
-                            .foregroundColor(DesignTokens.Colors.Forum.primary)
+                    Spacer()
+                }
+                
+                // Content
+                Text(reply.content)
+                    .font(DesignTokens.ResponsiveTypography.bodyMedium)
+                    .foregroundColor(DesignTokens.Colors.textSecondary)
+                    .lineSpacing(4)
+                
+                // Images
+                if !reply.images.isEmpty {
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        HStack(spacing: DesignTokens.ResponsiveSpacing.sm) {
+                            ForEach(reply.images, id: \.self) { imageUrl in
+                                AsyncImage(url: URL(string: imageUrl)) { image in
+                                    image
+                                        .resizable()
+                                        .aspectRatio(contentMode: .fill)
+                                } placeholder: {
+                                    Rectangle()
+                                        .fill(DesignTokens.Colors.backgroundSecondary)
+                                        .overlay(
+                                            ProgressView()
+                                                .progressViewStyle(CircularProgressViewStyle())
+                                        )
+                                }
+                                .frame(width: 100, height: 100)
+                                .clipShape(RoundedRectangle(cornerRadius: 8))
+                            }
+                        }
+                        .padding(.horizontal, 4)
                     }
                 }
-                .scaleButtonStyle()
+                
+                // Actions
+                HStack {
+                    // Like button with haptic feedback
+                    Button(action: {
+                        // Haptic feedback
+                        let impactFeedback = UIImpactFeedbackGenerator(style: .light)
+                        impactFeedback.impactOccurred()
+                        
+                        // Check if user is anonymous
+                        if appViewModel.isAnonymousUser {
+                            restrictionViewModel.showRestrictionModal(for: .likeReply)
+                            return
+                        }
+                        
+                        Task {
+                            await toggleReplyLike(replyId: reply.id)
+                        }
+                    }) {
+                        HStack(spacing: 4) {
+                            Image(systemName: reply.isLiked ? "heart.fill" : "heart")
+                                .font(.system(size: 14, weight: .medium))
+                                .foregroundColor(reply.isLiked ? DesignTokens.Colors.primaryAmber : DesignTokens.Colors.textSecondary)
+                            
+                            Text("\(reply.likeCount)")
+                                .font(DesignTokens.ResponsiveTypography.caption)
+                                .foregroundColor(DesignTokens.Colors.textSecondary)
+                        }
+                    }
+                    .scaleButtonStyle()
+                    
+                    Spacer()
+                    
+                    // Reply to this reply button with haptic feedback
+                    Button(action: {
+                        // Haptic feedback
+                        let impactFeedback = UIImpactFeedbackGenerator(style: .medium)
+                        impactFeedback.impactOccurred()
+                        
+                        // Check if user is anonymous
+                        if appViewModel.isAnonymousUser {
+                            restrictionViewModel.showRestrictionModal(for: .replyToReply)
+                            return
+                        }
+                        
+                        replyingToReply = reply
+                        showReplyForm = true
+                    }) {
+                        HStack(spacing: 4) {
+                            Image(systemName: "arrowshape.turn.up.left")
+                                .font(.system(size: 14, weight: .medium))
+                                .foregroundColor(DesignTokens.Colors.Forum.primary)
+                            
+                            Text("Reply")
+                                .font(DesignTokens.ResponsiveTypography.caption)
+                                .foregroundColor(DesignTokens.Colors.Forum.primary)
+                        }
+                    }
+                    .scaleButtonStyle()
+                }
             }
+            .padding(DesignTokens.ResponsiveSpacing.md)
+            .background(
+                RoundedRectangle(cornerRadius: reply.isNestedReply ? 12 : 16)
+                    .fill(DesignTokens.Colors.backgroundSurface)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: reply.isNestedReply ? 12 : 16)
+                            .stroke(reply.isNestedReply ? DesignTokens.Colors.Forum.primary.opacity(0.2) : DesignTokens.Colors.borderSecondary, lineWidth: 1)
+                    )
+            )
         }
-        .padding(DesignTokens.ResponsiveSpacing.md)
-        .background(
-            RoundedRectangle(cornerRadius: 16)
-                .fill(DesignTokens.Colors.backgroundSurface)
-                .overlay(
-                    RoundedRectangle(cornerRadius: 16)
-                        .stroke(DesignTokens.Colors.borderSecondary, lineWidth: 1)
-                )
-        )
     }
     
     // MARK: - Loading and Empty States
@@ -678,6 +881,34 @@ struct TopicDetailView: View {
         isRefreshing = false
     }
     
+    /// Refreshes replies with specific sort option
+    @MainActor
+    private func refreshWithSort(_ sortOption: ForumSortOption) async {
+        isRefreshing = true
+        currentPage = 1
+        hasMorePages = true
+        
+        do {
+            let response = try await forumService.fetchReplies(
+                topicId: topicId,
+                page: 1,
+                limit: 20,
+                sort: sortOption
+            )
+            
+            replies = response.data.replies
+            hasMorePages = response.data.pagination.hasNext
+            
+            logger.info("Refreshed replies with sort: \(sortOption.rawValue)")
+            
+        } catch {
+            logger.error("Failed to refresh replies with sort: \(error.localizedDescription)")
+            errorMessage = error.localizedDescription
+        }
+        
+        isRefreshing = false
+    }
+    
     /// Loads more replies for pagination
     @MainActor
     private func loadMoreReplies() async {
@@ -773,6 +1004,8 @@ struct TopicDetailView: View {
             id: reply.id,
             content: reply.content,
             author: reply.author,
+            parentReplyId: reply.parentReplyId,
+            parentReply: reply.parentReply,
             likeCount: newLikeCount,
             isLiked: !wasLiked,
             images: reply.images,
@@ -788,6 +1021,8 @@ struct TopicDetailView: View {
                 id: reply.id,
                 content: reply.content,
                 author: reply.author,
+                parentReplyId: reply.parentReplyId,
+                parentReply: reply.parentReply,
                 likeCount: response.data.likeCount,
                 isLiked: response.data.isLiked,
                 images: reply.images,
@@ -975,7 +1210,8 @@ struct ReplyFormView: View {
         do {
             let _ = try await forumService.createReply(
                 topicId: topicId,
-                content: replyContent.trimmingCharacters(in: .whitespacesAndNewlines)
+                content: replyContent.trimmingCharacters(in: .whitespacesAndNewlines),
+                parentReplyId: parentReply?.id
             )
             
             presentationMode.wrappedValue.dismiss()

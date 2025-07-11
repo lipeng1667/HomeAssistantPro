@@ -29,7 +29,6 @@ You are my pair-programmer.  Obey the global USER rules **plus** these project-s
    - Inject services with constructor injection or `@Environment(\.injection)`.
 8. Networking with `URLSession` + `Codable`; never add `Alamofire`.
 9. Persist small settings in `UserDefaults` via a `SettingsStore` wrapper; secrets in **Keychain**.
-10. All new modules must ship **unit tests** (XCTest) and **UI snapshot tests** (SwiftSnapshotTesting).
 
 ### Security & privacy
 

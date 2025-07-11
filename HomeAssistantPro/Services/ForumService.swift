@@ -54,8 +54,10 @@ final class ForumService {
     /// - Throws: ForumError.userNotAuthenticated if no user ID found
     private func getCurrentUserId() throws -> String {
         guard let userId = try? settingsStore.retrieveUserId() else {
+            logger.error("❌ No user ID found in settings store")
             throw ForumError.userNotAuthenticated
         }
+        logger.info("👤 Current user ID: \(userId)")
         return userId
     }
     
@@ -80,6 +82,8 @@ final class ForumService {
         // Add authentication headers
         let timestamp = String(Int(Date().timeIntervalSince1970 * 1000))
         let signature = generateSignature(timestamp: timestamp, appSecret: appSecret)
+        
+        logger.info("🔐 Auth Headers - Timestamp: \(timestamp), Signature: \(signature.prefix(10))...")
         
         request.setValue(timestamp, forHTTPHeaderField: "X-Timestamp")
         request.setValue(signature, forHTTPHeaderField: "X-Signature")
@@ -107,16 +111,56 @@ final class ForumService {
     /// - Returns: Response data
     /// - Throws: ForumError for various failure cases
     private func performRequest(_ request: URLRequest) async throws -> Data {
+        // Log request details
+        logger.info("🚀 API Request: \(request.httpMethod ?? "GET") \(request.url?.absoluteString ?? "Unknown URL")")
+        
+        // Log request headers
+        if let headers = request.allHTTPHeaderFields {
+            logger.info("📋 Request Headers:")
+            for (key, value) in headers {
+                // Don't log sensitive data like signatures
+                if key.lowercased().contains("signature") {
+                    logger.info("  \(key): [REDACTED]")
+                } else {
+                    logger.info("  \(key): \(value)")
+                }
+            }
+        }
+        
+        // Log request body if present
+        if let body = request.httpBody,
+           let bodyString = String(data: body, encoding: .utf8) {
+            logger.info("📝 Request Body: \(bodyString)")
+        }
+        
         do {
             let (data, response) = try await URLSession.shared.data(for: request)
             
             guard let httpResponse = response as? HTTPURLResponse else {
+                logger.error("❌ Invalid response type")
                 throw ForumError.invalidResponse
             }
             
-            // Check for API errors
-            if httpResponse.statusCode != 200 {
+            // Log response details
+            logger.info("📥 Response Status: \(httpResponse.statusCode)")
+            logger.info("📋 Response Headers:")
+            for (key, value) in httpResponse.allHeaderFields {
+                logger.info("  \(String(describing: key)): \(String(describing: value))")
+            }
+            
+            // Log response body
+            if let responseString = String(data: data, encoding: .utf8) {
+                logger.info("📄 Response Body: \(responseString)")
+            } else {
+                logger.info("📄 Response Body: [Binary data, \(data.count) bytes]")
+            }
+            
+            // Check for API errors - 200 (OK) and 201 (Created) are success codes
+            if httpResponse.statusCode != 200 && httpResponse.statusCode != 201 {
+                logger.error("❌ API Error - Status: \(httpResponse.statusCode)")
+                
                 if let errorResponse = try? JSONDecoder().decode(ErrorResponse.self, from: data) {
+                    logger.error("❌ Error Response: status=\(errorResponse.status), message=\(errorResponse.message)")
                     switch httpResponse.statusCode {
                     case 400:
                         throw ForumError.badRequest(errorResponse.message)
@@ -134,16 +178,20 @@ final class ForumService {
                         throw ForumError.unknownError(httpResponse.statusCode)
                     }
                 } else {
+                    logger.error("❌ Unknown error format")
                     throw ForumError.unknownError(httpResponse.statusCode)
                 }
             }
             
+            logger.info("✅ Request completed successfully")
             return data
+            
         } catch {
             if error is ForumError {
+                logger.error("❌ Forum Error: \(error.localizedDescription)")
                 throw error
             }
-            logger.error("Network request failed: \(error.localizedDescription)")
+            logger.error("❌ Network request failed: \(error.localizedDescription)")
             throw ForumError.networkError(error)
         }
     }
@@ -160,6 +208,7 @@ final class ForumService {
     /// - Returns: ForumTopicsResponse with topics and pagination
     /// - Throws: ForumError for API failures
     func fetchTopics(page: Int = 1, limit: Int = 20, category: String? = nil, sort: ForumSortOption = .newest, search: String? = nil) async throws -> ForumTopicsResponse {
+        logger.info("🔍 fetchTopics called - page: \(page), limit: \(limit), category: \(category ?? "nil"), sort: \(sort.rawValue), search: \(search ?? "nil")")
         var components = URLComponents()
         components.queryItems = [
             URLQueryItem(name: "page", value: String(page)),
@@ -195,6 +244,7 @@ final class ForumService {
     /// - Returns: ForumTopicDetailResponse with topic and replies
     /// - Throws: ForumError for API failures
     func fetchTopicDetail(topicId: Int, replyPage: Int = 1, replyLimit: Int = 20) async throws -> ForumTopicDetailResponse {
+        logger.info("📖 fetchTopicDetail called - topicId: \(topicId), replyPage: \(replyPage), replyLimit: \(replyLimit)")
         let endpoint = "/api/forum/topics/\(topicId)?reply_page=\(replyPage)&reply_limit=\(replyLimit)"
         
         let request = createForumRequest(endpoint: endpoint, method: "GET")
@@ -211,18 +261,39 @@ final class ForumService {
     ///   - title: Topic title (3-100 characters)
     ///   - content: Topic content (10-2000 characters)
     ///   - category: Topic category
-    ///   - images: Array of image URLs (max 3)
+    ///   - images: Array of image URLs (max 3) - DEPRECATED, use imageFiles instead
+    ///   - imageFiles: Array of image file data to upload
     /// - Returns: CreateTopicResponse with topic ID
     /// - Throws: ForumError for API failures
-    func createTopic(title: String, content: String, category: String, images: [String] = []) async throws -> CreateTopicResponse {
+    func createTopic(title: String, content: String, category: String, images: [String] = [], imageFiles: [FileUploadRequest] = []) async throws -> CreateTopicResponse {
+        logger.info("📝 createTopic called - title: \(title), category: \(category), imageFiles: \(imageFiles.count)")
+        
         let userId = try getCurrentUserId()
+        var finalImageUrls = images // Start with provided URLs
+        
+        // Upload image files first if provided
+        if !imageFiles.isEmpty {
+            logger.info("📤 Uploading \(imageFiles.count) image files before creating topic...")
+            
+            for imageFile in imageFiles {
+                let uploadResponse = try await uploadFile(imageFile)
+                
+                if let fileUrl = uploadResponse.data.fileUrl {
+                    finalImageUrls.append(fileUrl)
+                    logger.info("✅ Image uploaded successfully: \(fileUrl)")
+                } else {
+                    logger.error("❌ Failed to get file URL from upload response")
+                    throw ForumError.serverError
+                }
+            }
+        }
         
         let requestData = CreateTopicRequest(
             userId: Int(userId) ?? 0,
             title: title,
             content: content,
             category: category,
-            images: images
+            images: finalImageUrls
         )
         
         let body = try JSONEncoder().encode(requestData)
@@ -230,7 +301,7 @@ final class ForumService {
         let data = try await performRequest(request)
         
         let response = try JSONDecoder().decode(CreateTopicResponse.self, from: data)
-        logger.info("Created topic with ID: \(response.data.topic.id)")
+        logger.info("✅ Created topic with ID: \(response.data.topic.id), images: \(finalImageUrls.count)")
         
         return response
     }
@@ -305,20 +376,43 @@ final class ForumService {
         return response
     }
     
-    /// Creates a reply to a topic
+    /// Creates a reply to a topic or nested reply to another reply
     /// - Parameters:
     ///   - topicId: Topic ID
     ///   - content: Reply content (1-1000 characters)
-    ///   - images: Array of image URLs (max 2)
+    ///   - parentReplyId: Parent reply ID for nested replies (optional)
+    ///   - images: Array of image URLs (max 2) - DEPRECATED, use imageFiles instead
+    ///   - imageFiles: Array of image file data to upload
     /// - Returns: CreateReplyResponse with reply ID
     /// - Throws: ForumError for API failures
-    func createReply(topicId: Int, content: String, images: [String] = []) async throws -> CreateReplyResponse {
+    func createReply(topicId: Int, content: String, parentReplyId: Int? = nil, images: [String] = [], imageFiles: [FileUploadRequest] = []) async throws -> CreateReplyResponse {
+        logger.info("💬 createReply called - topicId: \(topicId), parentReplyId: \(parentReplyId?.description ?? "nil"), content length: \(content.count), imageFiles: \(imageFiles.count)")
+        
         let userId = try getCurrentUserId()
+        var finalImageUrls = images // Start with provided URLs
+        
+        // Upload image files first if provided
+        if !imageFiles.isEmpty {
+            logger.info("📤 Uploading \(imageFiles.count) image files before creating reply...")
+            
+            for imageFile in imageFiles {
+                let uploadResponse = try await uploadFile(imageFile)
+                
+                if let fileUrl = uploadResponse.data.fileUrl {
+                    finalImageUrls.append(fileUrl)
+                    logger.info("✅ Image uploaded successfully: \(fileUrl)")
+                } else {
+                    logger.error("❌ Failed to get file URL from upload response")
+                    throw ForumError.serverError
+                }
+            }
+        }
         
         let requestData = CreateReplyRequest(
             userId: Int(userId) ?? 0,
             content: content,
-            images: images
+            parentReplyId: parentReplyId,
+            images: finalImageUrls
         )
         
         let body = try JSONEncoder().encode(requestData)
@@ -326,7 +420,8 @@ final class ForumService {
         let data = try await performRequest(request)
         
         let response = try JSONDecoder().decode(CreateReplyResponse.self, from: data)
-        logger.info("Created reply with ID: \(response.data.reply.id)")
+        let replyType = parentReplyId != nil ? "nested reply" : "reply"
+        logger.info("✅ Created \(replyType) with ID: \(response.data.reply.id), images: \(finalImageUrls.count)")
         
         return response
     }
@@ -546,6 +641,82 @@ final class ForumService {
         logger.info("Deleted draft \(draftId)")
         
         return response.message
+    }
+    
+    // MARK: - Upload API
+    
+    /// Uploads a file for forum use (topic or reply)
+    /// - Parameters:
+    ///   - uploadRequest: File upload request with data and metadata
+    /// - Returns: UploadResponse with file URL
+    /// - Throws: ForumError for API failures
+    func uploadFile(_ uploadRequest: FileUploadRequest) async throws -> UploadResponse {
+        logger.info("📤 uploadFile called - fileName: \(uploadRequest.fileName), type: \(uploadRequest.type), fileSize: \(uploadRequest.file.count) bytes")
+        
+        let userId = try getCurrentUserId()
+        let baseURL = "http://47.94.108.189:10000"
+        let appSecret = "EJFIDNFNGIUHq32923HDFHIHsdf866HU"
+        
+        guard let url = URL(string: baseURL + "/api/forum/uploads") else {
+            throw ForumError.invalidResponse
+        }
+        
+        // Create multipart form data
+        let boundary = "Boundary-\(UUID().uuidString)"
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("multipart/form-data; boundary=\(boundary)", forHTTPHeaderField: "Content-Type")
+        
+        // Add authentication headers
+        let timestamp = String(Int(Date().timeIntervalSince1970 * 1000))
+        let signature = generateSignature(timestamp: timestamp, appSecret: appSecret)
+        
+        logger.info("🔐 Upload Auth Headers - Timestamp: \(timestamp), Signature: \(signature.prefix(10))...")
+        
+        request.setValue(timestamp, forHTTPHeaderField: "X-Timestamp")
+        request.setValue(signature, forHTTPHeaderField: "X-Signature")
+        
+        // Build multipart form data
+        var body = Data()
+        
+        // Add file data
+        body.append("--\(boundary)\r\n".data(using: .utf8)!)
+        body.append("Content-Disposition: form-data; name=\"file\"; filename=\"\(uploadRequest.fileName)\"\r\n".data(using: .utf8)!)
+        body.append("Content-Type: \(uploadRequest.mimeType)\r\n\r\n".data(using: .utf8)!)
+        body.append(uploadRequest.file)
+        body.append("\r\n".data(using: .utf8)!)
+        
+        // Add user_id
+        body.append("--\(boundary)\r\n".data(using: .utf8)!)
+        body.append("Content-Disposition: form-data; name=\"user_id\"\r\n\r\n".data(using: .utf8)!)
+        body.append("\(uploadRequest.userId)".data(using: .utf8)!)
+        body.append("\r\n".data(using: .utf8)!)
+        
+        // Add type
+        body.append("--\(boundary)\r\n".data(using: .utf8)!)
+        body.append("Content-Disposition: form-data; name=\"type\"\r\n\r\n".data(using: .utf8)!)
+        body.append(uploadRequest.type.data(using: .utf8)!)
+        body.append("\r\n".data(using: .utf8)!)
+        
+        // Add post_id if provided
+        if let postId = uploadRequest.postId {
+            body.append("--\(boundary)\r\n".data(using: .utf8)!)
+            body.append("Content-Disposition: form-data; name=\"post_id\"\r\n\r\n".data(using: .utf8)!)
+            body.append("\(postId)".data(using: .utf8)!)
+            body.append("\r\n".data(using: .utf8)!)
+        }
+        
+        // Close boundary
+        body.append("--\(boundary)--\r\n".data(using: .utf8)!)
+        
+        request.httpBody = body
+        
+        let data = try await performRequest(request)
+        
+        let response = try JSONDecoder().decode(UploadResponse.self, from: data)
+        logger.info("✅ File uploaded successfully - fileUrl: \(response.data.fileUrl ?? "nil")")
+        
+        return response
     }
 }
 

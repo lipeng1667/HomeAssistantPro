@@ -82,6 +82,8 @@ struct ForumReply: Codable, Identifiable {
     let id: Int
     let content: String
     let author: ForumAuthor
+    let parentReplyId: Int?
+    let parentReply: ParentReplyInfo?
     let likeCount: Int
     let isLiked: Bool
     let images: [String]
@@ -92,6 +94,8 @@ struct ForumReply: Codable, Identifiable {
         case id
         case content
         case author
+        case parentReplyId = "parent_reply_id"
+        case parentReply = "parent_reply"
         case likeCount = "like_count"
         case isLiked = "is_liked"
         case images
@@ -109,6 +113,23 @@ struct ForumReply: Codable, Identifiable {
             return formatter.localizedString(for: date, relativeTo: Date())
         }
         return "Unknown"
+    }
+    
+    /// Computed property to check if this is a nested reply
+    var isNestedReply: Bool {
+        return parentReplyId != nil
+    }
+}
+
+/// Parent reply information for nested replies
+struct ParentReplyInfo: Codable {
+    let id: Int
+    let content: String
+    let author: ForumAuthor
+    
+    /// Computed property for shortened content preview
+    var contentPreview: String {
+        return String(content.prefix(100)) + (content.count > 100 ? "..." : "")
     }
 }
 
@@ -323,11 +344,13 @@ struct DeleteTopicRequest: Codable {
 struct CreateReplyRequest: Codable {
     let userId: Int
     let content: String
+    let parentReplyId: Int?
     let images: [String]
     
     enum CodingKeys: String, CodingKey {
         case userId = "user_id"
         case content
+        case parentReplyId = "parent_reply_id"
         case images
     }
 }
@@ -596,6 +619,16 @@ struct UploadProgress: Codable {
 struct UploadResponse: Codable {
     let status: String
     let data: UploadProgress
+}
+
+/// Request model for file upload
+struct FileUploadRequest {
+    let file: Data
+    let fileName: String
+    let mimeType: String
+    let userId: Int
+    let type: String // "topic" or "reply"
+    let postId: Int?
 }
 
 // MARK: - Enums
