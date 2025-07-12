@@ -378,9 +378,10 @@ struct TopicDetailView: View {
             // Images
             if !topic.images.isEmpty {
                 ScrollView(.horizontal, showsIndicators: false) {
-                    HStack(spacing: DesignTokens.ResponsiveSpacing.sm) {
+                    LazyHStack(spacing: 12) {
                         ForEach(0..<topic.images.count, id: \.self) { index in
                             let imageUrl = topic.images[index]
+                            
                             AsyncImage(url: URL(string: imageUrl)) { image in
                                 image
                                     .resizable()
@@ -395,17 +396,13 @@ struct TopicDetailView: View {
                             }
                             .frame(width: 120, height: 120)
                             .clipShape(RoundedRectangle(cornerRadius: 12))
+                            .contentShape(Rectangle())
                             .onTapGesture {
                                 logger.info("🎯 Topic image tapped: index \(index), URL: \(imageUrl), total images: \(topic.images.count)")
-                                logger.info("🎯 All topic images: \(topic.images)")
-                                print("🎯 Creating ImageViewerData with index: \(index), images count: \(topic.images.count)")
-                                
-                                let data = ImageViewerData(
+                                imageViewerData = ImageViewerData(
                                     images: topic.images,
                                     selectedIndex: index
                                 )
-                                print("🎯 ImageViewerData created: selectedIndex = \(data.selectedIndex)")
-                                imageViewerData = data
                             }
                         }
                     }
@@ -717,28 +714,31 @@ struct TopicDetailView: View {
                         HStack(spacing: DesignTokens.ResponsiveSpacing.sm) {
                             ForEach(0..<reply.images.count, id: \.self) { index in
                                 let imageUrl = reply.images[index]
-                                AsyncImage(url: URL(string: imageUrl)) { image in
-                                    image
-                                        .resizable()
-                                        .aspectRatio(contentMode: .fill)
-                                } placeholder: {
-                                    Rectangle()
-                                        .fill(DesignTokens.Colors.backgroundSecondary)
-                                        .overlay(
-                                            ProgressView()
-                                                .progressViewStyle(CircularProgressViewStyle())
-                                        )
-                                }
-                                .frame(width: 100, height: 100)
-                                .clipShape(RoundedRectangle(cornerRadius: 8))
-                                .onTapGesture {
+                                
+                                Button(action: {
                                     logger.info("Reply image tapped: index \(index), URL: \(imageUrl), total images: \(reply.images.count)")
                                     logger.info("All reply images: \(reply.images)")
                                     imageViewerData = ImageViewerData(
                                         images: reply.images,
                                         selectedIndex: index
                                     )
+                                }) {
+                                    AsyncImage(url: URL(string: imageUrl)) { image in
+                                        image
+                                            .resizable()
+                                            .aspectRatio(contentMode: .fill)
+                                    } placeholder: {
+                                        Rectangle()
+                                            .fill(DesignTokens.Colors.backgroundSecondary)
+                                            .overlay(
+                                                ProgressView()
+                                                    .progressViewStyle(CircularProgressViewStyle())
+                                            )
+                                    }
+                                    .frame(width: 100, height: 100)
+                                    .clipShape(RoundedRectangle(cornerRadius: 8))
                                 }
+                                .buttonStyle(PlainButtonStyle())
                             }
                         }
                         .padding(.horizontal, 4)

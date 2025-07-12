@@ -382,12 +382,26 @@ struct ZoomableAsyncImage: View {
             .onEnded { _ in
                 // Snap back to bounds if needed
                 withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
-                    if scale < minScale {
+                    if scale <= minScale {
                         scale = minScale
                         offset = .zero
                         lastOffset = .zero
                     } else if scale > maxScale {
                         scale = maxScale
+                    }
+                    
+                    // Recalculate bounds after scale change to prevent image from going out of view
+                    if scale > 1.0 {
+                        let maxOffsetX = max(0, (geometry.size.width * (scale - 1)) / 2)
+                        let maxOffsetY = max(0, (geometry.size.height * (scale - 1)) / 2)
+                        
+                        let clampedOffset = CGSize(
+                            width: max(-maxOffsetX, min(maxOffsetX, offset.width)),
+                            height: max(-maxOffsetY, min(maxOffsetY, offset.height))
+                        )
+                        
+                        offset = clampedOffset
+                        lastOffset = clampedOffset
                     }
                 }
             }
