@@ -51,8 +51,13 @@ struct TopicDetailView: View {
     
     // Image viewer state
     @State private var showImageViewer = false
-    @State private var selectedImageIndex = 0
-    @State private var currentImageUrls: [String] = []
+    @State private var imageViewerData: ImageViewerData? = nil
+    
+    struct ImageViewerData: Identifiable {
+        let id = UUID()
+        let images: [String]
+        let selectedIndex: Int
+    }
     
     // Services
     private let forumService = ForumService.shared
@@ -127,11 +132,14 @@ struct TopicDetailView: View {
         .refreshable {
             await refreshTopic()
         }
-        .fullScreenCover(isPresented: $showImageViewer) {
+        .fullScreenCover(item: $imageViewerData) { data in
             ImageViewerModal(
-                images: currentImageUrls,
-                selectedIndex: selectedImageIndex,
-                isPresented: $showImageViewer
+                images: data.images,
+                selectedIndex: data.selectedIndex,
+                isPresented: .init(
+                    get: { imageViewerData != nil },
+                    set: { if !$0 { imageViewerData = nil } }
+                )
             )
         }
         .sheet(isPresented: $showReplyForm) {
@@ -371,7 +379,8 @@ struct TopicDetailView: View {
             if !topic.images.isEmpty {
                 ScrollView(.horizontal, showsIndicators: false) {
                     HStack(spacing: DesignTokens.ResponsiveSpacing.sm) {
-                        ForEach(Array(topic.images.enumerated()), id: \.offset) { index, imageUrl in
+                        ForEach(0..<topic.images.count, id: \.self) { index in
+                            let imageUrl = topic.images[index]
                             AsyncImage(url: URL(string: imageUrl)) { image in
                                 image
                                     .resizable()
@@ -387,9 +396,16 @@ struct TopicDetailView: View {
                             .frame(width: 120, height: 120)
                             .clipShape(RoundedRectangle(cornerRadius: 12))
                             .onTapGesture {
-                                currentImageUrls = topic.images
-                                selectedImageIndex = index
-                                showImageViewer = true
+                                logger.info("🎯 Topic image tapped: index \(index), URL: \(imageUrl), total images: \(topic.images.count)")
+                                logger.info("🎯 All topic images: \(topic.images)")
+                                print("🎯 Creating ImageViewerData with index: \(index), images count: \(topic.images.count)")
+                                
+                                let data = ImageViewerData(
+                                    images: topic.images,
+                                    selectedIndex: index
+                                )
+                                print("🎯 ImageViewerData created: selectedIndex = \(data.selectedIndex)")
+                                imageViewerData = data
                             }
                         }
                     }
@@ -699,7 +715,8 @@ struct TopicDetailView: View {
                 if !reply.images.isEmpty {
                     ScrollView(.horizontal, showsIndicators: false) {
                         HStack(spacing: DesignTokens.ResponsiveSpacing.sm) {
-                            ForEach(Array(reply.images.enumerated()), id: \.offset) { index, imageUrl in
+                            ForEach(0..<reply.images.count, id: \.self) { index in
+                                let imageUrl = reply.images[index]
                                 AsyncImage(url: URL(string: imageUrl)) { image in
                                     image
                                         .resizable()
@@ -715,9 +732,12 @@ struct TopicDetailView: View {
                                 .frame(width: 100, height: 100)
                                 .clipShape(RoundedRectangle(cornerRadius: 8))
                                 .onTapGesture {
-                                    currentImageUrls = reply.images
-                                    selectedImageIndex = index
-                                    showImageViewer = true
+                                    logger.info("Reply image tapped: index \(index), URL: \(imageUrl), total images: \(reply.images.count)")
+                                    logger.info("All reply images: \(reply.images)")
+                                    imageViewerData = ImageViewerData(
+                                        images: reply.images,
+                                        selectedIndex: index
+                                    )
                                 }
                             }
                         }

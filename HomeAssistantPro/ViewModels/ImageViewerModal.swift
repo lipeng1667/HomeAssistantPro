@@ -33,6 +33,9 @@ struct ImageViewerModal: View {
     @State private var lastOffset: CGSize = .zero
     @State private var showControls = true
     @State private var isLoading = false
+    @State private var hasAppeared = false
+    @State private var loadingImages: Set<Int> = []
+    @State private var loadedImages: Set<Int> = []
     
     private let logger = Logger(subsystem: "com.homeassistant.ios", category: "ImageViewerModal")
     private let minScale: CGFloat = 1.0
@@ -47,7 +50,15 @@ struct ImageViewerModal: View {
         self.images = images
         self.selectedIndex = selectedIndex
         self._isPresented = isPresented
-        self._currentIndex = State(initialValue: selectedIndex)
+        // Ensure currentIndex is valid
+        let validIndex = images.isEmpty ? 0 : max(0, min(selectedIndex, images.count - 1))
+        self._currentIndex = State(initialValue: validIndex)
+        
+        // Debug logging
+        print("🖼️ ImageViewerModal init - selectedIndex: \(selectedIndex), validIndex: \(validIndex), images.count: \(images.count)")
+        if images.count > 0 && validIndex < images.count {
+            print("🖼️ Will show image at index \(validIndex): \(images[validIndex])")
+        }
     }
     
     var body: some View {
@@ -69,19 +80,31 @@ struct ImageViewerModal: View {
                     if !images.isEmpty && currentIndex < images.count {
                         ZoomableAsyncImage(
                             url: images[currentIndex],
+                            imageIndex: currentIndex,
                             scale: $scale,
                             offset: $offset,
                             lastOffset: $lastOffset,
-                            isLoading: $isLoading,
+                            onLoadingChanged: { index, isCurrentlyLoading in
+                                if isCurrentlyLoading {
+                                    loadingImages.insert(index)
+                                    loadedImages.remove(index)
+                                } else {
+                                    loadingImages.remove(index)
+                                    loadedImages.insert(index)
+                                }
+                                // Only show loading for current image if it's not loaded
+                                isLoading = loadingImages.contains(currentIndex) && !loadedImages.contains(currentIndex)
+                            },
                             geometry: geometry
                         )
+                        .id("image-\(currentIndex)") // Force view recreation on index change
                     }
                 }
-                .gesture(
-                    SimultaneousGesture(
-                        swipeGesture,
-                        dismissGesture
-                    )
+                .simultaneousGesture(
+                    scale <= 1.1 ? swipeGesture : nil
+                )
+                .simultaneousGesture(
+                    scale <= 1.1 ? dismissGesture : nil
                 )
             }
             
@@ -154,25 +177,34 @@ struct ImageViewerModal: View {
             }
         }
         .onAppear {
+            guard !hasAppeared else { return }
+            hasAppeared = true
+            
             logger.info("ImageViewer opened with \(images.count) images, index: \(currentIndex)")
+            print("🖼️ ImageViewer onAppear - currentIndex: \(currentIndex), selectedIndex: \(selectedIndex)")
+            if !images.isEmpty && currentIndex < images.count {
+                print("🖼️ Currently showing: \(images[currentIndex])")
+                print("🖼️ All images: \(images)")
+            }
             
             // Reset zoom state on appear
-            DispatchQueue.main.async {
-                resetZoom()
-            }
+            resetZoom()
             
             // Auto-hide controls after 3 seconds
             DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
-                withAnimation(.easeInOut(duration: 0.3)) {
-                    showControls = false
+                if hasAppeared {
+                    withAnimation(.easeInOut(duration: 0.3)) {
+                        showControls = false
+                    }
                 }
             }
         }
+        .onDisappear {
+            hasAppeared = false
+        }
         .onChange(of: currentIndex) { _ in
             // Reset zoom when switching images
-            DispatchQueue.main.async {
-                resetZoom()
-            }
+            resetZoom()
         }
     }
     
@@ -194,7 +226,7 @@ struct ImageViewerModal: View {
                 let impactFeedback = UIImpactFeedbackGenerator(style: .light)
                 impactFeedback.impactOccurred()
                 
-                withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
+                withAnimation(.easeInOut(duration: 0.3)) {
                     if horizontalDistance > 0 && currentIndex > 0 {
                         // Swipe right - previous image
                         currentIndex -= 1
@@ -236,11 +268,9 @@ struct ImageViewerModal: View {
     
     /// Reset zoom and pan to default state
     private func resetZoom() {
-        withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
-            scale = 1.0
-            offset = .zero
-            lastOffset = .zero
-        }
+        scale = 1.0
+        offset = .zero
+        lastOffset = .zero
     }
 }
 
@@ -249,11 +279,14 @@ struct ImageViewerModal: View {
 /// Zoomable async image component with pan and zoom gestures
 struct ZoomableAsyncImage: View {
     let url: String
+    let imageIndex: Int
     @Binding var scale: CGFloat
     @Binding var offset: CGSize
     @Binding var lastOffset: CGSize
-    @Binding var isLoading: Bool
+    let onLoadingChanged: (Int, Bool) -> Void
     let geometry: GeometryProxy
+    
+    @State private var imageLoading = false
     
     private let minScale: CGFloat = 1.0
     private let maxScale: CGFloat = 3.0
@@ -272,15 +305,17 @@ struct ZoomableAsyncImage: View {
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                 .onAppear {
-                    isLoading = true
+                    imageLoading = true
                 }
                 
             case .success(let image):
                 image
                     .resizable()
                     .aspectRatio(contentMode: .fit)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
                     .scaleEffect(scale)
                     .offset(offset)
+                    .clipped()
                     .gesture(
                         SimultaneousGesture(
                             magnificationGesture,
@@ -288,7 +323,10 @@ struct ZoomableAsyncImage: View {
                         )
                     )
                     .onAppear {
-                        isLoading = false
+                        if imageLoading {
+                            imageLoading = false
+                            onLoadingChanged(imageIndex, false)
+                        }
                     }
                     
             case .failure(_):
@@ -308,7 +346,10 @@ struct ZoomableAsyncImage: View {
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                 .onAppear {
-                    isLoading = false
+                    if imageLoading {
+                        imageLoading = false
+                        onLoadingChanged(imageIndex, false)
+                    }
                 }
                 
             @unknown default:
@@ -317,15 +358,25 @@ struct ZoomableAsyncImage: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .clipped()
+        .task(id: url) {
+            // Reset loading state when URL changes
+            if !imageLoading {
+                imageLoading = true
+                onLoadingChanged(imageIndex, true)
+            }
+        }
+        .onChange(of: imageLoading) { loading in
+            onLoadingChanged(imageIndex, loading)
+        }
     }
     
     /// Pinch-to-zoom gesture
     private var magnificationGesture: some Gesture {
         MagnificationGesture()
             .onChanged { value in
-                let newScale = scale * value
-                if newScale >= minScale && newScale <= maxScale {
-                    scale = newScale
+                withAnimation(.interactiveSpring()) {
+                    let newScale = scale * value
+                    scale = max(minScale, min(maxScale, newScale))
                 }
             }
             .onEnded { _ in
@@ -353,9 +404,9 @@ struct ZoomableAsyncImage: View {
                     height: lastOffset.height + value.translation.height
                 )
                 
-                // Constrain pan to image bounds
-                let maxOffsetX = (geometry.size.width * (scale - 1)) / 2
-                let maxOffsetY = (geometry.size.height * (scale - 1)) / 2
+                // Calculate pan bounds - prevent dragging too far
+                let maxOffsetX = max(0, (geometry.size.width * (scale - 1)) / 2)
+                let maxOffsetY = max(0, (geometry.size.height * (scale - 1)) / 2)
                 
                 offset = CGSize(
                     width: max(-maxOffsetX, min(maxOffsetX, newOffset.width)),
@@ -364,6 +415,14 @@ struct ZoomableAsyncImage: View {
             }
             .onEnded { _ in
                 lastOffset = offset
+                
+                // Snap back if image is dragged too far when zoomed out
+                withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
+                    if scale <= 1.0 {
+                        offset = .zero
+                        lastOffset = .zero
+                    }
+                }
             }
     }
 }
