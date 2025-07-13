@@ -52,13 +52,20 @@ final class ForumService {
     /// Gets current user ID from settings store
     /// - Returns: User ID string or throws error if not found
     /// - Throws: ForumError.userNotAuthenticated if no user ID found
-    private func getCurrentUserId() throws -> String {
+    func getCurrentUserId() throws -> String {
         guard let userId = try? settingsStore.retrieveUserId() else {
             logger.error("❌ No user ID found in settings store")
             throw ForumError.userNotAuthenticated
         }
         logger.info("👤 Current user ID: \(userId)")
         return userId
+    }
+    
+    /// Checks if current user is authenticated (not anonymous)
+    /// - Returns: True if user is authenticated (status = 2), false if anonymous (status = 1) or not logged in (status = 0)
+    private func isUserAuthenticated() -> Bool {
+        let userStatus = settingsStore.retrieveUserStatus()
+        return userStatus == 2 // Only authenticated users (status = 2)
     }
     
     /// Creates authenticated URLRequest for forum endpoints
@@ -205,10 +212,11 @@ final class ForumService {
     ///   - category: Optional category filter
     ///   - sort: Sort order (newest, oldest, popular, trending)
     ///   - search: Optional search query
+    ///   - includeUserReviews: Include current user's under-review content
     /// - Returns: ForumTopicsResponse with topics and pagination
     /// - Throws: ForumError for API failures
-    func fetchTopics(page: Int = 1, limit: Int = 20, category: String? = nil, sort: ForumSortOption = .newest, search: String? = nil) async throws -> ForumTopicsResponse {
-        logger.info("🔍 fetchTopics called - page: \(page), limit: \(limit), category: \(category ?? "nil"), sort: \(sort.rawValue), search: \(search ?? "nil")")
+    func fetchTopics(page: Int = 1, limit: Int = 20, category: String? = nil, sort: ForumSortOption = .newest, search: String? = nil, includeUserReviews: Bool = true) async throws -> ForumTopicsResponse {
+        logger.info("🔍 fetchTopics called - page: \(page), limit: \(limit), category: \(category ?? "nil"), sort: \(sort.rawValue), search: \(search ?? "nil"), includeUserReviews: \(includeUserReviews)")
         var components = URLComponents()
         components.queryItems = [
             URLQueryItem(name: "page", value: String(page)),
@@ -222,6 +230,14 @@ final class ForumService {
         
         if let search = search {
             components.queryItems?.append(URLQueryItem(name: "search", value: search))
+        }
+        
+        // Include user_id to get under-review topics for current user (only for authenticated users)
+        if includeUserReviews && isUserAuthenticated() {
+            if let userId = try? getCurrentUserId() {
+                components.queryItems?.append(URLQueryItem(name: "user_id", value: userId))
+                logger.info("👤 Including user_id \(userId) for under-review content")
+            }
         }
         
         let queryString = components.query ?? ""
@@ -241,11 +257,28 @@ final class ForumService {
     ///   - topicId: Topic ID
     ///   - replyPage: Reply page number
     ///   - replyLimit: Replies per page
+    ///   - includeUserReviews: Include current user's under-review replies
     /// - Returns: ForumTopicDetailResponse with topic and replies
     /// - Throws: ForumError for API failures
-    func fetchTopicDetail(topicId: Int, replyPage: Int = 1, replyLimit: Int = 20) async throws -> ForumTopicDetailResponse {
-        logger.info("📖 fetchTopicDetail called - topicId: \(topicId), replyPage: \(replyPage), replyLimit: \(replyLimit)")
-        let endpoint = "/api/forum/topics/\(topicId)?reply_page=\(replyPage)&reply_limit=\(replyLimit)"
+    func fetchTopicDetail(topicId: Int, replyPage: Int = 1, replyLimit: Int = 20, includeUserReviews: Bool = true) async throws -> ForumTopicDetailResponse {
+        logger.info("📖 fetchTopicDetail called - topicId: \(topicId), replyPage: \(replyPage), replyLimit: \(replyLimit), includeUserReviews: \(includeUserReviews)")
+        
+        var components = URLComponents()
+        components.queryItems = [
+            URLQueryItem(name: "reply_page", value: String(replyPage)),
+            URLQueryItem(name: "reply_limit", value: String(replyLimit))
+        ]
+        
+        // Include user_id to get under-review replies for current user (only for authenticated users)
+        if includeUserReviews && isUserAuthenticated() {
+            if let userId = try? getCurrentUserId() {
+                components.queryItems?.append(URLQueryItem(name: "user_id", value: userId))
+                logger.info("👤 Including user_id \(userId) for under-review replies")
+            }
+        }
+        
+        let queryString = components.query ?? ""
+        let endpoint = "/api/forum/topics/\(topicId)?\(queryString)"
         
         let request = createForumRequest(endpoint: endpoint, method: "GET")
         let data = try await performRequest(request)
@@ -362,10 +395,27 @@ final class ForumService {
     ///   - page: Page number
     ///   - limit: Replies per page
     ///   - sort: Sort order
+    ///   - includeUserReviews: Include current user's under-review replies
     /// - Returns: ForumRepliesResponse with replies and pagination
     /// - Throws: ForumError for API failures
-    func fetchReplies(topicId: Int, page: Int = 1, limit: Int = 20, sort: ForumSortOption = .newest) async throws -> ForumRepliesResponse {
-        let endpoint = "/api/forum/topics/\(topicId)/replies?page=\(page)&limit=\(limit)&sort=\(sort.rawValue)"
+    func fetchReplies(topicId: Int, page: Int = 1, limit: Int = 20, sort: ForumSortOption = .newest, includeUserReviews: Bool = true) async throws -> ForumRepliesResponse {
+        var components = URLComponents()
+        components.queryItems = [
+            URLQueryItem(name: "page", value: String(page)),
+            URLQueryItem(name: "limit", value: String(limit)),
+            URLQueryItem(name: "sort", value: sort.rawValue)
+        ]
+        
+        // Include user_id to get under-review replies for current user (only for authenticated users)
+        if includeUserReviews && isUserAuthenticated() {
+            if let userId = try? getCurrentUserId() {
+                components.queryItems?.append(URLQueryItem(name: "user_id", value: userId))
+                logger.info("👤 Including user_id \(userId) for under-review replies")
+            }
+        }
+        
+        let queryString = components.query ?? ""
+        let endpoint = "/api/forum/topics/\(topicId)/replies?\(queryString)"
         
         let request = createForumRequest(endpoint: endpoint, method: "GET")
         let data = try await performRequest(request)

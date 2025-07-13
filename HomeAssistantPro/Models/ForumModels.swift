@@ -59,6 +59,16 @@ struct ForumTopic: Codable, Identifiable {
         return status == 0
     }
     
+    /// Computed property to check if topic is under review
+    var isUnderReview: Bool {
+        return status == -1
+    }
+    
+    /// Computed property to check if topic is deleted
+    var isDeleted: Bool {
+        return status == 1
+    }
+    
     /// Computed property to check if topic is hot (trending)
     var isHot: Bool {
         return likeCount > 50 || replyCount > 20
@@ -69,10 +79,34 @@ struct ForumTopic: Codable, Identifiable {
         let formatter = RelativeDateTimeFormatter()
         formatter.dateTimeStyle = .named
         
-        let dateFormatter = ISO8601DateFormatter()
-        if let date = dateFormatter.date(from: createdAt) {
+        // Try ISO8601 format first
+        let iso8601Formatter = ISO8601DateFormatter()
+        if let date = iso8601Formatter.date(from: createdAt) {
             return formatter.localizedString(for: date, relativeTo: Date())
         }
+        
+        // Fallback to RFC3339 format
+        let rfc3339Formatter = DateFormatter()
+        rfc3339Formatter.dateFormat = "yyyy-MM-dd'T'HH:mm:ssZ"
+        rfc3339Formatter.locale = Locale(identifier: "en_US_POSIX")
+        rfc3339Formatter.timeZone = TimeZone(secondsFromGMT: 0)
+        
+        if let date = rfc3339Formatter.date(from: createdAt) {
+            return formatter.localizedString(for: date, relativeTo: Date())
+        }
+        
+        // Additional fallback for format with fractional seconds
+        rfc3339Formatter.dateFormat = "yyyy-MM-dd'T'HH:mm:ss.SSSZ"
+        if let date = rfc3339Formatter.date(from: createdAt) {
+            return formatter.localizedString(for: date, relativeTo: Date())
+        }
+        
+        // Additional fallback for format without Z
+        rfc3339Formatter.dateFormat = "yyyy-MM-dd'T'HH:mm:ss"
+        if let date = rfc3339Formatter.date(from: createdAt) {
+            return formatter.localizedString(for: date, relativeTo: Date())
+        }
+        
         return "Unknown"
     }
 }
@@ -86,6 +120,7 @@ struct ForumReply: Codable, Identifiable {
     let parentReply: ParentReplyInfo?
     let likeCount: Int
     let isLiked: Bool
+    let status: Int
     let images: [String]
     let createdAt: String
     let updatedAt: String
@@ -98,9 +133,25 @@ struct ForumReply: Codable, Identifiable {
         case parentReply = "parent_reply"
         case likeCount = "like_count"
         case isLiked = "is_liked"
+        case status
         case images
         case createdAt = "created_at"
         case updatedAt = "updated_at"
+    }
+    
+    /// Computed property to check if reply is published
+    var isPublished: Bool {
+        return status == 0
+    }
+    
+    /// Computed property to check if reply is under review
+    var isUnderReview: Bool {
+        return status == -1
+    }
+    
+    /// Computed property to check if reply is deleted
+    var isDeleted: Bool {
+        return status == 1
     }
     
     /// Computed property for formatted time ago
@@ -108,10 +159,34 @@ struct ForumReply: Codable, Identifiable {
         let formatter = RelativeDateTimeFormatter()
         formatter.dateTimeStyle = .named
         
-        let dateFormatter = ISO8601DateFormatter()
-        if let date = dateFormatter.date(from: createdAt) {
+        // Try ISO8601 format first
+        let iso8601Formatter = ISO8601DateFormatter()
+        if let date = iso8601Formatter.date(from: createdAt) {
             return formatter.localizedString(for: date, relativeTo: Date())
         }
+        
+        // Fallback to RFC3339 format
+        let rfc3339Formatter = DateFormatter()
+        rfc3339Formatter.dateFormat = "yyyy-MM-dd'T'HH:mm:ssZ"
+        rfc3339Formatter.locale = Locale(identifier: "en_US_POSIX")
+        rfc3339Formatter.timeZone = TimeZone(secondsFromGMT: 0)
+        
+        if let date = rfc3339Formatter.date(from: createdAt) {
+            return formatter.localizedString(for: date, relativeTo: Date())
+        }
+        
+        // Additional fallback for format with fractional seconds
+        rfc3339Formatter.dateFormat = "yyyy-MM-dd'T'HH:mm:ss.SSSZ"
+        if let date = rfc3339Formatter.date(from: createdAt) {
+            return formatter.localizedString(for: date, relativeTo: Date())
+        }
+        
+        // Additional fallback for format without Z
+        rfc3339Formatter.dateFormat = "yyyy-MM-dd'T'HH:mm:ss"
+        if let date = rfc3339Formatter.date(from: createdAt) {
+            return formatter.localizedString(for: date, relativeTo: Date())
+        }
+        
         return "Unknown"
     }
     

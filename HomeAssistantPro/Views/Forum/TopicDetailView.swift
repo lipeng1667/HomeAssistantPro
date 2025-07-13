@@ -63,6 +63,25 @@ struct TopicDetailView: View {
     private let forumService = ForumService.shared
     private let logger = Logger(subsystem: "com.homeassistant.ios", category: "TopicDetailView")
     
+    /// Computed property to sort replies with under-review replies for current user at the top
+    private var sortedReplies: [ForumReply] {
+        return replies.sorted { reply1, reply2 in
+            // Check if either reply is under review for the current user
+            let reply1IsUserReview = reply1.isUnderReview && isCurrentUserReply(reply1)
+            let reply2IsUserReview = reply2.isUnderReview && isCurrentUserReply(reply2)
+            
+            // Under-review replies for current user come first
+            if reply1IsUserReview && !reply2IsUserReview {
+                return true
+            } else if !reply1IsUserReview && reply2IsUserReview {
+                return false
+            } else {
+                // For replies with same review status, maintain original order
+                return false
+            }
+        }
+    }
+    
     // Computed header height based on device size
     private var headerHeight: CGFloat {
         let baseHeight: CGFloat = 40 // Button height
@@ -261,7 +280,7 @@ struct TopicDetailView: View {
                 }
                 
                 // Replies list
-                ForEach(replies) { reply in
+                ForEach(sortedReplies) { reply in
                     replyCard(reply: reply)
                         .onAppear {
                             // Load more replies when approaching the end
@@ -690,9 +709,16 @@ struct TopicDetailView: View {
                         )
                     
                     VStack(alignment: .leading, spacing: 2) {
-                        Text(reply.author.name)
-                            .font(reply.isNestedReply ? DesignTokens.ResponsiveTypography.bodySmall : DesignTokens.ResponsiveTypography.bodyMedium)
-                            .foregroundColor(DesignTokens.Colors.textPrimary)
+                        HStack(spacing: 8) {
+                            Text(reply.author.name)
+                                .font(reply.isNestedReply ? DesignTokens.ResponsiveTypography.bodySmall : DesignTokens.ResponsiveTypography.bodyMedium)
+                                .foregroundColor(DesignTokens.Colors.textPrimary)
+                            
+                            // Review status badge for user's under-review replies
+                            if reply.isUnderReview && isCurrentUserReply(reply) {
+                                ReviewStatusBadge(status: reply.status)
+                            }
+                        }
                         
                         Text(reply.timeAgo)
                             .font(DesignTokens.ResponsiveTypography.caption)
@@ -1050,6 +1076,7 @@ struct TopicDetailView: View {
             parentReply: reply.parentReply,
             likeCount: newLikeCount,
             isLiked: !wasLiked,
+            status: reply.status,
             images: reply.images,
             createdAt: reply.createdAt,
             updatedAt: reply.updatedAt
@@ -1067,6 +1094,7 @@ struct TopicDetailView: View {
                 parentReply: reply.parentReply,
                 likeCount: response.data.likeCount,
                 isLiked: response.data.isLiked,
+                status: reply.status,
                 images: reply.images,
                 createdAt: reply.createdAt,
                 updatedAt: reply.updatedAt
@@ -1079,6 +1107,18 @@ struct TopicDetailView: View {
             replies[replyIndex] = reply
             logger.error("Failed to toggle reply like: \(error.localizedDescription)")
         }
+    }
+    
+    /// Checks if a reply belongs to the current user
+    /// - Parameter reply: The reply to check
+    /// - Returns: True if the reply belongs to the current user (only for authenticated users)
+    private func isCurrentUserReply(_ reply: ForumReply) -> Bool {
+        // Only check for authenticated users (not anonymous)
+        guard !appViewModel.isAnonymousUser,
+              let userId = try? forumService.getCurrentUserId() else {
+            return false
+        }
+        return String(reply.author.id) == userId
     }
 }
 

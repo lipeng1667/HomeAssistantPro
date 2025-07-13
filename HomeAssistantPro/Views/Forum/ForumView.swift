@@ -44,18 +44,50 @@ struct ForumView: View {
     private let logger = Logger(subsystem: "com.homeassistant.ios", category: "ForumView")
     
     var filteredTopics: [ForumTopic] {
+        let baseTopics: [ForumTopic]
+        
         if searchText.isEmpty {
-            return topics
+            baseTopics = topics
         } else if isSearching {
-            return searchResults
+            baseTopics = searchResults
         } else {
             // Local filtering as fallback
-            return topics.filter { 
+            baseTopics = topics.filter { 
                 $0.title.lowercased().contains(searchText.lowercased()) || 
                 $0.category.lowercased().contains(searchText.lowercased()) ||
                 $0.content.lowercased().contains(searchText.lowercased())
             }
         }
+        
+        // Sort topics with under-review topics for current user at the top
+        return baseTopics.sorted { topic1, topic2 in
+            // Check if either topic is under review for the current user
+            let topic1IsUserReview = topic1.isUnderReview && isCurrentUserTopic(topic1)
+            let topic2IsUserReview = topic2.isUnderReview && isCurrentUserTopic(topic2)
+            
+            // Under-review topics for current user come first
+            if topic1IsUserReview && !topic2IsUserReview {
+                return true
+            } else if !topic1IsUserReview && topic2IsUserReview {
+                return false
+            } else {
+                // For topics with same review status, maintain original order
+                return false
+            }
+        }
+    }
+    
+    /// Checks if a topic belongs to the current user
+    /// - Parameter topic: The topic to check
+    /// - Returns: True if the topic belongs to the current user (only for authenticated users)
+    private func isCurrentUserTopic(_ topic: ForumTopic) -> Bool {
+        // Only check for authenticated users (not anonymous)
+        guard !appViewModel.isAnonymousUser,
+              let userId = try? forumService.getCurrentUserId(),
+              let topicAuthorId = topic.author?.id else {
+            return false
+        }
+        return String(topicAuthorId) == userId
     }
     
     var body: some View {
@@ -464,8 +496,13 @@ struct ForumView: View {
                 
                 // Content
                 VStack(alignment: .leading, spacing: 8) {
-                    // Category and time
+                    // Category, review status, and time
                     HStack {
+                        // Review status badge for user's under-review content
+                        if topic.isUnderReview && isCurrentUserTopic(topic) {
+                            ReviewStatusBadge(status: topic.status)
+                        }
+                        
                         Text(topic.category)
                             .font(.system(size: 12, weight: .semibold))
                             .foregroundColor(DesignTokens.Colors.primaryCyan)
