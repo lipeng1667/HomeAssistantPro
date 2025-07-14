@@ -120,7 +120,11 @@ struct ForumView: View {
             await refreshTopics()
         }
         .sheet(isPresented: $showCreatePost) {
-            CreatePostView()
+            CreatePostView(mode: .create) {
+                Task {
+                    await refreshTopics()
+                }
+            }
         }
         .confirmationDialog("Create Post", isPresented: $showCreateMenu, titleVisibility: .visible) {
             Button("New Topic") {
@@ -462,7 +466,11 @@ struct ForumView: View {
     
     @ViewBuilder
     private func topicCard(topic: ForumTopic, index: Int) -> some View {
-        NavigationLink(destination: TopicDetailView(topicId: topic.id)) {
+        NavigationLink(destination: TopicDetailView(topicId: topic.id, onUpdate: { 
+            Task {
+                await refreshTopics()
+            }
+        })) {
             HStack(spacing: 16) {
                 // Avatar with status indicator
                 ZStack(alignment: .bottomTrailing) {

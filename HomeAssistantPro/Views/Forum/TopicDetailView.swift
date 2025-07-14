@@ -24,6 +24,7 @@ import os.log
 /// Topic detail view with replies and interactions
 struct TopicDetailView: View {
     let topicId: Int
+    var onUpdate: (() -> Void)?
     
     @Environment(\.presentationMode) var presentationMode
     @Environment(\.optionalTabBarVisibility) private var tabBarVisibility
@@ -52,6 +53,14 @@ struct TopicDetailView: View {
     // Image viewer state
     @State private var showImageViewer = false
     @State private var imageViewerData: ImageViewerData? = nil
+    
+    // Edit/Delete state
+    @State private var showEditTopic = false
+    @State private var showEditReply = false
+    @State private var editingReply: ForumReply? = nil
+    @State private var showDeleteTopicConfirmation = false
+    @State private var showDeleteReplyConfirmation = false
+    @State private var deletingReply: ForumReply? = nil
     
     struct ImageViewerData: Identifiable {
         let id = UUID()
@@ -171,6 +180,73 @@ struct TopicDetailView: View {
                     }
                 }
             )
+        }
+        .sheet(isPresented: $showEditTopic) {
+            if let currentTopic = topic {
+                CreatePostView(
+                    mode: .edit(currentTopic),
+                    onCompletion: {
+                        Task {
+                            await refreshTopic()
+                        }
+                    }
+                )
+            }
+        }
+        .sheet(isPresented: $showEditReply) {
+            if let editingReply = editingReply {
+                EditReplyView(
+                    reply: editingReply,
+                    topicId: topicId,
+                    onReplyUpdated: {
+                        Task {
+                            await refreshTopic()
+                        }
+                    }
+                )
+            }
+        }
+        .overlay {
+            // Delete Topic Confirmation Modal
+            if showDeleteTopicConfirmation {
+                CustomConfirmationModal(
+                    isPresented: $showDeleteTopicConfirmation,
+                    config: ConfirmationConfig.destructive(
+                        title: "Delete Topic",
+                        message: "Are you sure you want to delete this topic? This action cannot be undone.",
+                        icon: "trash",
+                        confirmText: "Delete",
+                        cancelText: "Cancel",
+                        onConfirm: {
+                            Task {
+                                await deleteTopic()
+                            }
+                        }
+                    )
+                )
+            }
+        }
+        .overlay {
+            // Delete Reply Confirmation Modal
+            if showDeleteReplyConfirmation {
+                CustomConfirmationModal(
+                    isPresented: $showDeleteReplyConfirmation,
+                    config: ConfirmationConfig.destructive(
+                        title: "Delete Reply",
+                        message: "Are you sure you want to delete this reply? This action cannot be undone.",
+                        icon: "trash",
+                        confirmText: "Delete",
+                        cancelText: "Cancel",
+                        onConfirm: {
+                            if let deletingReply = deletingReply {
+                                Task {
+                                    await deleteReply(deletingReply.id)
+                                }
+                            }
+                        }
+                    )
+                )
+            }
         }
         .alert("Error", isPresented: .constant(errorMessage != nil)) {
             Button("OK") {
@@ -344,10 +420,19 @@ struct TopicDetailView: View {
                     )
                 
                 VStack(alignment: .leading, spacing: 2) {
-                    if let author = topic.author {
-                        Text(author.name)
-                            .font(DesignTokens.ResponsiveTypography.bodyLarge)
-                            .foregroundColor(DesignTokens.Colors.textPrimary)
+                    HStack() {
+                        if let author = topic.author {
+                            Text(author.name)
+                                .font(DesignTokens.ResponsiveTypography.bodyLarge)
+                                .foregroundColor(DesignTokens.Colors.textPrimary)
+                        }
+                        
+                        Spacer()
+                        
+                        Text(topic.timeAgo)
+                            .font(DesignTokens.ResponsiveTypography.caption)
+                            .foregroundColor(DesignTokens.Colors.textTertiary)
+                       
                     }
                     
                     HStack(spacing: 8) {
@@ -361,13 +446,32 @@ struct TopicDetailView: View {
                                     .fill(DesignTokens.Colors.primaryCyan.opacity(0.15))
                             )
                         
-                        Text(topic.timeAgo)
-                            .font(DesignTokens.ResponsiveTypography.caption)
-                            .foregroundColor(DesignTokens.Colors.textTertiary)
+                        Spacer()
+                        
+                        // Edit/Delete menu for current user's topic
+                        if isCurrentUserTopic() {
+                            Menu {
+                                Button(action: {
+                                    showEditTopic = true
+                                }) {
+                                    Label("Edit Topic", systemImage: "pencil")
+                                }
+                                
+                                Button(role: .destructive, action: {
+                                    showDeleteTopicConfirmation = true
+                                }) {
+                                    Label("Delete Topic", systemImage: "trash")
+                                }
+                            } label: {
+                                Image(systemName: "ellipsis.circle")
+                                    .font(.system(size: 18, weight: .medium))
+                                    .foregroundColor(DesignTokens.Colors.textSecondary)
+                                    .frame(width: 24, height: 24)
+                            }
+                        }
+                        
                     }
                 }
-                
-                Spacer()
                 
                 if topic.isHot {
                     Circle()
@@ -803,32 +907,57 @@ struct TopicDetailView: View {
                     
                     Spacer()
                     
-                    // Reply to this reply button with haptic feedback
-                    Button(action: {
-                        // Haptic feedback
-                        let impactFeedback = UIImpactFeedbackGenerator(style: .medium)
-                        impactFeedback.impactOccurred()
-                        
-                        // Check if user is anonymous
-                        if appViewModel.isAnonymousUser {
-                            restrictionViewModel.showRestrictionModal(for: .replyToReply)
-                            return
-                        }
-                        
-                        replyingToReply = reply
-                        showReplyForm = true
-                    }) {
-                        HStack(spacing: 4) {
-                            Image(systemName: "arrowshape.turn.up.left")
-                                .font(.system(size: 14, weight: .medium))
-                                .foregroundColor(DesignTokens.Colors.Forum.primary)
+                    // Edit/Delete menu for current user's reply
+                    if isCurrentUserReply(reply) {
+                        Menu {
+                            Button(action: {
+                                editingReply = reply
+                                showEditReply = true
+                            }) {
+                                Label("Edit Reply", systemImage: "pencil")
+                            }
                             
-                            Text("Reply")
-                                .font(DesignTokens.ResponsiveTypography.caption)
-                                .foregroundColor(DesignTokens.Colors.Forum.primary)
+                            Button(role: .destructive, action: {
+                                deletingReply = reply
+                                showDeleteReplyConfirmation = true
+                            }) {
+                                Label("Delete Reply", systemImage: "trash")
+                            }
+                        } label: {
+                            Image(systemName: "ellipsis")
+                                .font(.system(size: 14, weight: .medium))
+                                .foregroundColor(DesignTokens.Colors.textSecondary)
+                                .padding(.horizontal, 8)
+                                .padding(.vertical, 4)
                         }
+                    } else {
+                        // Reply to this reply button with haptic feedback
+                        Button(action: {
+                            // Haptic feedback
+                            let impactFeedback = UIImpactFeedbackGenerator(style: .medium)
+                            impactFeedback.impactOccurred()
+                            
+                            // Check if user is anonymous
+                            if appViewModel.isAnonymousUser {
+                                restrictionViewModel.showRestrictionModal(for: .replyToReply)
+                                return
+                            }
+                            
+                            replyingToReply = reply
+                            showReplyForm = true
+                        }) {
+                            HStack(spacing: 4) {
+                                Image(systemName: "arrowshape.turn.up.left")
+                                    .font(.system(size: 14, weight: .medium))
+                                    .foregroundColor(DesignTokens.Colors.Forum.primary)
+                                
+                                Text("Reply")
+                                    .font(DesignTokens.ResponsiveTypography.caption)
+                                    .foregroundColor(DesignTokens.Colors.Forum.primary)
+                            }
+                        }
+                        .scaleButtonStyle()
                     }
-                    .scaleButtonStyle()
                 }
             }
             .padding(DesignTokens.ResponsiveSpacing.md)
@@ -1119,6 +1248,67 @@ struct TopicDetailView: View {
             return false
         }
         return String(reply.author.id) == userId
+    }
+    
+    /// Checks if the current topic belongs to the current user
+    /// - Returns: True if the topic belongs to the current user (only for authenticated users)
+    private func isCurrentUserTopic() -> Bool {
+        guard !appViewModel.isAnonymousUser,
+              let currentTopic = topic,
+              let author = currentTopic.author,
+              let userId = try? forumService.getCurrentUserId() else {
+            return false
+        }
+        return String(author.id) == userId
+    }
+    
+    /// Deletes the current topic
+    @MainActor
+    private func deleteTopic() async {
+        guard let currentTopic = topic else { return }
+        
+        do {
+            let _ = try await forumService.deleteTopic(topicId: currentTopic.id)
+            
+            // Haptic feedback
+            let impactFeedback = UIImpactFeedbackGenerator(style: .medium)
+            impactFeedback.impactOccurred()
+            
+            logger.info("Topic \(currentTopic.id) deleted successfully")
+            
+            // Navigate back to forum view
+            onUpdate?()
+            presentationMode.wrappedValue.dismiss()
+            
+        } catch {
+            logger.error("Failed to delete topic: \(error.localizedDescription)")
+            errorMessage = error.localizedDescription
+        }
+    }
+    
+    /// Deletes a specific reply
+    @MainActor
+    private func deleteReply(_ replyId: Int) async {
+        do {
+            let _ = try await forumService.deleteReply(replyId: replyId)
+            
+            // Haptic feedback
+            let impactFeedback = UIImpactFeedbackGenerator(style: .medium)
+            impactFeedback.impactOccurred()
+            
+            logger.info("Reply \(replyId) deleted successfully")
+            
+            // Refresh the topic to show updated replies
+            await refreshTopic()
+            
+            // Clear the deleting reply reference
+            deletingReply = nil
+            
+        } catch {
+            logger.error("Failed to delete reply: \(error.localizedDescription)")
+            errorMessage = error.localizedDescription
+            deletingReply = nil
+        }
     }
 }
 

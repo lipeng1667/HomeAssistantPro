@@ -25,17 +25,55 @@
 import SwiftUI
 import os.log
 
-/// Enhanced create post view with image attachments and responsive design
+/// Enhanced create/edit post view with image attachments and responsive design
 struct CreatePostView: View {
+    
+    /// Mode enum to differentiate between creating new topic or editing existing one
+    enum Mode {
+        case create
+        case edit(ForumTopic)
+        
+        var title: String {
+            switch self {
+            case .create: return "Create New Post"
+            case .edit: return "Edit Topic"
+            }
+        }
+        
+        var description: String {
+            switch self {
+            case .create: return "Share your question or insight with the community"
+            case .edit: return "Update your topic information"
+            }
+        }
+        
+        var buttonText: String {
+            switch self {
+            case .create: return "Post"
+            case .edit: return "Update"
+            }
+        }
+        
+        var loadingText: String {
+            switch self {
+            case .create: return "Posting..."
+            case .edit: return "Updating..."
+            }
+        }
+    }
+    
+    let mode: Mode
+    let onCompletion: () -> Void
+    
     @Environment(\.presentationMode) var presentationMode
     @StateObject private var draftManager = DraftManager.shared
     
     // MARK: - Form State
-    @State private var postTitle = ""
-    @State private var postContent = ""
-    @State private var selectedCategory = "Smart Home"
+    @State private var postTitle: String
+    @State private var postContent: String
+    @State private var selectedCategory: String
     @State private var attachedImages: [UIImage] = []
-    @State private var uploadedImageUrls: [String] = []
+    @State private var existingImageUrls: [String] = []
     
     // MARK: - UI State
     @State private var showImagePicker = false
@@ -53,6 +91,29 @@ struct CreatePostView: View {
     private let maxTitleLength = 100
     private let maxContentLength = 2000
     private let maxImages = 3
+    
+    /// Initialize with mode (create new or edit existing)
+    /// - Parameters:
+    ///   - mode: Create new topic or edit existing topic
+    ///   - onCompletion: Callback when operation completes successfully
+    init(mode: Mode = .create, onCompletion: @escaping () -> Void = {}) {
+        self.mode = mode
+        self.onCompletion = onCompletion
+        
+        // Initialize form state based on mode
+        switch mode {
+        case .create:
+            self._postTitle = State(initialValue: "")
+            self._postContent = State(initialValue: "")
+            self._selectedCategory = State(initialValue: "Smart Home")
+            
+        case .edit(let topic):
+            self._postTitle = State(initialValue: topic.title)
+            self._postContent = State(initialValue: topic.content)
+            self._selectedCategory = State(initialValue: topic.category)
+            self._existingImageUrls = State(initialValue: topic.images)
+        }
+    }
     
     var body: some View {
         NavigationView {
@@ -82,19 +143,40 @@ struct CreatePostView: View {
             }
             .navigationBarHidden(true)
             .onAppear {
-                loadDraftIfAvailable()
+                // Only load draft for create mode
+                if case .create = mode {
+                    loadDraftIfAvailable()
+                }
                 loadCategories()
             }
-            .onChange(of: postTitle) { _ in saveDraft() }
-            .onChange(of: postContent) { _ in saveDraft() }
-            .onChange(of: selectedCategory) { _ in saveDraft() }
+            .onChange(of: postTitle) { _ in 
+                // Only save draft for create mode
+                if case .create = mode {
+                    saveDraft()
+                }
+            }
+            .onChange(of: postContent) { _ in 
+                // Only save draft for create mode
+                if case .create = mode {
+                    saveDraft()
+                }
+            }
+            .onChange(of: selectedCategory) { _ in 
+                // Only save draft for create mode
+                if case .create = mode {
+                    saveDraft()
+                }
+            }
             .sheet(isPresented: $showImagePicker) {
                 ImagePicker(selectedImage: Binding<UIImage?>(
                     get: { nil },
                     set: { image in
                         if let image = image {
                             attachedImages.append(image)
-                            saveDraft()
+                            // Only save draft for create mode
+                            if case .create = mode {
+                                saveDraft()
+                            }
                         }
                     }
                 ))
@@ -128,11 +210,11 @@ struct CreatePostView: View {
     
     private var headerSection: some View {
         VStack(spacing: DesignTokens.ResponsiveSpacing.sm) {
-            Text("Create New Post")
+            Text(mode.title)
                 .font(DesignTokens.ResponsiveTypography.headingLarge)
                 .foregroundColor(DesignTokens.Colors.textPrimary)
             
-            Text("Share your question or insight with the community")
+            Text(mode.description)
                 .font(DesignTokens.ResponsiveTypography.bodyMedium)
                 .foregroundColor(DesignTokens.Colors.textSecondary)
                 .multilineTextAlignment(.center)
@@ -304,7 +386,7 @@ struct CreatePostView: View {
                 
                 Spacer()
                 
-                Text("Optional (\(attachedImages.count)/\(maxImages))")
+                Text("Optional (\(totalImageCount)/\(maxImages))")
                     .font(DesignTokens.ResponsiveTypography.caption)
                     .foregroundColor(DesignTokens.Colors.textSecondary)
             }
@@ -312,7 +394,7 @@ struct CreatePostView: View {
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: DesignTokens.ResponsiveSpacing.sm) {
                     // Add image button
-                    if attachedImages.count < maxImages {
+                    if totalImageCount < maxImages {
                         Button(action: {
                             showImagePicker = true
                         }) {
@@ -320,9 +402,14 @@ struct CreatePostView: View {
                         }
                     }
                     
-                    // Attached images
+                    // Existing images (for edit mode)
+                    ForEach(Array(existingImageUrls.enumerated()), id: \.offset) { index, imageUrl in
+                        existingImagePreview(imageUrl, index: index)
+                    }
+                    
+                    // New attached images
                     ForEach(Array(attachedImages.enumerated()), id: \.offset) { index, image in
-                        imagePreview(image, index: index)
+                        newImagePreview(image, index: index)
                     }
                 }
                 .responsiveHorizontalPadding(4, 6, 8)
@@ -355,7 +442,50 @@ struct CreatePostView: View {
         .scaleButtonStyle()
     }
     
-    private func imagePreview(_ image: UIImage, index: Int) -> some View {
+    private func existingImagePreview(_ imageUrl: String, index: Int) -> some View {
+        ZStack(alignment: .topTrailing) {
+            AsyncImage(url: URL(string: imageUrl)) { image in
+                image
+                    .resizable()
+                    .aspectRatio(contentMode: .fill)
+            } placeholder: {
+                Rectangle()
+                    .fill(DesignTokens.Colors.backgroundSecondary)
+                    .overlay(
+                        ProgressView()
+                            .progressViewStyle(CircularProgressViewStyle())
+                    )
+            }
+            .frame(
+                width: DesignTokens.DeviceSize.current.spacing(80, 90, 100),
+                height: DesignTokens.DeviceSize.current.spacing(80, 90, 100)
+            )
+            .clipped()
+            .background(DesignTokens.Colors.backgroundSecondary)
+            .cornerRadius(DesignTokens.ResponsiveSpacing.sm)
+            
+            // Remove button
+            Button(action: {
+                withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                    existingImageUrls.remove(at: index)
+                }
+                HapticManager.buttonTap()
+            }) {
+                Image(systemName: "xmark.circle.fill")
+                    .font(.system(size: DesignTokens.DeviceSize.current.fontSize(16, 18, 20)))
+                    .foregroundColor(.white)
+                    .background(
+                        Circle()
+                            .fill(DesignTokens.Colors.primaryRed)
+                            .frame(width: 20, height: 20)
+                    )
+            }
+            .offset(x: 8, y: -8)
+            .scaleButtonStyle()
+        }
+    }
+    
+    private func newImagePreview(_ image: UIImage, index: Int) -> some View {
         ZStack(alignment: .topTrailing) {
             Image(uiImage: image)
                 .resizable()
@@ -425,7 +555,7 @@ struct CreatePostView: View {
                             .scaleEffect(0.8)
                     }
                     
-                    Text(isLoading ? "Posting..." : "Post")
+                    Text(isLoading ? mode.loadingText : mode.buttonText)
                         .font(DesignTokens.ResponsiveTypography.buttonMedium)
                         .foregroundColor(.white)
                 }
@@ -460,6 +590,10 @@ struct CreatePostView: View {
             return defaultCategories
         }
         return categories.map { $0.name }
+    }
+    
+    private var totalImageCount: Int {
+        return existingImageUrls.count + attachedImages.count
     }
     
     private var isFormInvalid: Bool {
@@ -517,7 +651,7 @@ struct CreatePostView: View {
     // MARK: - Helper Methods
     
     
-    /// Create new post with validation and submission
+    /// Create or update post with validation and submission
     private func createPost() {
         guard !isFormInvalid else { return }
         
@@ -529,18 +663,49 @@ struct CreatePostView: View {
                 // Convert UIImages to FileUploadRequest objects
                 let imageFiles = await convertImagesToUploadRequests()
                 
-                // Create the topic with image files (upload will happen automatically)
-                let response = try await forumService.createTopic(
-                    title: postTitle.trimmingCharacters(in: .whitespacesAndNewlines),
-                    content: postContent.trimmingCharacters(in: .whitespacesAndNewlines),
-                    category: selectedCategory,
-                    imageFiles: imageFiles
-                )
+                var finalImageUrls = existingImageUrls
+                
+                // Upload new images if any and add to final URLs
+                for imageFile in imageFiles {
+                    let uploadResponse = try await forumService.uploadFile(imageFile)
+                    if let fileUrl = uploadResponse.data.fileUrl {
+                        finalImageUrls.append(fileUrl)
+                    }
+                }
+                
+                let response: Any
+                switch mode {
+                case .create:
+                    // Create new topic
+                    let createResponse = try await forumService.createTopic(
+                        title: postTitle.trimmingCharacters(in: .whitespacesAndNewlines),
+                        content: postContent.trimmingCharacters(in: .whitespacesAndNewlines),
+                        category: selectedCategory,
+                        imageFiles: imageFiles
+                    )
+                    response = createResponse
+                    logger.info("Topic created successfully with ID: \(createResponse.data.topic.id)")
+                    
+                case .edit(let topic):
+                    // Update existing topic
+                    let updateResponse = try await forumService.updateTopic(
+                        topicId: topic.id,
+                        title: postTitle.trimmingCharacters(in: .whitespacesAndNewlines),
+                        content: postContent.trimmingCharacters(in: .whitespacesAndNewlines),
+                        category: selectedCategory,
+                        images: finalImageUrls
+                    )
+                    response = updateResponse
+                    logger.info("Topic updated successfully with ID: \(topic.id)")
+                }
                 
                 await MainActor.run {
-                    logger.info("Topic created successfully with ID: \(response.data.topic.id)")
                     isLoading = false
-                    draftManager.clearDraft()
+                    // Only clear draft for create mode
+                    if case .create = mode {
+                        draftManager.clearDraft()
+                    }
+                    onCompletion()
                     presentationMode.wrappedValue.dismiss()
                     HapticManager.buttonTap()
                 }
@@ -621,7 +786,19 @@ struct CreatePostView: View {
                 continue
             }
             
-            let fileName = "image_\(index)_\(Date().timeIntervalSince1970).jpg"
+            let fileNamePrefix: String
+            let postId: Int?
+            
+            switch mode {
+            case .create:
+                fileNamePrefix = "image"
+                postId = nil
+            case .edit(let topic):
+                fileNamePrefix = "topic_edit_\(topic.id)"
+                postId = topic.id
+            }
+            
+            let fileName = "\(fileNamePrefix)_\(index)_\(Date().timeIntervalSince1970).jpg"
             
             let fileRequest = FileUploadRequest(
                 file: imageData,
@@ -629,7 +806,7 @@ struct CreatePostView: View {
                 mimeType: "image/jpeg",
                 userId: userId,
                 type: "topic",
-                postId: nil
+                postId: postId
             )
             
             fileRequests.append(fileRequest)
@@ -741,6 +918,8 @@ struct ImagePicker: UIViewControllerRepresentable {
 // MARK: - Preview
 
 #Preview {
-    CreatePostView()
-        .environmentObject(AppViewModel())
+    CreatePostView(mode: .create) {
+        // Preview completion
+    }
+    .environmentObject(AppViewModel())
 }
