@@ -72,23 +72,11 @@ struct TopicDetailView: View {
     private let forumService = ForumService.shared
     private let logger = Logger(subsystem: "com.homeassistant.ios", category: "TopicDetailView")
     
-    /// Computed property to sort replies with under-review replies for current user at the top
+    /// Computed property that preserves hierarchical order from API response
+    /// The backend now returns replies in correct hierarchical order, so we just use them as-is
     private var sortedReplies: [ForumReply] {
-        return replies.sorted { reply1, reply2 in
-            // Check if either reply is under review for the current user
-            let reply1IsUserReview = reply1.isUnderReview && isCurrentUserReply(reply1)
-            let reply2IsUserReview = reply2.isUnderReview && isCurrentUserReply(reply2)
-            
-            // Under-review replies for current user come first
-            if reply1IsUserReview && !reply2IsUserReview {
-                return true
-            } else if !reply1IsUserReview && reply2IsUserReview {
-                return false
-            } else {
-                // For replies with same review status, maintain original order
-                return false
-            }
-        }
+        // Return replies in the exact order provided by the API to preserve hierarchical structure
+        return replies
     }
     
     // Computed header height based on device size
@@ -1036,8 +1024,21 @@ struct TopicDetailView: View {
                 )
                 
                 topic = response.data.topic
-                replies = response.data.replies
-                hasMorePages = response.data.replyPagination.hasNext
+                
+                var fetchedReplies = response.data.replies
+                let replyMap = Dictionary(uniqueKeysWithValues: fetchedReplies.map { ($0.id, $0) })
+                for i in 0..<fetchedReplies.count {
+                    if let parentId = fetchedReplies[i].parentReplyId, let parentReply = replyMap[parentId] {
+                        fetchedReplies[i].parentReply = ParentReplyInfo(
+                            id: parentReply.id,
+                            content: parentReply.content,
+                            author: parentReply.author
+                        )
+                    }
+                }
+                self.replies = fetchedReplies
+                
+                hasMorePages = self.replies.count < response.data.totalReplies
                 
                 logger.info("Loaded topic \(topicId) with \(replies.count) replies")
                 
@@ -1065,8 +1066,21 @@ struct TopicDetailView: View {
             )
             
             topic = response.data.topic
-            replies = response.data.replies
-            hasMorePages = response.data.replyPagination.hasNext
+            
+            var fetchedReplies = response.data.replies
+            let replyMap = Dictionary(uniqueKeysWithValues: fetchedReplies.map { ($0.id, $0) })
+            for i in 0..<fetchedReplies.count {
+                if let parentId = fetchedReplies[i].parentReplyId, let parentReply = replyMap[parentId] {
+                    fetchedReplies[i].parentReply = ParentReplyInfo(
+                        id: parentReply.id,
+                        content: parentReply.content,
+                        author: parentReply.author
+                    )
+                }
+            }
+            self.replies = fetchedReplies
+            
+            hasMorePages = self.replies.count < response.data.totalReplies
             
             logger.info("Refreshed topic \(topicId)")
             
@@ -1093,7 +1107,19 @@ struct TopicDetailView: View {
                 sort: sortOption
             )
             
-            replies = response.data.replies
+            var fetchedReplies = response.data.replies
+            let replyMap = Dictionary(uniqueKeysWithValues: fetchedReplies.map { ($0.id, $0) })
+            for i in 0..<fetchedReplies.count {
+                if let parentId = fetchedReplies[i].parentReplyId, let parentReply = replyMap[parentId] {
+                    fetchedReplies[i].parentReply = ParentReplyInfo(
+                        id: parentReply.id,
+                        content: parentReply.content,
+                        author: parentReply.author
+                    )
+                }
+            }
+            self.replies = fetchedReplies
+            
             hasMorePages = response.data.pagination.hasNext
             
             logger.info("Refreshed replies with sort: \(sortOption.rawValue)")
@@ -1121,10 +1147,25 @@ struct TopicDetailView: View {
                 limit: 20
             )
             
-            replies.append(contentsOf: response.data.replies)
-            hasMorePages = response.data.pagination.hasNext
+            var newReplies = response.data.replies
+            let combinedReplies = self.replies + newReplies
             
-            logger.info("Loaded \(response.data.replies.count) more replies")
+            var processedReplies = combinedReplies
+            let replyMap = Dictionary(uniqueKeysWithValues: processedReplies.map { ($0.id, $0) })
+            for i in 0..<processedReplies.count {
+                if let parentId = processedReplies[i].parentReplyId, let parentReply = replyMap[parentId] {
+                    processedReplies[i].parentReply = ParentReplyInfo(
+                        id: parentReply.id,
+                        content: parentReply.content,
+                        author: parentReply.author
+                    )
+                }
+            }
+            self.replies = processedReplies
+            
+            self.hasMorePages = response.data.pagination.hasNext
+            
+            logger.info("Loaded \(newReplies.count) more replies")
             
         } catch {
             logger.error("Failed to load more replies: \(error.localizedDescription)")

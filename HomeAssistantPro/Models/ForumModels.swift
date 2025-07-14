@@ -117,7 +117,7 @@ struct ForumReply: Codable, Identifiable {
     let content: String
     let author: ForumAuthor
     let parentReplyId: Int?
-    let parentReply: ParentReplyInfo?
+    var parentReply: ParentReplyInfo?
     let likeCount: Int
     let isLiked: Bool
     let status: Int
@@ -130,7 +130,6 @@ struct ForumReply: Codable, Identifiable {
         case content
         case author
         case parentReplyId = "parent_reply_id"
-        case parentReply = "parent_reply"
         case likeCount = "like_count"
         case isLiked = "is_liked"
         case status
@@ -197,7 +196,7 @@ struct ForumReply: Codable, Identifiable {
 }
 
 /// Parent reply information for nested replies
-struct ParentReplyInfo: Codable {
+struct ParentReplyInfo {
     let id: Int
     let content: String
     let author: ForumAuthor
@@ -252,12 +251,12 @@ struct ForumTopicDetailResponse: Codable {
     struct ForumTopicDetailData: Codable {
         let topic: ForumTopic
         let replies: [ForumReply]
-        let replyPagination: ForumPagination
+        let totalReplies: Int
         
         enum CodingKeys: String, CodingKey {
             case topic
             case replies
-            case replyPagination = "reply_pagination"
+            case totalReplies = "total_replies"
         }
     }
 }
