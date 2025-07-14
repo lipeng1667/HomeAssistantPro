@@ -4,25 +4,33 @@
 //
 //  Purpose: Modern chat interface with technical support featuring 2025 design aesthetics
 //  Author: Michael
-//  Updated: 2025-06-25
+//  Updated: 2025-07-14
 //
-//  Features: Glassmorphism effects, smooth animations, dynamic typing indicators,
+//  Features: Real-time messaging with IM service integration, WebSocket support,
+//  glassmorphism effects, smooth animations, dynamic typing indicators,
 //  contemporary message bubbles with enhanced UX, and keyboard-responsive tab bar.
 //
 
 import SwiftUI
 
-/// Modern chat view with sophisticated design and animations
+/// Modern chat view with sophisticated design and real-time messaging
 struct ChatView: View {
     @State private var message: String = ""
-    @State private var messages: [ChatMessage] = ChatMessage.sampleMessages
+    @State private var messages: [ChatMessage] = []
     @State private var isTyping = false
     @State private var showEmojiPicker = false
     @State private var isKeyboardVisible = false
+    @State private var isLoading = false
+    @State private var errorMessage: String?
     @FocusState private var isMessageFieldFocused: Bool
     
-    // Access the tab bar visibility manager from environment
+    // Services
+    @StateObject private var imService = IMService.shared
+    @StateObject private var socketManager = SocketManager.shared
+    
+    // Environment
     @EnvironmentObject var tabBarVisibility: TabBarVisibilityManager
+    @EnvironmentObject private var appViewModel: AppViewModel
     
     var body: some View {
         ZStack {
@@ -45,9 +53,32 @@ struct ChatView: View {
         }
         .onAppear {
             setupKeyboardObservers()
+            loadInitialData()
         }
         .onDisappear {
             removeKeyboardObservers()
+        }
+        .onChange(of: socketManager.newMessage) { newMessage in
+            if let newMessage = newMessage {
+                withAnimation(.spring(response: 0.6, dampingFraction: 0.8)) {
+                    messages.append(newMessage)
+                }
+                socketManager.clearState()
+            }
+        }
+        .onChange(of: socketManager.isAdminTyping) { isAdminTyping in
+            withAnimation(.easeInOut(duration: 0.3)) {
+                isTyping = isAdminTyping
+            }
+        }
+        .alert("Connection Error", isPresented: .constant(errorMessage != nil)) {
+            Button("OK") {
+                errorMessage = nil
+            }
+        } message: {
+            if let errorMessage = errorMessage {
+                Text(errorMessage)
+            }
         }
         .onTapGesture {
             isMessageFieldFocused = false
@@ -107,26 +138,45 @@ struct ChatView: View {
     // MARK: - Messages
     
     private var messagesView: some View {
-        ScrollView {
-            LazyVStack(spacing: 16) {
-                ForEach(messages) { message in
-                    MessageBubble(message: message)
-                        .transition(.asymmetric(
-                            insertion: .move(edge: .bottom).combined(with: .opacity),
-                            removal: .move(edge: .top).combined(with: .opacity)
-                        ))
+        ScrollViewReader { proxy in
+            ScrollView {
+                LazyVStack(spacing: 16) {
+                    // Loading indicator
+                    if isLoading {
+                        ProgressView("Loading messages...")
+                            .frame(maxWidth: .infinity, maxHeight: .infinity)
+                            .foregroundColor(.secondary)
+                    }
+                    
+                    ForEach(messages) { message in
+                        MessageBubble(message: message)
+                            .transition(.asymmetric(
+                                insertion: .move(edge: .bottom).combined(with: .opacity),
+                                removal: .move(edge: .top).combined(with: .opacity)
+                            ))
+                            .id(message.id)
+                    }
+                    
+                    // Typing indicator
+                    if isTyping {
+                        TypingIndicator()
+                            .transition(.scale.combined(with: .opacity))
+                            .id("typing-indicator")
+                    }
                 }
-                
-                // Typing indicator
-                if isTyping {
-                    TypingIndicator()
-                        .transition(.scale.combined(with: .opacity))
+                .padding(.horizontal, DesignTokens.ResponsiveSpacing.lg)
+                .padding(.vertical, 16)
+            }
+            .background(Color.clear)
+            .onChange(of: messages.count) { _ in
+                // Auto-scroll to bottom when new messages arrive
+                if let lastMessage = messages.last {
+                    withAnimation(.easeInOut(duration: 0.3)) {
+                        proxy.scrollTo(lastMessage.id, anchor: .bottom)
+                    }
                 }
             }
-            .padding(.horizontal, DesignTokens.ResponsiveSpacing.lg)
-            .padding(.vertical, 16)
         }
-        .background(Color.clear)
     }
     
     // MARK: - Input Area
@@ -213,57 +263,96 @@ struct ChatView: View {
         let trimmedMessage = message.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmedMessage.isEmpty else { return }
         
+        // Get current user ID
+        guard let currentUserId = imService.currentUserId else {
+            errorMessage = "User not authenticated"
+            return
+        }
+        
         // Haptic feedback
         HapticManager.messageSent()
         
-        // Add user message
-        let newMessage = ChatMessage(
-            id: UUID(),
-            content: trimmedMessage,
-            isFromUser: true,
-            timestamp: Date()
-        )
-        
-        withAnimation(.spring(response: 0.6, dampingFraction: 0.8)) {
-            messages.append(newMessage)
-            message = ""
-        }
+        // Clear message field immediately
+        let messageToSend = trimmedMessage
+        message = ""
         
         // Dismiss keyboard after sending
         isMessageFieldFocused = false
         
-        // Simulate typing response
-        simulateTypingResponse()
+        // Send message via IM service
+        Task {
+            do {
+                let sentMessage = try await imService.sendMessage(
+                    message: messageToSend,
+                    userId: currentUserId
+                )
+                
+                // Add sent message to UI
+                await MainActor.run {
+                    withAnimation(.spring(response: 0.6, dampingFraction: 0.8)) {
+                        messages.append(sentMessage)
+                    }
+                }
+                
+                // Also send via WebSocket for real-time updates
+                if let conversationId = socketManager.currentConversationId {
+                    socketManager.sendMessage(
+                        content: messageToSend,
+                        conversationId: conversationId
+                    )
+                }
+                
+            } catch {
+                await MainActor.run {
+                    errorMessage = imService.handleError(error)
+                }
+            }
+        }
     }
     
-    private func simulateTypingResponse() {
-        withAnimation(.easeInOut(duration: 0.3)) {
-            isTyping = true
+    // MARK: - Data Loading
+    
+    private func loadInitialData() {
+        // Get current user ID from app view model
+        guard let userId = getUserId() else {
+            errorMessage = "User not authenticated"
+            return
         }
         
-        DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
-            withAnimation(.easeInOut(duration: 0.3)) {
-                isTyping = false
-            }
-            
-            let responses = [
-                "I understand your concern. Let me help you with that.",
-                "That's a great question! Here's what I recommend...",
-                "I can definitely assist you with this issue.",
-                "Thanks for the details. Let me walk you through the solution."
-            ]
-            
-            let responseMessage = ChatMessage(
-                id: UUID(),
-                content: responses.randomElement() ?? "How else can I help you today?",
-                isFromUser: false,
-                timestamp: Date()
-            )
-            
-            withAnimation(.spring(response: 0.6, dampingFraction: 0.8)) {
-                messages.append(responseMessage)
+        // Set user ID in IM service
+        imService.setCurrentUserId(userId)
+        
+        // Connect to WebSocket
+        socketManager.connect(userId: userId)
+        
+        // Load chat history
+        Task {
+            isLoading = true
+            do {
+                let chatMessages = try await imService.fetchMessages(userId: userId)
+                
+                await MainActor.run {
+                    messages = chatMessages
+                    isLoading = false
+                    
+                    // Join conversation if we have messages
+                    if let firstMessage = chatMessages.first {
+                        socketManager.joinConversation(firstMessage.conversationId)
+                    }
+                }
+            } catch {
+                await MainActor.run {
+                    errorMessage = imService.handleError(error)
+                    isLoading = false
+                }
             }
         }
+    }
+    
+    private func getUserId() -> Int? {
+        // Try to get user ID from app view model or authentication service
+        // This is a placeholder - you'll need to implement based on your auth system
+        return 53 // Placeholder user ID
     }
     
 }
@@ -275,7 +364,7 @@ struct MessageBubble: View {
     
     var body: some View {
         HStack {
-            if message.isFromUser {
+            if message.isFromCurrentUser {
                 Spacer(minLength: 60)
                 userMessageBubble
             } else {
@@ -302,7 +391,7 @@ struct MessageBubble: View {
                 .clipShape(MessageBubbleShape(isFromUser: true))
                 .shadow(color: DesignTokens.Colors.primaryGreen.opacity(0.3), radius: 8, x: 0, y: 4)
             
-            Text(message.timestamp.formatted(date: .omitted, time: .shortened))
+            Text(message.timeAgo)
                 .font(.system(size: 11, weight: .medium))
                 .foregroundColor(.secondary)
                 .padding(.trailing, 4)
@@ -349,7 +438,7 @@ struct MessageBubble: View {
                     )
                     .clipShape(MessageBubbleShape(isFromUser: false))
                 
-                Text(message.timestamp.formatted(date: .omitted, time: .shortened))
+                Text(message.timeAgo)
                     .font(.system(size: 11, weight: .medium))
                     .foregroundColor(.secondary)
                     .padding(.leading, 4)
@@ -429,7 +518,7 @@ struct MessageBubbleShape: Shape {
     
     func path(in rect: CGRect) -> Path {
         let radius: CGFloat = 18
-        let tailSize: CGFloat = 8
+        let tailSize: CGFloat = 2
         
         var path = Path()
         
@@ -486,39 +575,12 @@ struct MessageBubbleShape: Shape {
 }
 
 
-// MARK: - Chat Message Model
-
-struct ChatMessage: Identifiable {
-    let id: UUID
-    let content: String
-    let isFromUser: Bool
-    let timestamp: Date
-    
-    static let sampleMessages: [ChatMessage] = [
-        ChatMessage(
-            id: UUID(),
-            content: "Hi there! I'm here to help with any technical questions you might have. What can I assist you with today?",
-            isFromUser: false,
-            timestamp: Date().addingTimeInterval(-3600)
-        ),
-        ChatMessage(
-            id: UUID(),
-            content: "Hello! I'm having trouble connecting my smart home devices to the network.",
-            isFromUser: true,
-            timestamp: Date().addingTimeInterval(-3500)
-        ),
-        ChatMessage(
-            id: UUID(),
-            content: "I'd be happy to help you with that! Can you tell me which specific devices you're trying to connect and what error messages you're seeing?",
-            isFromUser: false,
-            timestamp: Date().addingTimeInterval(-3400)
-        )
-    ]
-}
+// MARK: - Note: ChatMessage model is now imported from IMModels.swift
 
 // MARK: - Preview
 
 #Preview {
     ChatView()
         .environmentObject(AppViewModel())
+        .environmentObject(TabBarVisibilityManager())
 }

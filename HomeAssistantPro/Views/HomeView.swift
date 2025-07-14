@@ -422,4 +422,5 @@ struct BottomRoundedRectangle: Shape {
 #Preview {
     HomeView()
         .environmentObject(AppViewModel())
+        .environmentObject(TabBarVisibilityManager())
 }

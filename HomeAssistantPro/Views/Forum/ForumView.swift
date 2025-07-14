@@ -808,5 +808,6 @@ struct ForumView: View {
 #Preview {
     ForumView()
         .environmentObject(AppViewModel())
+        .environmentObject(TabBarVisibilityManager())
 }
 

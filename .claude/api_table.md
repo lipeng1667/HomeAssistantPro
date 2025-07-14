@@ -40,10 +40,23 @@ This document provides a detailed reference for the Home Assistant Backend API.
 
 - 📩 Instant Messaging (IM)
 
-| Method | Endpoint             | Description                |Done|
-| ------ | -------------------- | -------------------------- |----|
-| GET    | `/api/chat/messages` | Fetch chat history         | ❌ |
-| POST   | `/api/chat/messages` | Send message to admin/user | ❌ |
+| Method | Endpoint                           | Description                               |Done|
+| ------ | ---------------------------------- | ----------------------------------------- |----|
+| GET    | `/api/chat/messages`               | Fetch chat history                        | ✅ |
+| POST   | `/api/chat/messages`               | Send message to admin/user                | ✅ |
+| GET    | `/api/chat/conversations`          | List user's conversations                 | 🔄 |
+| POST   | `/api/chat/conversations`          | Create new conversation                   | 🔄 |
+| PUT    | `/api/chat/conversations/:id/read` | Mark messages as read                     | 🔄 |
+| POST   | `/api/chat/conversations/:id/typing` | Send typing indicator                   | 🔄 |
+| POST   | `/api/chat/upload`                 | Upload file/image for messaging          | 🔄 |
+| GET    | `/api/chat/search`                 | Search messages in conversations          | 🔄 |
+
+**WebSocket Events (Real-time)**
+
+- `new_message` - New message received
+- `typing_indicator` - User typing status
+- `message_read` - Message read receipt
+- `conversation_status` - Conversation status change
 
 - 📊 Logs
 
@@ -114,7 +127,8 @@ All API endpoints return standardized error responses with the following format:
 
 | Status Code | Description | When It Occurs |
 |-------------|-------------|----------------|
-| **200** | Success | Request completed successfully |
+| **200** | Success | Request completed successfully (data retrieval, updates, deletes) |
+| **201** | Created | New resource created successfully (topics, replies, drafts) |
 | **400** | Bad Request | Missing required parameters, invalid input format |
 | **401** | Unauthorized | Invalid authentication, expired session, missing headers |
 | **403** | Forbidden | Access denied (e.g., localhost-only endpoints) |
