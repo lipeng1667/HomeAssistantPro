@@ -55,9 +55,6 @@ struct ChatMessage: Codable, Identifiable, Equatable {
     
     /// Computed property for formatted time ago
     var timeAgo: String {
-        // Debug: print the timestamp for debugging
-        print("DEBUG: Processing timestamp: '\(timestamp)'")
-        
         let formatter = RelativeDateTimeFormatter()
         formatter.dateTimeStyle = .named
         
@@ -65,7 +62,6 @@ struct ChatMessage: Codable, Identifiable, Equatable {
         let iso8601Formatter = ISO8601DateFormatter()
         if let date = iso8601Formatter.date(from: timestamp) {
             let result = formatter.localizedString(for: date, relativeTo: Date())
-            print("DEBUG: ISO8601 parsed successfully, result: '\(result)'")
             return result
         }
         
@@ -77,7 +73,6 @@ struct ChatMessage: Codable, Identifiable, Equatable {
         
         if let date = rfc3339Formatter.date(from: timestamp) {
             let result = formatter.localizedString(for: date, relativeTo: Date())
-            print("DEBUG: RFC3339 parsed successfully, result: '\(result)'")
             return result
         }
         
@@ -85,7 +80,6 @@ struct ChatMessage: Codable, Identifiable, Equatable {
         rfc3339Formatter.dateFormat = "yyyy-MM-dd'T'HH:mm:ss.SSSZ"
         if let date = rfc3339Formatter.date(from: timestamp) {
             let result = formatter.localizedString(for: date, relativeTo: Date())
-            print("DEBUG: RFC3339 with fractional seconds parsed successfully, result: '\(result)'")
             return result
         }
         
@@ -93,7 +87,6 @@ struct ChatMessage: Codable, Identifiable, Equatable {
         rfc3339Formatter.dateFormat = "yyyy-MM-dd'T'HH:mm:ss"
         if let date = rfc3339Formatter.date(from: timestamp) {
             let result = formatter.localizedString(for: date, relativeTo: Date())
-            print("DEBUG: RFC3339 without Z parsed successfully, result: '\(result)'")
             return result
         }
         

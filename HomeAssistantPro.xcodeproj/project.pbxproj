@@ -6,6 +6,10 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		2244ED2D2E26554000FDE473 /* SocketIO in Frameworks */ = {isa = PBXBuildFile; productRef = 2244ED2C2E26554000FDE473 /* SocketIO */; };
+/* End PBXBuildFile section */
+
 /* Begin PBXContainerItemProxy section */
 		22145D7A2D673499009B471C /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
@@ -65,6 +69,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				2244ED2D2E26554000FDE473 /* SocketIO in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -125,6 +130,7 @@
 			);
 			name = HomeAssistantPro;
 			packageProductDependencies = (
+				2244ED2C2E26554000FDE473 /* SocketIO */,
 			);
 			productName = HomeAssistantPro;
 			productReference = 22145D632D673498009B471C /* HomeAssistantPro.app */;
@@ -209,6 +215,9 @@
 			);
 			mainGroup = 22145D5A2D673498009B471C;
 			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				2244ED2B2E26554000FDE473 /* XCRemoteSwiftPackageReference "socket" */,
+			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 22145D642D673498009B471C /* Products */;
 			projectDirPath = "";
@@ -582,6 +591,25 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		2244ED2B2E26554000FDE473 /* XCRemoteSwiftPackageReference "socket" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/socketio/socket.io-client-swift";
+			requirement = {
+				branch = master;
+				kind = branch;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		2244ED2C2E26554000FDE473 /* SocketIO */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 2244ED2B2E26554000FDE473 /* XCRemoteSwiftPackageReference "socket" */;
+			productName = SocketIO;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = 22145D5B2D673498009B471C /* Project object */;
 }

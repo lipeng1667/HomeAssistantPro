@@ -71,6 +71,12 @@ struct ChatView: View {
                 isTyping = isAdminTyping
             }
         }
+        .onChange(of: socketManager.connectionState) { connectionState in
+            // Join conversation when WebSocket connection is established
+            if connectionState.isConnected, let firstMessage = messages.first {
+                socketManager.joinConversation(firstMessage.conversationId)
+            }
+        }
         .alert("Connection Error", isPresented: .constant(errorMessage != nil)) {
             Button("OK") {
                 errorMessage = nil
@@ -294,13 +300,8 @@ struct ChatView: View {
                     }
                 }
                 
-                // Also send via WebSocket for real-time updates
-                if let conversationId = socketManager.currentConversationId {
-                    socketManager.sendMessage(
-                        content: messageToSend,
-                        conversationId: conversationId
-                    )
-                }
+                // Note: Message is sent via REST API only
+                // WebSocket is used for receiving real-time messages from admin
                 
             } catch {
                 await MainActor.run {
@@ -335,10 +336,8 @@ struct ChatView: View {
                     messages = chatMessages
                     isLoading = false
                     
-                    // Join conversation if we have messages
-                    if let firstMessage = chatMessages.first {
-                        socketManager.joinConversation(firstMessage.conversationId)
-                    }
+                    // Note: Conversation joining is handled by onChange(of: socketManager.connectionState)
+                    // when WebSocket connection is established
                 }
             } catch {
                 await MainActor.run {
