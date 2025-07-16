@@ -608,9 +608,9 @@ struct MessageBubbleShape: Shape {
                 to: CGPoint(x: rect.width - tailSize, y: radius),
                 control: CGPoint(x: rect.width - tailSize, y: 0)
             )
-            path.addLine(to: CGPoint(x: rect.width - tailSize, y: rect.height - radius - tailSize))
+            path.addLine(to: CGPoint(x: rect.width - tailSize, y: rect.height - radius/2))
             path.addLine(to: CGPoint(x: rect.width, y: rect.height))
-            path.addLine(to: CGPoint(x: rect.width - tailSize - radius, y: rect.height - tailSize))
+            path.addLine(to: CGPoint(x: rect.width - radius/2, y: rect.height - tailSize))
             path.addLine(to: CGPoint(x: radius, y: rect.height - tailSize))
             path.addQuadCurve(
                 to: CGPoint(x: 0, y: rect.height - tailSize - radius),
@@ -623,10 +623,10 @@ struct MessageBubbleShape: Shape {
             )
         } else {
             // Support message bubble (left-aligned)
-            path.move(to: CGPoint(x: tailSize + radius, y: 0))
-            path.addLine(to: CGPoint(x: rect.width - radius, y: 0))
+            path.move(to: CGPoint(x: radius/2, y: tailSize))
+            path.addLine(to: CGPoint(x: rect.width - radius, y: tailSize))
             path.addQuadCurve(
-                to: CGPoint(x: rect.width, y: radius),
+                to: CGPoint(x: rect.width, y: radius + tailSize),
                 control: CGPoint(x: rect.width, y: 0)
             )
             path.addLine(to: CGPoint(x: rect.width, y: rect.height - radius))
@@ -639,9 +639,9 @@ struct MessageBubbleShape: Shape {
                 to: CGPoint(x: tailSize, y: rect.height - radius),
                 control: CGPoint(x: tailSize, y: rect.height)
             )
-            path.addLine(to: CGPoint(x: tailSize, y: tailSize + radius))
+            path.addLine(to: CGPoint(x: tailSize, y: radius/2))
             path.addLine(to: CGPoint(x: 0, y: 0))
-            path.addLine(to: CGPoint(x: tailSize + radius, y: 0))
+            path.addLine(to: CGPoint(x: radius/2, y: tailSize))
         }
         
         return path
