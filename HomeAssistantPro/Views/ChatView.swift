@@ -43,6 +43,12 @@ struct ChatView: View {
                     // Options action
                 }, isTyping: isTyping))
                 
+                // Connection status bar
+                if socketManager.connectionState != .connected {
+                    ConnectionStatusBar(connectionState: socketManager.connectionState)
+                        .transition(.move(edge: .top).combined(with: .opacity))
+                }
+                
                 // Messages area
                 messagesView
                 
@@ -64,6 +70,11 @@ struct ChatView: View {
                     messages.append(newMessage)
                 }
                 socketManager.clearState()
+                
+                // Ensure scroll to new message after a brief delay
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                    // This will trigger the onChange(of: messages.count) which handles scrolling
+                }
             }
         }
         .onChange(of: socketManager.isAdminTyping) { isAdminTyping in
@@ -75,6 +86,16 @@ struct ChatView: View {
             // Join conversation when WebSocket connection is established
             if connectionState.isConnected, let firstMessage = messages.first {
                 socketManager.joinConversation(firstMessage.conversationId)
+            }
+            
+            // Handle connection errors
+            if connectionState == .error {
+                // Try to reconnect after a brief delay
+                DispatchQueue.main.asyncAfter(deadline: .now() + 3.0) {
+                    if let userId = getUserId() {
+                        socketManager.checkConnectionHealth(userId: userId)
+                    }
+                }
             }
         }
         .alert("Connection Error", isPresented: .constant(errorMessage != nil)) {
@@ -177,6 +198,18 @@ struct ChatView: View {
             .onChange(of: messages.count) { _ in
                 // Auto-scroll to bottom when new messages arrive
                 if let lastMessage = messages.last {
+                    withAnimation(.easeInOut(duration: 0.3)) {
+                        proxy.scrollTo(lastMessage.id, anchor: .bottom)
+                    }
+                }
+            }
+            .onChange(of: isTyping) { typing in
+                // Auto-scroll to bottom when typing indicator appears
+                if typing {
+                    withAnimation(.easeInOut(duration: 0.3)) {
+                        proxy.scrollTo("typing-indicator", anchor: .bottom)
+                    }
+                } else if let lastMessage = messages.last {
                     withAnimation(.easeInOut(duration: 0.3)) {
                         proxy.scrollTo(lastMessage.id, anchor: .bottom)
                     }
@@ -427,15 +460,15 @@ struct MessageBubble: View {
                     .foregroundColor(DesignTokens.Colors.textPrimary)
                     .padding(.horizontal, 16)
                     .padding(.vertical, 12)
+                    .fixedSize(horizontal: false, vertical: true)
                     .background(
-                        RoundedRectangle(cornerRadius: 18)
+                        MessageBubbleShape(isFromUser: false)
                             .fill(.ultraThinMaterial)
                             .overlay(
-                                RoundedRectangle(cornerRadius: 18)
+                                MessageBubbleShape(isFromUser: false)
                                     .stroke(Color.primary.opacity(0.1), lineWidth: 1)
                             )
                     )
-                    .clipShape(MessageBubbleShape(isFromUser: false))
                 
                 Text(message.timeAgo)
                     .font(.system(size: 11, weight: .medium))
@@ -510,6 +543,52 @@ struct TypingIndicator: View {
     }
 }
 
+// MARK: - Connection Status Bar
+
+struct ConnectionStatusBar: View {
+    let connectionState: ConnectionState
+    
+    var body: some View {
+        HStack(spacing: 8) {
+            // Status indicator
+            Circle()
+                .fill(statusColor)
+                .frame(width: 8, height: 8)
+                .scaleEffect(connectionState == .connecting || connectionState == .reconnecting ? 1.2 : 1.0)
+                .animation(.easeInOut(duration: 0.8).repeatForever(autoreverses: true), value: connectionState)
+            
+            Text(connectionState.displayName)
+                .font(.system(size: 13, weight: .medium))
+                .foregroundColor(statusColor)
+            
+            Spacer()
+        }
+        .padding(.horizontal, DesignTokens.ResponsiveSpacing.lg)
+        .padding(.vertical, 8)
+        .background(
+            Rectangle()
+                .fill(statusColor.opacity(0.1))
+                .overlay(
+                    Rectangle()
+                        .fill(statusColor.opacity(0.2))
+                        .frame(height: 1),
+                    alignment: .bottom
+                )
+        )
+    }
+    
+    private var statusColor: Color {
+        switch connectionState {
+        case .connecting, .reconnecting:
+            return DesignTokens.Colors.primaryAmber
+        case .connected:
+            return DesignTokens.Colors.primaryGreen
+        case .disconnected, .error:
+            return DesignTokens.Colors.primaryRed
+        }
+    }
+}
+
 // MARK: - Message Bubble Shape
 
 struct MessageBubbleShape: Shape {
@@ -517,7 +596,7 @@ struct MessageBubbleShape: Shape {
     
     func path(in rect: CGRect) -> Path {
         let radius: CGFloat = 18
-        let tailSize: CGFloat = 2
+        let tailSize: CGFloat = 1 // Adjusted for a more visible curve
         
         var path = Path()
         
@@ -562,11 +641,7 @@ struct MessageBubbleShape: Shape {
             )
             path.addLine(to: CGPoint(x: tailSize, y: tailSize + radius))
             path.addLine(to: CGPoint(x: 0, y: 0))
-            path.addLine(to: CGPoint(x: tailSize + radius, y: tailSize))
-            path.addQuadCurve(
-                to: CGPoint(x: tailSize + radius, y: 0),
-                control: CGPoint(x: tailSize, y: tailSize)
-            )
+            path.addLine(to: CGPoint(x: tailSize + radius, y: 0))
         }
         
         return path

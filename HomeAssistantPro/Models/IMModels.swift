@@ -55,43 +55,7 @@ struct ChatMessage: Codable, Identifiable, Equatable {
     
     /// Computed property for formatted time ago
     var timeAgo: String {
-        let formatter = RelativeDateTimeFormatter()
-        formatter.dateTimeStyle = .named
-        
-        // Try ISO8601 format first
-        let iso8601Formatter = ISO8601DateFormatter()
-        if let date = iso8601Formatter.date(from: timestamp) {
-            let result = formatter.localizedString(for: date, relativeTo: Date())
-            return result
-        }
-        
-        // Fallback to RFC3339 format
-        let rfc3339Formatter = DateFormatter()
-        rfc3339Formatter.dateFormat = "yyyy-MM-dd'T'HH:mm:ssZ"
-        rfc3339Formatter.locale = Locale(identifier: "en_US_POSIX")
-        rfc3339Formatter.timeZone = TimeZone(secondsFromGMT: 0)
-        
-        if let date = rfc3339Formatter.date(from: timestamp) {
-            let result = formatter.localizedString(for: date, relativeTo: Date())
-            return result
-        }
-        
-        // Additional fallback for format with fractional seconds
-        rfc3339Formatter.dateFormat = "yyyy-MM-dd'T'HH:mm:ss.SSSZ"
-        if let date = rfc3339Formatter.date(from: timestamp) {
-            let result = formatter.localizedString(for: date, relativeTo: Date())
-            return result
-        }
-        
-        // Additional fallback for format without Z
-        rfc3339Formatter.dateFormat = "yyyy-MM-dd'T'HH:mm:ss"
-        if let date = rfc3339Formatter.date(from: timestamp) {
-            let result = formatter.localizedString(for: date, relativeTo: Date())
-            return result
-        }
-        
-        print("DEBUG: All timestamp parsing failed for: '\(timestamp)'")
-        return "Unknown"
+        return DateUtils.formatTimeAgo(from: timestamp)
     }
     
     /// Computed property to check if message is from current user
