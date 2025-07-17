@@ -35,8 +35,14 @@ class IMService: ObservableObject {
     /// App secret for HMAC authentication
     private let appSecret = "EJFIDNFNGIUHq32923HDFHIHsdf866HU"
     
-    /// URL session for network requests
-    private let urlSession = URLSession.shared
+    /// URL session for network requests with custom configuration
+    private let urlSession: URLSession = {
+        let config = URLSessionConfiguration.default
+        config.timeoutIntervalForRequest = 30.0
+        config.timeoutIntervalForResource = 60.0
+        config.waitsForConnectivity = true
+        return URLSession(configuration: config)
+    }()
     
     /// Logger for debugging
     private let logger = Logger(subsystem: "com.homeassistant.ios", category: "IMService")
@@ -59,9 +65,10 @@ class IMService: ObservableObject {
     /// Fetch chat messages from API
     /// - Parameters:
     ///   - userId: User ID to fetch messages for
-    ///   - page: Page number (default: 1)
+    ///   - page: Page number (default: 1 = newest messages)
     ///   - limit: Number of messages per page (default: 20)
-    /// - Returns: Array of chat messages
+    /// - Returns: Array of chat messages ordered chronologically (oldest first)
+    /// - Note: Server returns newest messages first, this function reverses them for proper chat display
     func fetchMessages(userId: Int, page: Int = 1, limit: Int = 20) async throws -> [ChatMessage] {
         logger.info("Fetching chat messages for user: \(userId), page: \(page), limit: \(limit)")
         
@@ -135,7 +142,11 @@ class IMService: ObservableObject {
                     currentUserId = userId
                 }
                 logger.info("Successfully fetched \(chatResponse.data.messages.count) messages")
-                return chatResponse.data.messages
+                
+                // Server returns newest messages first, but chat UI needs oldest first
+                // So we reverse the array to show messages in chronological order
+                let orderedMessages = chatResponse.data.messages.reversed()
+                return Array(orderedMessages)
             } else {
                 throw IMServiceError.networkError("API returned error status")
             }
@@ -292,6 +303,22 @@ class IMService: ObservableObject {
         
         if let imError = error as? IMServiceError {
             errorMessage = imError.localizedDescription
+        } else if error.localizedDescription.contains("cancelled") {
+            // Don't show cancelled errors to user
+            return ""
+        } else if let urlError = error as? URLError {
+            switch urlError.code {
+            case .cancelled:
+                return "" // Don't show cancelled errors
+            case .timedOut:
+                errorMessage = "Request timed out. Please try again."
+            case .notConnectedToInternet:
+                errorMessage = "No internet connection. Please check your network."
+            case .networkConnectionLost:
+                errorMessage = "Network connection lost. Please try again."
+            default:
+                errorMessage = "Network error: \(urlError.localizedDescription)"
+            }
         } else {
             errorMessage = "An unexpected error occurred: \(error.localizedDescription)"
         }

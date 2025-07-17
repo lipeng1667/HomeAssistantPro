@@ -25,6 +25,17 @@ struct ChatView: View {
     @State private var errorMessage: String?
     @FocusState private var isMessageFieldFocused: Bool
     
+    // Pagination support
+    @State private var currentPage = 1
+    @State private var hasMoreMessages = true
+    @State private var isLoadingMore = false
+    @State private var loadMoreTask: Task<Void, Never>?
+    
+    // Scroll position management
+    @State private var isLoadingOlderMessages = false
+    @State private var firstVisibleMessageId: Int?
+    @State private var shouldRestorePosition = false
+    
     // Track if initial data has been loaded to avoid reloading on every appear
     @State private var hasLoadedInitialData = false
     
@@ -46,13 +57,7 @@ struct ChatView: View {
                 // Standardized header
                 StandardTabHeader(configuration: .chat(onOptions: {
                     // Options action
-                }, isTyping: isTyping))
-                
-                // Connection status bar
-                if socketManager.connectionState != .connected {
-                    ConnectionStatusBar(connectionState: socketManager.connectionState)
-                        .transition(.move(edge: .top).combined(with: .opacity))
-                }
+                }, connectionState: socketManager.connectionState, isTyping: isTyping))
                 
                 // Messages area
                 messagesView
@@ -77,11 +82,16 @@ struct ChatView: View {
         }
         .onDisappear {
             removeKeyboardObservers()
+            // Cancel any ongoing load task to prevent memory leaks
+            loadMoreTask?.cancel()
         }
         .onChange(of: socketManager.newMessage) { newMessage in
             if let newMessage = newMessage {
-                withAnimation(.spring(response: 0.6, dampingFraction: 0.8)) {
-                    messages.append(newMessage)
+                // Check if message already exists by ID to prevent duplicates
+                if !messages.contains(where: { $0.id == newMessage.id }) {
+                    withAnimation(.spring(response: 0.6, dampingFraction: 0.8)) {
+                        messages.append(newMessage)
+                    }
                 }
                 socketManager.clearState()
                 
@@ -182,7 +192,15 @@ struct ChatView: View {
         ScrollViewReader { proxy in
             ScrollView {
                 LazyVStack(spacing: 16) {
-                    // Loading indicator
+                    // Pull-to-refresh indicator for loading older messages
+                    if isLoadingMore {
+                        ProgressView("Loading older messages...")
+                            .frame(maxWidth: .infinity)
+                            .foregroundColor(.secondary)
+                            .padding(.vertical, 8)
+                    }
+                    
+                    // Loading indicator for initial load
                     if isLoading {
                         ProgressView("Loading messages...")
                             .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -209,23 +227,42 @@ struct ChatView: View {
                 .padding(.vertical, 16)
             }
             .background(Color.clear)
+            .refreshable {
+                await loadOlderMessages()
+            }
             .onChange(of: messages.count) { _ in
-                // Auto-scroll to bottom when new messages arrive
-                if let lastMessage = messages.last {
+                // Auto-scroll to bottom only when NOT loading older messages
+                if !isLoadingOlderMessages, let lastMessage = messages.last {
                     withAnimation(.easeInOut(duration: 0.3)) {
                         proxy.scrollTo(lastMessage.id, anchor: .bottom)
                     }
                 }
             }
             .onChange(of: isTyping) { typing in
-                // Auto-scroll to bottom when typing indicator appears
-                if typing {
-                    withAnimation(.easeInOut(duration: 0.3)) {
-                        proxy.scrollTo("typing-indicator", anchor: .bottom)
+                // Auto-scroll to bottom when typing indicator appears (only if NOT loading older messages)
+                if !isLoadingOlderMessages {
+                    if typing {
+                        withAnimation(.easeInOut(duration: 0.3)) {
+                            proxy.scrollTo("typing-indicator", anchor: .bottom)
+                        }
+                    } else if let lastMessage = messages.last {
+                        withAnimation(.easeInOut(duration: 0.3)) {
+                            proxy.scrollTo(lastMessage.id, anchor: .bottom)
+                        }
                     }
-                } else if let lastMessage = messages.last {
-                    withAnimation(.easeInOut(duration: 0.3)) {
-                        proxy.scrollTo(lastMessage.id, anchor: .bottom)
+                }
+            }
+            .onChange(of: shouldRestorePosition) { restore in
+                if restore, let messageId = firstVisibleMessageId {
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                        // Verify the message still exists before scrolling
+                        if messages.contains(where: { $0.id == messageId }) {
+                            withAnimation(.easeInOut(duration: 0.2)) {
+                                proxy.scrollTo(messageId, anchor: .top)
+                            }
+                        }
+                        shouldRestorePosition = false
+                        firstVisibleMessageId = nil
                     }
                 }
             }
@@ -340,10 +377,13 @@ struct ChatView: View {
                     userId: currentUserId
                 )
                 
-                // Add sent message to UI
+                // Add sent message to UI (with duplicate check)
                 await MainActor.run {
-                    withAnimation(.spring(response: 0.6, dampingFraction: 0.8)) {
-                        messages.append(sentMessage)
+                    // Check if message already exists by ID
+                    if !messages.contains(where: { $0.id == sentMessage.id }) {
+                        withAnimation(.spring(response: 0.6, dampingFraction: 0.8)) {
+                            messages.append(sentMessage)
+                        }
                     }
                 }
                 
@@ -384,6 +424,10 @@ struct ChatView: View {
     
     /// Loads chat history using cached data first, then API if cache is invalid
     private func loadChatHistory(userId: Int) {
+        // Reset pagination state
+        currentPage = 1
+        hasMoreMessages = true
+        
         // Check cache first for instant display
         let cachedMessages = backgroundDataPreloader.getCachedChatHistory()
         
@@ -401,11 +445,16 @@ struct ChatView: View {
                 }
                 
                 do {
-                    let chatMessages = try await imService.fetchMessages(userId: userId)
+                    let chatMessages = try await imService.fetchMessages(userId: userId, page: 1)
                     
                     await MainActor.run {
                         messages = chatMessages
                         isLoading = false
+                        
+                        // Update pagination state based on results
+                        if chatMessages.count < 20 {
+                            hasMoreMessages = false
+                        }
                         
                         // Cache the fresh data we just loaded
                         let cacheManager = CacheManager.shared
@@ -429,6 +478,81 @@ struct ChatView: View {
         // This is a placeholder - you'll need to implement based on your auth system
         return 53 // Placeholder user ID
     }
+    
+    /// Load older messages for pagination (triggered by pull-to-refresh)
+    private func loadOlderMessages() async {
+        // Cancel any existing load task
+        loadMoreTask?.cancel()
+        
+        guard hasMoreMessages && !isLoadingMore else { return }
+        guard let userId = getUserId() else { return }
+        
+        await MainActor.run {
+            isLoadingMore = true
+            isLoadingOlderMessages = true
+            
+            // Store reference to the first visible message to maintain scroll position
+            // If no messages exist, we won't need to restore position
+            firstVisibleMessageId = messages.first?.id
+        }
+        
+        let nextPage = currentPage + 1
+        
+        // Create a new task to handle the loading
+        loadMoreTask = Task {
+            do {
+                let olderMessages = try await imService.fetchMessages(userId: userId, page: nextPage)
+                
+                // Check if task was cancelled
+                guard !Task.isCancelled else {
+                    await MainActor.run {
+                        isLoadingMore = false
+                        isLoadingOlderMessages = false
+                    }
+                    return
+                }
+                
+                await MainActor.run {
+                    if olderMessages.isEmpty {
+                        hasMoreMessages = false
+                        // Clear reference since no restoration is needed
+                        firstVisibleMessageId = nil
+                    } else {
+                        // Prepend older messages to the beginning of the array
+                        messages = olderMessages + messages
+                        currentPage = nextPage
+                        
+                        // Trigger scroll position restoration only if we have a reference message
+                        shouldRestorePosition = firstVisibleMessageId != nil
+                    }
+                    isLoadingMore = false
+                    isLoadingOlderMessages = false
+                }
+            } catch {
+                // Check if task was cancelled
+                guard !Task.isCancelled else {
+                    await MainActor.run {
+                        isLoadingMore = false
+                        isLoadingOlderMessages = false
+                    }
+                    return
+                }
+                
+                await MainActor.run {
+                    // Only show error if it's not a cancellation error
+                    if !error.localizedDescription.contains("cancelled") {
+                        errorMessage = imService.handleError(error)
+                    }
+                    isLoadingMore = false
+                    isLoadingOlderMessages = false
+                }
+            }
+        }
+        
+        // Wait for the task to complete
+        await loadMoreTask?.value
+    }
+    
     
 }
 
@@ -586,51 +710,6 @@ struct TypingIndicator: View {
     }
 }
 
-// MARK: - Connection Status Bar
-
-struct ConnectionStatusBar: View {
-    let connectionState: ConnectionState
-    
-    var body: some View {
-        HStack(spacing: 8) {
-            // Status indicator
-            Circle()
-                .fill(statusColor)
-                .frame(width: 8, height: 8)
-                .scaleEffect(connectionState == .connecting || connectionState == .reconnecting ? 1.2 : 1.0)
-                .animation(.easeInOut(duration: 0.8).repeatForever(autoreverses: true), value: connectionState)
-            
-            Text(connectionState.displayName)
-                .font(.system(size: 13, weight: .medium))
-                .foregroundColor(statusColor)
-            
-            Spacer()
-        }
-        .padding(.horizontal, DesignTokens.ResponsiveSpacing.lg)
-        .padding(.vertical, 8)
-        .background(
-            Rectangle()
-                .fill(statusColor.opacity(0.1))
-                .overlay(
-                    Rectangle()
-                        .fill(statusColor.opacity(0.2))
-                        .frame(height: 1),
-                    alignment: .bottom
-                )
-        )
-    }
-    
-    private var statusColor: Color {
-        switch connectionState {
-        case .connecting, .reconnecting:
-            return DesignTokens.Colors.primaryAmber
-        case .connected:
-            return DesignTokens.Colors.primaryGreen
-        case .disconnected, .error:
-            return DesignTokens.Colors.primaryRed
-        }
-    }
-}
 
 // MARK: - Message Bubble Shape
 

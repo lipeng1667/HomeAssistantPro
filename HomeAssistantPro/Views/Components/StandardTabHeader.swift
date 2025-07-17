@@ -34,6 +34,7 @@
 //
 
 import SwiftUI
+import Foundation
 
 /// Standardized header component for tab views with consistent styling
 /// 
@@ -299,15 +300,42 @@ extension HeaderConfiguration {
         )
     }
  
-    static func chat(onOptions: @escaping () -> Void, isTyping: Bool = false) -> HeaderConfiguration {
-        HeaderConfiguration(
+    static func chat(onOptions: @escaping () -> Void, connectionState: ConnectionState = .disconnected, isTyping: Bool = false) -> HeaderConfiguration {
+        let statusText: String
+        let statusColor: Color
+        let shouldAnimate: Bool
+        
+        switch connectionState {
+        case .connected:
+            statusText = isTyping ? "Agent typing..." : "Agent Online"
+            statusColor = DesignTokens.Colors.primaryGreen
+            shouldAnimate = isTyping
+        case .connecting:
+            statusText = "Connecting..."
+            statusColor = DesignTokens.Colors.primaryAmber
+            shouldAnimate = true
+        case .reconnecting:
+            statusText = "Reconnecting..."
+            statusColor = DesignTokens.Colors.primaryAmber
+            shouldAnimate = true
+        case .disconnected:
+            statusText = "Disconnected"
+            statusColor = DesignTokens.Colors.textSecondary
+            shouldAnimate = false
+        case .error:
+            statusText = "Connection Error"
+            statusColor = DesignTokens.Colors.primaryRed
+            shouldAnimate = false
+        }
+        
+        return HeaderConfiguration(
             categoryLabel: LocalizedKeys.chatSupport.localized,
             title: LocalizedKeys.chatTitle.localized,
             showDivider: true,
             statusIndicator: StatusIndicator(
-                text: "Agent Online",
-                color: DesignTokens.Colors.primaryGreen,
-                isAnimated: isTyping
+                text: statusText,
+                color: statusColor,
+                isAnimated: shouldAnimate
             ),
             actionButton: ActionButton(
                 style: .glass(icon: "ellipsis"),
