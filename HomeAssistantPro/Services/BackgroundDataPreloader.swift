@@ -5,16 +5,21 @@
 //  Purpose: Background data preloading service for improving app performance
 //  Author: Michael
 //  Created: 2025-07-10
-//  Modified: 2025-07-10
+//  Modified: 2025-07-17
 //
 //  Modification Log:
 //  - 2025-07-10: Initial creation with forum data preloading
+//  - 2025-07-17: Added chat history preloading during splash screen for instant view loading
 //
 //  Functions:
-//  - startPreloading(): Initiates background data loading tasks
+//  - startPreloading(): Initiates background data loading tasks (forum + chat)
 //  - preloadForumData(): Preloads forum topics and categories
+//  - preloadChatHistory(): Preloads chat history messages
 //  - getCachedForumTopics(): Returns cached forum topics if available
 //  - getCachedCategories(): Returns cached forum categories if available
+//  - getCachedChatHistory(): Returns cached chat history if available
+//  - hasValidCachedData(): Checks if forum cache is valid
+//  - hasValidCachedChatData(): Checks if chat cache is valid
 //
 
 import Foundation
@@ -34,6 +39,7 @@ class BackgroundDataPreloader: ObservableObject {
     
     // MARK: - Private Properties
     private let forumService = ForumService.shared
+    private let imService = IMService.shared
     private let cacheManager = CacheManager.shared
     private let logger = Logger(subsystem: "com.homeassistant.ios", category: "BackgroundDataPreloader")
     
@@ -63,14 +69,19 @@ class BackgroundDataPreloader: ObservableObject {
             await preloadCategories()
         }
         
+        let chatTask = Task {
+            await preloadChatHistory()
+        }
+        
         // Store tasks for potential cancellation
-        preloadingTasks = [forumTask, categoriesTask]
+        preloadingTasks = [forumTask, categoriesTask, chatTask]
         
         // Monitor completion
         Task {
             await withTaskGroup(of: Void.self) { group in
                 group.addTask { await forumTask.value }
                 group.addTask { await categoriesTask.value }
+                group.addTask { await chatTask.value }
             }
             
             await MainActor.run {
@@ -100,10 +111,22 @@ class BackgroundDataPreloader: ObservableObject {
         return cacheManager.getCachedCategories()
     }
     
+    /// Returns cached chat history if available
+    /// - Returns: Array of cached ChatMessage objects, or empty array if none cached
+    func getCachedChatHistory() -> [ChatMessage] {
+        return cacheManager.getCachedChatHistory()
+    }
+    
     /// Checks if forum data is available in cache
     /// - Returns: True if cached data exists and is valid
     func hasValidCachedData() -> Bool {
         return cacheManager.hasValidForumCache()
+    }
+    
+    /// Checks if chat history is available in cache
+    /// - Returns: True if cached chat data exists and is valid
+    func hasValidCachedChatData() -> Bool {
+        return cacheManager.hasValidChatCache()
     }
     
     // MARK: - Private Methods
@@ -124,7 +147,7 @@ class BackgroundDataPreloader: ObservableObject {
             // Cache the preloaded data
             await MainActor.run {
                 cacheManager.cacheForumTopics(response.data.topics)
-                self.preloadingProgress += 0.5
+                self.preloadingProgress += 0.33
                 self.logger.info("Forum topics preloaded and cached: \(response.data.topics.count) topics")
             }
             
@@ -143,12 +166,34 @@ class BackgroundDataPreloader: ObservableObject {
             // Cache the preloaded data
             await MainActor.run {
                 cacheManager.cacheCategories(response.data.categories)
-                self.preloadingProgress += 0.5
+                self.preloadingProgress += 0.33
                 self.logger.info("Categories preloaded and cached: \(response.data.categories.count) categories")
             }
             
         } catch {
             logger.error("Failed to preload categories: \(error.localizedDescription)")
+        }
+    }
+    
+    /// Preloads chat history data in background
+    private func preloadChatHistory() async {
+        logger.info("Starting chat history preload")
+        
+        // Get user ID for chat history (placeholder - you'll need to implement proper user ID retrieval)
+        let userId = 53 // TODO: Replace with actual user ID from authentication
+        
+        do {
+            let messages = try await imService.fetchMessages(userId: userId, page: 1, limit: 20)
+            
+            // Cache the preloaded data
+            await MainActor.run {
+                cacheManager.cacheChatHistory(messages)
+                self.preloadingProgress += 0.34
+                self.logger.info("Chat history preloaded and cached: \(messages.count) messages")
+            }
+            
+        } catch {
+            logger.error("Failed to preload chat history: \(error.localizedDescription)")
         }
     }
 }

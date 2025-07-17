@@ -4,11 +4,12 @@
 //
 //  Purpose: Modern chat interface with technical support featuring 2025 design aesthetics
 //  Author: Michael
-//  Updated: 2025-07-14
+//  Updated: 2025-07-17
 //
 //  Features: Real-time messaging with IM service integration, WebSocket support,
 //  glassmorphism effects, smooth animations, dynamic typing indicators,
-//  contemporary message bubbles with enhanced UX, and keyboard-responsive tab bar.
+//  contemporary message bubbles with enhanced UX, keyboard-responsive tab bar,
+//  and optimized data loading using splash screen preloaded chat history cache.
 //
 
 import SwiftUI
@@ -24,6 +25,9 @@ struct ChatView: View {
     @State private var errorMessage: String?
     @FocusState private var isMessageFieldFocused: Bool
     
+    // Track if initial data has been loaded to avoid reloading on every appear
+    @State private var hasLoadedInitialData = false
+    
     // Services
     @StateObject private var imService = IMService.shared
     @StateObject private var socketManager = SocketManager.shared
@@ -31,6 +35,7 @@ struct ChatView: View {
     // Environment
     @EnvironmentObject var tabBarVisibility: TabBarVisibilityManager
     @EnvironmentObject private var appViewModel: AppViewModel
+    @Environment(\.backgroundDataPreloader) private var backgroundDataPreloader
     
     var body: some View {
         ZStack {
@@ -58,8 +63,17 @@ struct ChatView: View {
             }
         }
         .onAppear {
+            print("💬 CHAT: onAppear called, hasLoadedInitialData: \(hasLoadedInitialData)")
             setupKeyboardObservers()
-            loadInitialData()
+            
+            // Only load initial data once, not on every appear
+            if !hasLoadedInitialData {
+                print("💬 CHAT: Loading initial data for first time")
+                loadInitialData()
+                hasLoadedInitialData = true
+            } else {
+                print("💬 CHAT: Skipping initial data load (already loaded)")
+            }
         }
         .onDisappear {
             removeKeyboardObservers()
@@ -356,26 +370,55 @@ struct ChatView: View {
         // Set user ID in IM service
         imService.setCurrentUserId(userId)
         
-        // Connect to WebSocket
-        socketManager.connect(userId: userId)
+        // Connect to WebSocket only if not already connected
+        if socketManager.connectionState != .connected {
+            print("💬 CHAT: WebSocket not connected (\(socketManager.connectionState)), connecting...")
+            socketManager.connect(userId: userId)
+        } else {
+            print("💬 CHAT: WebSocket already connected, skipping reconnection")
+        }
         
-        // Load chat history
-        Task {
-            isLoading = true
-            do {
-                let chatMessages = try await imService.fetchMessages(userId: userId)
-                
-                await MainActor.run {
-                    messages = chatMessages
-                    isLoading = false
-                    
-                    // Note: Conversation joining is handled by onChange(of: socketManager.connectionState)
-                    // when WebSocket connection is established
+        // Load chat history - use cached data first, then API if needed
+        loadChatHistory(userId: userId)
+    }
+    
+    /// Loads chat history using cached data first, then API if cache is invalid
+    private func loadChatHistory(userId: Int) {
+        // Check cache first for instant display
+        let cachedMessages = backgroundDataPreloader.getCachedChatHistory()
+        
+        if !cachedMessages.isEmpty {
+            messages = cachedMessages
+            // Don't show loading state if we have cached data
+            isLoading = false
+        }
+        
+        // Only load fresh data from API if cache is invalid or expired
+        if !backgroundDataPreloader.hasValidCachedChatData() {
+            Task {
+                if cachedMessages.isEmpty {
+                    isLoading = true
                 }
-            } catch {
-                await MainActor.run {
-                    errorMessage = imService.handleError(error)
-                    isLoading = false
+                
+                do {
+                    let chatMessages = try await imService.fetchMessages(userId: userId)
+                    
+                    await MainActor.run {
+                        messages = chatMessages
+                        isLoading = false
+                        
+                        // Cache the fresh data we just loaded
+                        let cacheManager = CacheManager.shared
+                        cacheManager.cacheChatHistory(chatMessages)
+                        
+                        // Note: Conversation joining is handled by onChange(of: socketManager.connectionState)
+                        // when WebSocket connection is established
+                    }
+                } catch {
+                    await MainActor.run {
+                        errorMessage = imService.handleError(error)
+                        isLoading = false
+                    }
                 }
             }
         }

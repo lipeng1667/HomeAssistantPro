@@ -4,10 +4,11 @@
 //
 //  Purpose: Modern forum community with 2025 iOS design aesthetics
 //  Author: Michael
-//  Updated: 2025-06-25
+//  Updated: 2025-07-17
 //
 //  Features: Glassmorphism search, floating cards, smooth animations,
-//  dynamic interactions, and contemporary visual hierarchy.
+//  dynamic interactions, contemporary visual hierarchy, and optimized
+//  data loading using splash screen preloaded cache to avoid redundant API calls.
 //
 
 import SwiftUI
@@ -37,6 +38,9 @@ struct ForumView: View {
     @State private var errorMessage: String? = nil
     @State private var isSearching = false
     @State private var searchResults: [ForumTopic] = []
+    
+    // Cache current user ID to avoid repeated Keychain access
+    @State private var currentUserId: String? = nil
     
     // Services
     private let forumService = ForumService.shared
@@ -83,7 +87,7 @@ struct ForumView: View {
     private func isCurrentUserTopic(_ topic: ForumTopic) -> Bool {
         // Only check for authenticated users (not anonymous)
         guard !appViewModel.isAnonymousUser,
-              let userId = try? forumService.getCurrentUserId(),
+              let userId = currentUserId,
               let topicAuthorId = topic.author?.id else {
             return false
         }
@@ -114,6 +118,7 @@ struct ForumView: View {
         .dismissKeyboardOnSwipeDown()
         .onAppear {
             startAnimations()
+            loadCurrentUserId()
             loadInitialData()
         }
         .refreshable {
@@ -601,6 +606,23 @@ struct ForumView: View {
         }
     }
     
+    /// Loads and caches current user ID to avoid repeated Keychain access
+    private func loadCurrentUserId() {
+        // Only load for authenticated users (not anonymous)
+        guard !appViewModel.isAnonymousUser else {
+            currentUserId = nil
+            return
+        }
+        
+        // Only load if not already cached
+        if currentUserId == nil {
+            logger.info("🔑 FORUM: Loading user ID from Keychain (first time)")
+            currentUserId = try? forumService.getCurrentUserId()
+        } else {
+            logger.info("🔑 FORUM: Using cached user ID: \(currentUserId ?? "nil")")
+        }
+    }
+    
     /// Format draft date for display in confirmation dialog
     /// - Parameter date: Draft creation/modification date
     /// - Returns: Formatted relative date string
@@ -613,15 +635,19 @@ struct ForumView: View {
     // MARK: - Data Loading
     
     /// Loads initial forum data (topics and categories)
-    /// Checks cache first for instant display, then loads from API if needed
+    /// Uses preloaded data from splash screen and only loads fresh data if cache is invalid
     private func loadInitialData() {
         // Check cache first for instant display
         loadCachedDataIfAvailable()
         
-        // Always load fresh data from API (in background if cache exists)
-        Task {
-            await loadTopics()
-            await loadCategories()
+        // Only load fresh data from API if cache is invalid or expired
+        if !backgroundDataPreloader.hasValidCachedData() {
+            Task {
+                await loadTopics()
+                await loadCategories()
+            }
+        } else {
+            logger.info("Using valid cached data, skipping API calls")
         }
     }
     
@@ -685,7 +711,9 @@ struct ForumView: View {
             
             // Cache fresh data for future use (only for first page)
             if currentPage == 1 && selectedCategory == nil && searchText.isEmpty {
-                backgroundDataPreloader.getCachedForumTopics() // This triggers caching in the preloader
+                // Cache the fresh data we just loaded
+                let cacheManager = CacheManager.shared
+                cacheManager.cacheForumTopics(response.data.topics)
             }
             
         } catch {

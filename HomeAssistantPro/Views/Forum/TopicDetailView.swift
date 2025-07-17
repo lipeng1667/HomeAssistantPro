@@ -48,6 +48,9 @@ struct TopicDetailView: View {
     @State private var isTopicHeaderCollapsed = false
     @State private var scrollOffset: CGFloat = 0
     @State private var selectedSortOption: ForumSortOption = .newest
+    
+    // Cache current user ID to avoid repeated Keychain access
+    @State private var currentUserId: String? = nil
     @State private var showSortOptions = false
     
     // Image viewer state
@@ -140,6 +143,7 @@ struct TopicDetailView: View {
         .gesture(backSwipeGesture)
         .onAppear {
             tabBarVisibility?.hideTabBar()
+            loadCurrentUserId()
             loadTopicDetail()
         }
         .onDisappear {
@@ -1285,7 +1289,7 @@ struct TopicDetailView: View {
     private func isCurrentUserReply(_ reply: ForumReply) -> Bool {
         // Only check for authenticated users (not anonymous)
         guard !appViewModel.isAnonymousUser,
-              let userId = try? forumService.getCurrentUserId() else {
+              let userId = currentUserId else {
             return false
         }
         return String(reply.author.id) == userId
@@ -1297,10 +1301,27 @@ struct TopicDetailView: View {
         guard !appViewModel.isAnonymousUser,
               let currentTopic = topic,
               let author = currentTopic.author,
-              let userId = try? forumService.getCurrentUserId() else {
+              let userId = currentUserId else {
             return false
         }
         return String(author.id) == userId
+    }
+    
+    /// Loads and caches current user ID to avoid repeated Keychain access
+    private func loadCurrentUserId() {
+        // Only load for authenticated users (not anonymous)
+        guard !appViewModel.isAnonymousUser else {
+            currentUserId = nil
+            return
+        }
+        
+        // Only load if not already cached
+        if currentUserId == nil {
+            logger.info("🔑 TOPIC_DETAIL: Loading user ID from Keychain (first time)")
+            currentUserId = try? forumService.getCurrentUserId()
+        } else {
+            logger.info("🔑 TOPIC_DETAIL: Using cached user ID: \(currentUserId ?? "nil")")
+        }
     }
     
     /// Deletes the current topic
