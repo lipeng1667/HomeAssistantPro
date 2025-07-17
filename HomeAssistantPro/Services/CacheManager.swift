@@ -2,49 +2,49 @@
 //  CacheManager.swift
 //  HomeAssistantPro
 //
-//  Purpose: Cache management service for storing and retrieving preloaded data
+//  Purpose: In-memory cache management service for storing and retrieving preloaded data
 //  Author: Michael
 //  Created: 2025-07-10
 //  Modified: 2025-07-17
 //
 //  Modification Log:
-//  - 2025-07-10: Initial creation with forum data caching
+//  - 2025-07-10: Initial creation with forum data caching using UserDefaults
 //  - 2025-07-17: Added chat history caching support for splash screen preloading optimization
+//  - 2025-07-17: Refactored from UserDefaults to in-memory cache for better performance
 //
 //  Functions:
-//  - cacheForumTopics(_:): Stores forum topics in cache
-//  - getCachedForumTopics(): Retrieves cached forum topics
-//  - cacheCategories(_:): Stores forum categories in cache
-//  - getCachedCategories(): Retrieves cached forum categories
-//  - cacheChatHistory(_:): Stores chat history in cache
-//  - getCachedChatHistory(): Retrieves cached chat history
+//  - cacheForumTopics(_:): Stores forum topics in memory cache
+//  - getCachedForumTopics(): Retrieves cached forum topics from memory
+//  - cacheCategories(_:): Stores forum categories in memory cache
+//  - getCachedCategories(): Retrieves cached forum categories from memory
+//  - cacheChatHistory(_:): Stores chat history in memory cache
+//  - getCachedChatHistory(): Retrieves cached chat history from memory
 //  - hasValidForumCache(): Checks if cached forum data is still valid
 //  - hasValidChatCache(): Checks if cached chat data is still valid
-//  - clearCache(): Clears all cached data
+//  - clearCache(): Clears all cached data from memory
 //
 
 import Foundation
 import os.log
 
-/// Cache management service for storing and retrieving preloaded application data
+/// Cache management service for storing and retrieving preloaded application data in memory
 class CacheManager {
     
     // MARK: - Singleton
     static let shared = CacheManager()
     
     // MARK: - Private Properties
-    private let userDefaults = UserDefaults.standard
     private let logger = Logger(subsystem: "com.homeassistant.ios", category: "CacheManager")
     
-    // Cache keys
-    private enum CacheKeys {
-        static let forumTopics = "cached_forum_topics"
-        static let forumCategories = "cached_forum_categories"
-        static let forumTopicsTimestamp = "cached_forum_topics_timestamp"
-        static let categoriesTimestamp = "cached_categories_timestamp"
-        static let chatHistory = "cached_chat_history"
-        static let chatHistoryTimestamp = "cached_chat_history_timestamp"
-    }
+    // In-memory cache storage
+    private var cachedForumTopics: [ForumTopic] = []
+    private var cachedForumCategories: [ForumCategory] = []
+    private var cachedChatHistory: [ChatMessage] = []
+    
+    // Cache timestamps
+    private var forumTopicsTimestamp: Date?
+    private var categoriesTimestamp: Date?
+    private var chatHistoryTimestamp: Date?
     
     // Cache expiration time (30 minutes)
     private let cacheExpirationInterval: TimeInterval = 30 * 60
@@ -56,22 +56,12 @@ class CacheManager {
     
     // MARK: - Forum Topics Cache
     
-    /// Stores forum topics in cache with timestamp
+    /// Stores forum topics in memory cache with timestamp
     /// - Parameter topics: Array of ForumTopic objects to cache
     func cacheForumTopics(_ topics: [ForumTopic]) {
-        do {
-            let encoder = JSONEncoder()
-            encoder.dateEncodingStrategy = .iso8601
-            
-            let data = try encoder.encode(topics)
-            userDefaults.set(data, forKey: CacheKeys.forumTopics)
-            userDefaults.set(Date(), forKey: CacheKeys.forumTopicsTimestamp)
-            
-            logger.info("Cached \(topics.count) forum topics")
-            
-        } catch {
-            logger.error("Failed to cache forum topics: \(error.localizedDescription)")
-        }
+        cachedForumTopics = topics
+        forumTopicsTimestamp = Date()
+        logger.info("Cached \(topics.count) forum topics in memory")
     }
     
     /// Retrieves cached forum topics if available and valid
@@ -79,64 +69,40 @@ class CacheManager {
     func getCachedForumTopics() -> [ForumTopic] {
         guard isForumTopicsCacheValid() else {
             logger.info("Forum topics cache is invalid or expired")
-            return []
-        }
-        
-        guard let data = userDefaults.data(forKey: CacheKeys.forumTopics) else {
-            logger.info("No cached forum topics found")
-            return []
-        }
-        
-        do {
-            let decoder = JSONDecoder()
-            decoder.dateDecodingStrategy = .iso8601
-            
-            let topics = try decoder.decode([ForumTopic].self, from: data)
-            logger.info("Retrieved \(topics.count) cached forum topics")
-            return topics
-            
-        } catch {
-            logger.error("Failed to decode cached forum topics: \(error.localizedDescription)")
-            // Clear corrupted cache
             clearForumTopicsCache()
             return []
         }
+        
+        logger.info("Retrieved \(self.cachedForumTopics.count) cached forum topics from memory")
+        return cachedForumTopics
     }
     
     /// Checks if forum topics cache is valid (not expired)
     /// - Returns: True if cache exists and is within expiration time
     private func isForumTopicsCacheValid() -> Bool {
-        guard let timestamp = userDefaults.object(forKey: CacheKeys.forumTopicsTimestamp) as? Date else {
+        guard let timestamp = forumTopicsTimestamp else {
             return false
         }
         
         let timeSinceCache = Date().timeIntervalSince(timestamp)
-        return timeSinceCache < cacheExpirationInterval
+        return timeSinceCache < cacheExpirationInterval && !cachedForumTopics.isEmpty
     }
     
     /// Clears forum topics cache
     private func clearForumTopicsCache() {
-        userDefaults.removeObject(forKey: CacheKeys.forumTopics)
-        userDefaults.removeObject(forKey: CacheKeys.forumTopicsTimestamp)
-        logger.info("Cleared forum topics cache")
+        cachedForumTopics = []
+        forumTopicsTimestamp = nil
+        logger.info("Cleared forum topics cache from memory")
     }
     
     // MARK: - Categories Cache
     
-    /// Stores forum categories in cache with timestamp
+    /// Stores forum categories in memory cache with timestamp
     /// - Parameter categories: Array of ForumCategory objects to cache
     func cacheCategories(_ categories: [ForumCategory]) {
-        do {
-            let encoder = JSONEncoder()
-            let data = try encoder.encode(categories)
-            userDefaults.set(data, forKey: CacheKeys.forumCategories)
-            userDefaults.set(Date(), forKey: CacheKeys.categoriesTimestamp)
-            
-            logger.info("Cached \(categories.count) forum categories")
-            
-        } catch {
-            logger.error("Failed to cache categories: \(error.localizedDescription)")
-        }
+        cachedForumCategories = categories
+        categoriesTimestamp = Date()
+        logger.info("Cached \(categories.count) forum categories in memory")
     }
     
     /// Retrieves cached forum categories if available and valid
@@ -144,44 +110,30 @@ class CacheManager {
     func getCachedCategories() -> [ForumCategory] {
         guard isCategoriesCacheValid() else {
             logger.info("Categories cache is invalid or expired")
-            return []
-        }
-        
-        guard let data = userDefaults.data(forKey: CacheKeys.forumCategories) else {
-            logger.info("No cached categories found")
-            return []
-        }
-        
-        do {
-            let decoder = JSONDecoder()
-            let categories = try decoder.decode([ForumCategory].self, from: data)
-            logger.info("Retrieved \(categories.count) cached categories")
-            return categories
-            
-        } catch {
-            logger.error("Failed to decode cached categories: \(error.localizedDescription)")
-            // Clear corrupted cache
             clearCategoriesCache()
             return []
         }
+        
+        logger.info("Retrieved \(self.cachedForumCategories.count) cached categories from memory")
+        return cachedForumCategories
     }
     
     /// Checks if categories cache is valid (not expired)
     /// - Returns: True if cache exists and is within expiration time
     private func isCategoriesCacheValid() -> Bool {
-        guard let timestamp = userDefaults.object(forKey: CacheKeys.categoriesTimestamp) as? Date else {
+        guard let timestamp = categoriesTimestamp else {
             return false
         }
         
         let timeSinceCache = Date().timeIntervalSince(timestamp)
-        return timeSinceCache < cacheExpirationInterval
+        return timeSinceCache < cacheExpirationInterval && !cachedForumCategories.isEmpty
     }
     
     /// Clears categories cache
     private func clearCategoriesCache() {
-        userDefaults.removeObject(forKey: CacheKeys.forumCategories)
-        userDefaults.removeObject(forKey: CacheKeys.categoriesTimestamp)
-        logger.info("Cleared categories cache")
+        cachedForumCategories = []
+        categoriesTimestamp = nil
+        logger.info("Cleared categories cache from memory")
     }
     
     // MARK: - Cache Validation
@@ -195,9 +147,7 @@ class CacheManager {
     /// Checks if there's any cached forum data (valid or not)
     /// - Returns: True if any forum data exists in cache
     func hasCachedForumData() -> Bool {
-        let hasTopics = userDefaults.data(forKey: CacheKeys.forumTopics) != nil
-        let hasCategories = userDefaults.data(forKey: CacheKeys.forumCategories) != nil
-        return hasTopics || hasCategories
+        return !cachedForumTopics.isEmpty || !cachedForumCategories.isEmpty
     }
     
     /// Checks if there's valid cached chat history available
@@ -209,29 +159,19 @@ class CacheManager {
     /// Checks if there's any cached chat data (valid or not)
     /// - Returns: True if any chat history exists in cache
     func hasCachedChatData() -> Bool {
-        return userDefaults.data(forKey: CacheKeys.chatHistory) != nil
+        return !cachedChatHistory.isEmpty
     }
     
     // MARK: - Cache Management
     
     // MARK: - Chat History Cache
     
-    /// Stores chat history in cache with timestamp
+    /// Stores chat history in memory cache with timestamp
     /// - Parameter messages: Array of ChatMessage objects to cache
     func cacheChatHistory(_ messages: [ChatMessage]) {
-        do {
-            let encoder = JSONEncoder()
-            encoder.dateEncodingStrategy = .iso8601
-            
-            let data = try encoder.encode(messages)
-            userDefaults.set(data, forKey: CacheKeys.chatHistory)
-            userDefaults.set(Date(), forKey: CacheKeys.chatHistoryTimestamp)
-            
-            logger.info("Cached \(messages.count) chat messages")
-            
-        } catch {
-            logger.error("Failed to cache chat history: \(error.localizedDescription)")
-        }
+        cachedChatHistory = messages
+        chatHistoryTimestamp = Date()
+        logger.info("Cached \(messages.count) chat messages in memory")
     }
     
     /// Retrieves cached chat history if available and valid
@@ -239,46 +179,30 @@ class CacheManager {
     func getCachedChatHistory() -> [ChatMessage] {
         guard isChatHistoryCacheValid() else {
             logger.info("Chat history cache is invalid or expired")
-            return []
-        }
-        
-        guard let data = userDefaults.data(forKey: CacheKeys.chatHistory) else {
-            logger.info("No cached chat history found")
-            return []
-        }
-        
-        do {
-            let decoder = JSONDecoder()
-            decoder.dateDecodingStrategy = .iso8601
-            
-            let messages = try decoder.decode([ChatMessage].self, from: data)
-            logger.info("Retrieved \(messages.count) cached chat messages")
-            return messages
-            
-        } catch {
-            logger.error("Failed to decode cached chat history: \(error.localizedDescription)")
-            // Clear corrupted cache
             clearChatHistoryCache()
             return []
         }
+        
+        logger.info("Retrieved \(self.cachedChatHistory.count) cached chat messages from memory")
+        return cachedChatHistory
     }
     
     /// Checks if chat history cache is valid (not expired)
     /// - Returns: True if cache exists and is within expiration time
     private func isChatHistoryCacheValid() -> Bool {
-        guard let timestamp = userDefaults.object(forKey: CacheKeys.chatHistoryTimestamp) as? Date else {
+        guard let timestamp = chatHistoryTimestamp else {
             return false
         }
         
         let timeSinceCache = Date().timeIntervalSince(timestamp)
-        return timeSinceCache < cacheExpirationInterval
+        return timeSinceCache < cacheExpirationInterval && !cachedChatHistory.isEmpty
     }
     
     /// Clears chat history cache
     private func clearChatHistoryCache() {
-        userDefaults.removeObject(forKey: CacheKeys.chatHistory)
-        userDefaults.removeObject(forKey: CacheKeys.chatHistoryTimestamp)
-        logger.info("Cleared chat history cache")
+        cachedChatHistory = []
+        chatHistoryTimestamp = nil
+        logger.info("Cleared chat history cache from memory")
     }
     
     /// Clears all cached data
@@ -295,27 +219,31 @@ class CacheManager {
         var info: [String: Any] = [:]
         
         // Forum topics info
-        if let timestamp = userDefaults.object(forKey: CacheKeys.forumTopicsTimestamp) as? Date {
+        if let timestamp = forumTopicsTimestamp {
             info["topics_cached_at"] = timestamp
             info["topics_age_minutes"] = Int(Date().timeIntervalSince(timestamp) / 60)
             info["topics_valid"] = isForumTopicsCacheValid()
+            info["topics_count"] = cachedForumTopics.count
         }
         
         // Categories info
-        if let timestamp = userDefaults.object(forKey: CacheKeys.categoriesTimestamp) as? Date {
+        if let timestamp = categoriesTimestamp {
             info["categories_cached_at"] = timestamp
             info["categories_age_minutes"] = Int(Date().timeIntervalSince(timestamp) / 60)
             info["categories_valid"] = isCategoriesCacheValid()
+            info["categories_count"] = cachedForumCategories.count
         }
         
         // Chat history info
-        if let timestamp = userDefaults.object(forKey: CacheKeys.chatHistoryTimestamp) as? Date {
+        if let timestamp = chatHistoryTimestamp {
             info["chat_cached_at"] = timestamp
             info["chat_age_minutes"] = Int(Date().timeIntervalSince(timestamp) / 60)
             info["chat_valid"] = isChatHistoryCacheValid()
+            info["chat_count"] = cachedChatHistory.count
         }
         
         info["cache_expiration_minutes"] = Int(cacheExpirationInterval / 60)
+        info["storage_type"] = "memory"
         
         return info
     }
