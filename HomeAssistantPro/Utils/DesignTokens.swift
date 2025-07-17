@@ -599,7 +599,7 @@ struct DesignTokens {
         
         /// Section spacing
         static var sectionSpacing: CGFloat {
-            DeviceSize.current.spacing(28, 32, 36)
+            DeviceSize.current.spacing(12, 16, 20)
         }
         
         /// Tab bar responsive spacing

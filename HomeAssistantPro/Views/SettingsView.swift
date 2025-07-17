@@ -127,7 +127,6 @@ struct SettingsView: View {
                     .responsiveHorizontalPadding(6, 8, 10)
                     .limitedContentWidth()
                 }
-                .padding(.top, DesignTokens.DeviceSize.current.spacing(16, 18, 20))
                 .padding(.bottom, DesignTokens.DeviceSize.current.spacing(96, 108, 120))
             }
         }

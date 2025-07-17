@@ -2,51 +2,76 @@
 //  StandardTabHeader.swift
 //  HomeAssistantPro
 //
-//  Created: June 25, 2025
-//  Last Modified: June 26, 2025
-//  Author: Michael Lee
-//  Version: 1.1.0
+//  Purpose: Modern responsive header component for all tab views
+//  Author: Michael
+//  Created: 2025-06-25
+//  Modified: 2025-07-17
 //
-//  Purpose: Unified header component for all tab views with ForumView-style
-//  layout. Provides consistent navigation and branding across the app
-//  with flexible configuration options.
+//  Modification Log:
+//  - 2025-06-25: Initial creation with flexible configuration system
+//  - 2025-06-26: Removed duplicate StandardButtonStyle declaration
+//  - 2025-07-17: Major responsive design system integration
+//    * Updated to use DesignTokens.ResponsiveTypography for all text
+//    * Replaced fixed padding with responsive methods matching ForumView
+//    * Added glassmorphism effects and modern shadow system
+//    * Implemented device-adaptive button sizing
+//    * Streamlined configuration by removing obsolete padding parameters
+//    * Enhanced button styles with proper borders and responsive dimensions
 //
-//  Update History:
-//  v1.0.0 (June 25, 2025) - Initial creation with flexible configuration system
-//  v1.1.0 (June 26, 2025) - Removed duplicate StandardButtonStyle declaration
+//  Functions:
+//  - StatusIndicator: Animated status displays for real-time feedback
+//  - ActionButton: Responsive button styles (circular, capsule, glass)
+//  - HeaderConfiguration: Flexible configuration system for different tabs
+//  - Preset configurations: Pre-built setups for Home, Chat, and Settings tabs
 //
 //  Features:
-//  - Flexible configuration system for different tab requirements
-//  - ForumView-inspired layout with title/category on left, actions on right
-//  - Status indicators for dynamic content (typing, online status)
-//  - Preset configurations for Home, Forum, Chat, and Settings tabs
-//  - Consistent spacing and typography using design system tokens
+//  - Full responsive design system integration using DesignTokens
+//  - Device-adaptive spacing, typography, and button sizing
+//  - Modern glassmorphism effects with ultraThinMaterial backgrounds
+//  - Animated status indicators for dynamic content
+//  - Consistent styling across all tab implementations
+//  - Streamlined API with responsive defaults
 //
 
 import SwiftUI
 
 /// Standardized header component for tab views with consistent styling
+/// 
+/// ARCHITECTURE NOTE: This component is designed for generic tab headers (Home, Chat, Settings)
+/// that require basic configuration and styling. For specialized headers with complex business
+/// logic (like ForumView), separate dedicated header components should be used.
+///
+/// ForumView Header Separation Rationale:
+/// - Forum requires specialized features: draft management, anonymous restrictions, context menus
+/// - Complex dependencies: DraftManager, AnonymousRestrictionViewModel, AppViewModel
+/// - Domain-specific UI patterns: READ-ONLY indicators, draft status, restriction modals
+/// - Heavy business logic that would bloat this generic component
+///
+/// Usage Guidelines:
+/// - Use StandardTabHeader for: Simple headers with titles, status indicators, basic actions
+/// - Use dedicated headers for: Complex domain logic, multiple dependencies, specialized workflows
+/// - Both should share: DesignTokens, responsive patterns, common styling utilities
 struct StandardTabHeader: View {
     let configuration: HeaderConfiguration
     
     var body: some View {
         VStack(spacing: 16) {
-            // Main header content - ForumView style layout
+            // Main header content
             HStack(alignment: .center) {
                 // Left side content (category label and main title)
                 VStack(alignment: .leading, spacing: configuration.titleSpacing) {
                     // Category label (optional)
                     if let categoryLabel = configuration.categoryLabel {
                         Text(categoryLabel)
-                            .font(.system(size: 13, weight: .semibold, design: .rounded))
-                            .foregroundColor(.primary.opacity(0.6))
-                            .tracking(2)
+                            .font(DesignTokens.ResponsiveTypography.caption)
+                            .foregroundColor(DesignTokens.Colors.textSecondary)
+                            .tracking(1.5)
                     }
                     
                     // Main title
                     Text(configuration.title)
-                        .font(.system(size: configuration.titleSize, weight: .bold, design: .rounded))
-                        .foregroundColor(.primary)
+                        .font(DesignTokens.ResponsiveTypography.headingLarge)
+                        .foregroundColor(DesignTokens.Colors.textPrimary)
                 }
                 
                 Spacer()
@@ -64,23 +89,15 @@ struct StandardTabHeader: View {
                     }
                 }
             }
-            .padding(.horizontal, 24)
-            .padding(.top, configuration.topPadding)
-            .padding(.bottom, configuration.bottomPadding)
-            
-            // Divider (optional)
-            if configuration.showDivider {
-                Rectangle()
-                    .fill(Color.primary.opacity(0.1))
-                    .frame(height: 0.5)
-                    .padding(.horizontal, 20)
-            }
+            .responsiveHorizontalPadding(20, 24, 28)
+            .responsiveVerticalPadding(16, 20, 24)
         }
-        .background {
-            if let backgroundColor = configuration.backgroundColor {
-                Rectangle()
-                    .fill(backgroundColor)
-            }
+        
+        // Divider (optional)
+        if configuration.showDivider {
+            Rectangle()
+                .fill(DesignTokens.Colors.borderPrimary)
+                .frame(height: 1)
         }
     }
     
@@ -101,8 +118,8 @@ struct StandardTabHeader: View {
                 )
             
             Text(status.text)
-                .font(.system(size: 12, weight: .medium))
-                .foregroundColor(.secondary)
+                .font(DesignTokens.ResponsiveTypography.bodyMedium)
+                .foregroundColor(DesignTokens.Colors.textSecondary)
         }
     }
     
@@ -136,11 +153,14 @@ struct StandardTabHeader: View {
                         endPoint: .bottomTrailing
                     )
                 )
-                .frame(width: 48, height: 48)
-                .shadow(color: color.opacity(0.4), radius: 12, x: 0, y: 6)
+                .frame(
+                    width: DesignTokens.DeviceSize.current.spacing(44, 48, 52),
+                    height: DesignTokens.DeviceSize.current.spacing(44, 48, 52)
+                )
+                .standardShadowMedium()
             
             Image(systemName: icon)
-                .font(.system(size: 18, weight: .semibold))
+                .font(.system(size: DesignTokens.DeviceSize.current.fontSize(16, 18, 20), weight: .semibold))
                 .foregroundColor(.white)
         }
     }
@@ -148,7 +168,7 @@ struct StandardTabHeader: View {
     @ViewBuilder
     private func capsuleButton(text: String, color: Color) -> some View {
         Text(text)
-            .font(.system(size: 14, weight: .semibold))
+            .font(DesignTokens.ResponsiveTypography.bodyMedium)
             .foregroundColor(color)
             .padding(.horizontal, 16)
             .padding(.vertical, 8)
@@ -165,13 +185,20 @@ struct StandardTabHeader: View {
     @ViewBuilder
     private func glassButton(icon: String) -> some View {
         Image(systemName: icon)
-            .font(.system(size: 16, weight: .medium))
-            .foregroundColor(.primary.opacity(0.7))
-            .frame(width: 44, height: 44)
+            .font(.system(size: DesignTokens.DeviceSize.current.fontSize(14, 16, 18), weight: .medium))
+            .foregroundColor(DesignTokens.Colors.textSecondary)
+            .frame(
+                width: DesignTokens.DeviceSize.current.spacing(40, 44, 48),
+                height: DesignTokens.DeviceSize.current.spacing(40, 44, 48)
+            )
             .background(
                 Circle()
                     .fill(.ultraThinMaterial)
-                    .shadow(color: .black.opacity(0.05), radius: 8, x: 0, y: 4)
+                    .overlay(
+                        Circle()
+                            .stroke(DesignTokens.Colors.borderPrimary, lineWidth: 1)
+                    )
+                    .standardShadowLight()
             )
     }
 }
@@ -182,12 +209,8 @@ struct HeaderConfiguration {
     let categoryLabel: String?
     let title: String
     let subtitle: String?
-    let titleSize: CGFloat
-    let subtitleSize: CGFloat
     let titleSpacing: CGFloat
     let subtitleColor: Color
-    let topPadding: CGFloat
-    let bottomPadding: CGFloat
     let showDivider: Bool
     let backgroundColor: Material?
     let statusIndicator: StatusIndicator?
@@ -198,12 +221,8 @@ struct HeaderConfiguration {
         categoryLabel: String? = nil,
         title: String,
         subtitle: String? = nil,
-        titleSize: CGFloat = 32,
-        subtitleSize: CGFloat = 16,
-        titleSpacing: CGFloat = 6,
-        subtitleColor: Color = .primary.opacity(0.7),
-        topPadding: CGFloat = 60,
-        bottomPadding: CGFloat = 24,
+        titleSpacing: CGFloat = DesignTokens.ResponsiveSpacing.xs,
+        subtitleColor: Color = DesignTokens.Colors.textSecondary,
         showDivider: Bool = false,
         backgroundColor: Material? = nil,
         statusIndicator: StatusIndicator? = nil,
@@ -212,12 +231,8 @@ struct HeaderConfiguration {
         self.categoryLabel = categoryLabel
         self.title = title
         self.subtitle = subtitle
-        self.titleSize = titleSize
-        self.subtitleSize = subtitleSize
         self.titleSpacing = titleSpacing
         self.subtitleColor = subtitleColor
-        self.topPadding = topPadding
-        self.bottomPadding = bottomPadding
         self.showDivider = showDivider
         self.backgroundColor = backgroundColor
         self.statusIndicator = statusIndicator
@@ -251,36 +266,43 @@ struct ActionButton {
 
 // MARK: - Convenience Extensions
 
+/// Header Component Architecture Guidelines:
+///
+/// COMPONENT SEPARATION STRATEGY:
+/// 1. StandardTabHeader: Generic component for simple headers (Home, Chat, Settings)
+///    - Basic title/subtitle display
+///    - Simple status indicators  
+///    - Lightweight action buttons
+///    - Minimal dependencies
+///
+/// 2. Specialized Headers: Domain-specific components (ForumView.enhancedHeader)
+///    - Complex business logic
+///    - Multiple service dependencies
+///    - Advanced user interactions
+///    - Domain-specific UI patterns
+///
+/// SHARED DESIGN SYSTEM:
+/// - Both use DesignTokens.ResponsiveTypography for consistent fonts
+/// - Both use DesignTokens.ResponsiveSpacing for consistent spacing
+/// - Both use responsive padding: .responsiveHorizontalPadding(20, 24, 28)
+/// - Both use modern styling: glassmorphism, shadows, animations
+///
+/// DECISION CRITERIA:
+/// - Use StandardTabHeader if: Simple config, minimal state, generic patterns
+/// - Use specialized header if: Complex state, domain logic, multiple dependencies
 extension HeaderConfiguration {
     // Preset configurations for each tab - ForumView style layout
     static func home() -> HeaderConfiguration {
         HeaderConfiguration(
             categoryLabel: "WELCOME",
-            title: LocalizedKeys.tabHome.localized,
-            topPadding: 40,
-            bottomPadding: 24
+            title: LocalizedKeys.tabHome.localized
         )
     }
-    
-    static func forum(onCreatePost: @escaping () -> Void) -> HeaderConfiguration {
-        HeaderConfiguration(
-            categoryLabel: LocalizedKeys.forumCommunity.localized,
-            title: LocalizedKeys.forumTitle.localized,
-            topPadding: 40,
-            bottomPadding: 24,
-            actionButton: ActionButton(
-                style: .circular(icon: "plus", color: DesignTokens.Colors.primaryCyan),
-                action: onCreatePost
-            )
-        )
-    }
-    
+ 
     static func chat(onOptions: @escaping () -> Void, isTyping: Bool = false) -> HeaderConfiguration {
         HeaderConfiguration(
             categoryLabel: LocalizedKeys.chatSupport.localized,
             title: LocalizedKeys.chatTitle.localized,
-            topPadding: 40,
-            bottomPadding: 24,
             showDivider: true,
             statusIndicator: StatusIndicator(
                 text: "Agent Online",
@@ -297,10 +319,7 @@ extension HeaderConfiguration {
     static func settings(selectedColor: Color, onColorPicker: @escaping () -> Void) -> HeaderConfiguration {
         HeaderConfiguration(
             categoryLabel: "PREFERENCES",
-            title: "Settings",
-            topPadding: 20,
-            bottomPadding: 8,
-            actionButton: nil
+            title: "Settings"
         )
     }
 }

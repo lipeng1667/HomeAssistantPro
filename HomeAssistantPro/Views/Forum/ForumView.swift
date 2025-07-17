@@ -183,6 +183,18 @@ struct ForumView: View {
     
     // MARK: - Enhanced Header
     
+    /// Forum-specific header component with specialized business logic
+    /// 
+    /// ARCHITECTURE NOTE: This header is intentionally separate from StandardTabHeader
+    /// due to Forum's complex requirements:
+    /// - Anonymous user restriction handling (READ-ONLY indicators, restriction modals)
+    /// - Draft management integration (DraftManager state, draft indicators, context menus)
+    /// - Complex dependencies (DraftManager, AnonymousRestrictionViewModel, AppViewModel)
+    /// - Domain-specific UI patterns (draft status badges, contextual action menus)
+    /// - Heavy business logic that would bloat the generic StandardTabHeader component
+    ///
+    /// This specialized approach maintains clean separation of concerns while sharing
+    /// responsive design patterns and DesignTokens with StandardTabHeader.
     private var enhancedHeader: some View {
         HStack(alignment: .center) {
             // Left section
