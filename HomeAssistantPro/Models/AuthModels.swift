@@ -169,6 +169,7 @@ struct LoginResponse: Codable {
         
         struct User: Codable {
             let id: Int
+            let name: String
         }
     }
 }
@@ -214,7 +215,7 @@ struct User: Codable {
         case id
         case deviceId = "device_id"
         case status
-        case accountName = "account_name"
+        case accountName = "name"
         case phoneNumber = "phone_number"
     }
     

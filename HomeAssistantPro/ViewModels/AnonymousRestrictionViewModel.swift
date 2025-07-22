@@ -50,6 +50,7 @@ class AnonymousRestrictionViewModel: ObservableObject {
         case likeReply
         case editPost
         case sendChatMessage
+        case upgradeAccount
         
         /// Human-readable title for the restriction modal
         var title: String {
@@ -64,6 +65,8 @@ class AnonymousRestrictionViewModel: ObservableObject {
                 return "Log In to Edit Posts"
             case .sendChatMessage:
                 return "Log In to Chat"
+            case .upgradeAccount:
+                return "Create Your Account"
             }
         }
         
@@ -80,6 +83,8 @@ class AnonymousRestrictionViewModel: ObservableObject {
                 return "Log in to manage your posts and contribute to the community."
             case .sendChatMessage:
                 return "Log in to chat with our support team and get help with your Home Assistant setup."
+            case .upgradeAccount:
+                return "Create an account to access full features, manage your profile, and save your preferences."
             }
         }
         
@@ -155,6 +160,8 @@ class AnonymousRestrictionViewModel: ObservableObject {
             return "Log in to edit"
         case .sendChatMessage:
             return "Log in to chat"
+        case .upgradeAccount:
+            return "Log in to upgrade"
         }
     }
 }

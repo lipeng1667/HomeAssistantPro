@@ -529,7 +529,7 @@ struct ModernLoginView: View {
                         id: response.data.user.id,
                         deviceId: nil, // Will be populated from SettingsStore
                         status: 2, // Registered user
-                        accountName: nil, // Will be restored from SettingsStore
+                        accountName: response.data.user.name, // Will be restored from SettingsStore
                         phoneNumber: cleanPhoneNumber
                     )
                 }

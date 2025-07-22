@@ -19,6 +19,7 @@ struct SettingsView: View {
     @EnvironmentObject var appViewModel: AppViewModel
     @EnvironmentObject var settingsStore: SettingsStore
     @StateObject private var localizationManager = LocalizationManager.shared
+    @StateObject private var restrictionViewModel = AnonymousRestrictionViewModel()
     @State private var showLanguageSelection = false
     @State private var showLogoutConfirmation = false
     @State private var showThemeSelection = false
@@ -121,8 +122,13 @@ struct SettingsView: View {
                     
                     VStack(spacing: DesignTokens.ResponsiveSpacing.lg) {
                         profileSection
-                        preferencesSection  
-                        securitySection
+                        preferencesSection
+                        
+                        // Only show security section for authenticated users
+                        if let currentUser = appViewModel.currentUser,
+                           currentUser.userStatus != .anonymous {
+                            securitySection
+                        }
                     }
                     .responsiveHorizontalPadding(6, 8, 10)
                     .limitedContentWidth()
@@ -159,6 +165,29 @@ struct SettingsView: View {
                     }
                 }
             )
+        )
+        .overlay(
+            // Anonymous restriction modal - only show when needed
+            Group {
+                if restrictionViewModel.showModal {
+                    CustomConfirmationModal(
+                        isPresented: $restrictionViewModel.showModal,
+                        config: .primary(
+                            title: restrictionViewModel.restrictedAction.title,
+                            message: restrictionViewModel.restrictedAction.message,
+                            icon: "person.crop.circle.fill",
+                            confirmText: "Log In",
+                            cancelText: "Cancel",
+                            onConfirm: {
+                                restrictionViewModel.navigateToLogin(appViewModel: appViewModel)
+                            },
+                            onCancel: {
+                                restrictionViewModel.dismissModal()
+                            }
+                        )
+                    )
+                }
+            }
         )
     }
     
@@ -204,12 +233,38 @@ struct SettingsView: View {
                         if let currentUser = appViewModel.currentUser {
                             switch currentUser.userStatus {
                             case .anonymous:
-                                modernActionButton(
-                                    title: "Upgrade Account",
-                                    icon: "arrow.up.circle.fill",
-                                    color: DesignTokens.Colors.primaryGreen,
-                                    style: .primary
-                                )
+                                Button(action: {
+                                    restrictionViewModel.showRestrictionModal(for: .upgradeAccount)
+                                }) {
+                                    HStack(spacing: DesignTokens.DeviceSize.current.spacing(6, 7, 8)) {
+                                        Image(systemName: "arrow.up.circle.fill")
+                                            .font(.system(size: DesignTokens.DeviceSize.current.fontSize(11, 12.5, 14), weight: .semibold))
+                                        
+                                        Text("Upgrade Account")
+                                            .font(DesignTokens.ResponsiveTypography.buttonMedium)
+                                    }
+                                    .foregroundColor(.white)
+                                    .responsiveHorizontalPadding(12, 16, 20)
+                                    .responsiveVerticalPadding(10, 12, 14)
+                                    .frame(maxWidth: .infinity)
+                                    .background(
+                                        RoundedRectangle(cornerRadius: DesignTokens.DeviceSize.current.spacing(10, 11, 12))
+                                            .fill(
+                                                LinearGradient(
+                                                    colors: [DesignTokens.Colors.primaryGreen, DesignTokens.Colors.primaryGreen.opacity(0.8)],
+                                                    startPoint: .topLeading,
+                                                    endPoint: .bottomTrailing
+                                                )
+                                            )
+                                            .shadow(
+                                                color: DesignTokens.Colors.primaryGreen.opacity(0.3),
+                                                radius: DesignTokens.DeviceSize.current.spacing(6, 7, 8),
+                                                x: 0,
+                                                y: DesignTokens.DeviceSize.current.spacing(3, 3.5, 4)
+                                            )
+                                    )
+                                }
+                                .enhancedButtonStyle()
                             case .registered:
                                 modernActionButton(
                                     title: "Edit Profile",
