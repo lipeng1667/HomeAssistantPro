@@ -49,18 +49,21 @@ class AnonymousRestrictionViewModel: ObservableObject {
         case likeTopic
         case likeReply
         case editPost
+        case sendChatMessage
         
         /// Human-readable title for the restriction modal
         var title: String {
             switch self {
             case .createTopic:
-                return "Sign Up to Create Topics"
+                return "Log In to Create Topics"
             case .replyToTopic, .replyToReply:
-                return "Sign Up to Reply"
+                return "Log In to Reply"
             case .likeTopic, .likeReply:
-                return "Sign Up to Like Posts"
+                return "Log In to Like Posts"
             case .editPost:
-                return "Sign Up to Edit Posts"
+                return "Log In to Edit Posts"
+            case .sendChatMessage:
+                return "Log In to Chat"
             }
         }
         
@@ -68,24 +71,26 @@ class AnonymousRestrictionViewModel: ObservableObject {
         var message: String {
             switch self {
             case .createTopic:
-                return "Create an account to start discussions and share your Home Assistant experiences with the community."
+                return "Log in to start discussions and share your Home Assistant experiences with the community."
             case .replyToTopic, .replyToReply:
-                return "Join our community to participate in discussions and help other Home Assistant users."
+                return "Log in to participate in discussions and help other Home Assistant users."
             case .likeTopic, .likeReply:
-                return "Sign up to show appreciation for helpful posts and connect with the community."
+                return "Log in to show appreciation for helpful posts and connect with the community."
             case .editPost:
-                return "Create an account to manage your posts and contribute to the community."
+                return "Log in to manage your posts and contribute to the community."
+            case .sendChatMessage:
+                return "Log in to chat with our support team and get help with your Home Assistant setup."
             }
         }
         
         /// Primary action button text
         var primaryButtonText: String {
-            return "Sign Up"
+            return "Log In"
         }
         
         /// Secondary action button text
         var secondaryButtonText: String {
-            return "Log In"
+            return "Cancel"
         }
     }
     
@@ -110,7 +115,7 @@ class AnonymousRestrictionViewModel: ObservableObject {
         logger.info("Restriction modal dismissed")
     }
     
-    /// Handles navigation to registration flow
+    /// Handles navigation to registration flow (deprecated - no longer used)
     /// This method should be called when user taps "Sign Up"
     func navigateToRegistration() {
         logger.info("User initiated registration from restriction modal")
@@ -125,15 +130,14 @@ class AnonymousRestrictionViewModel: ObservableObject {
     
     /// Handles navigation to login flow
     /// This method should be called when user taps "Log In"
-    func navigateToLogin() {
+    func navigateToLogin(appViewModel: AppViewModel) {
         logger.info("User initiated login from restriction modal")
         dismissModal()
         
-        // Post notification for app-level navigation handling
-        NotificationCenter.default.post(
-            name: .navigateToLogin,
-            object: restrictedAction
-        )
+        // Logout current anonymous session to force navigation to AuthenticationView
+        Task {
+            await appViewModel.logout()
+        }
     }
     
     /// Provides contextual hint text for different UI elements
@@ -142,13 +146,15 @@ class AnonymousRestrictionViewModel: ObservableObject {
     func getHintText(for actionType: RestrictedActionType) -> String {
         switch actionType {
         case .createTopic:
-            return "Sign up to create topics"
+            return "Log in to create topics"
         case .replyToTopic, .replyToReply:
-            return "Sign up to reply"
+            return "Log in to reply"
         case .likeTopic, .likeReply:
-            return "Sign up to like posts"
+            return "Log in to like posts"
         case .editPost:
-            return "Sign up to edit"
+            return "Log in to edit"
+        case .sendChatMessage:
+            return "Log in to chat"
         }
     }
 }

@@ -65,7 +65,7 @@ struct StandardTabHeader: View {
                     if let categoryLabel = configuration.categoryLabel {
                         Text(categoryLabel)
                             .font(DesignTokens.ResponsiveTypography.caption)
-                            .foregroundColor(DesignTokens.Colors.textSecondary)
+                            .foregroundColor(configuration.categoryColor)
                             .tracking(1.5)
                     }
                     
@@ -208,6 +208,7 @@ struct StandardTabHeader: View {
 
 struct HeaderConfiguration {
     let categoryLabel: String?
+    let categoryColor: Color
     let title: String
     let subtitle: String?
     let titleSpacing: CGFloat
@@ -220,6 +221,7 @@ struct HeaderConfiguration {
     // Default initializer with sensible defaults
     init(
         categoryLabel: String? = nil,
+        categoryColor: Color = DesignTokens.Colors.textSecondary,
         title: String,
         subtitle: String? = nil,
         titleSpacing: CGFloat = DesignTokens.ResponsiveSpacing.xs,
@@ -230,6 +232,7 @@ struct HeaderConfiguration {
         actionButton: ActionButton? = nil
     ) {
         self.categoryLabel = categoryLabel
+        self.categoryColor = categoryColor
         self.title = title
         self.subtitle = subtitle
         self.titleSpacing = titleSpacing
@@ -296,6 +299,7 @@ extension HeaderConfiguration {
     static func home() -> HeaderConfiguration {
         HeaderConfiguration(
             categoryLabel: "WELCOME",
+            categoryColor: DesignTokens.Colors.Home.primary,
             title: LocalizedKeys.tabHome.localized
         )
     }
@@ -330,16 +334,13 @@ extension HeaderConfiguration {
         
         return HeaderConfiguration(
             categoryLabel: LocalizedKeys.chatSupport.localized,
+            categoryColor: DesignTokens.Colors.Chat.primary,
             title: LocalizedKeys.chatTitle.localized,
             showDivider: true,
             statusIndicator: StatusIndicator(
                 text: statusText,
                 color: statusColor,
                 isAnimated: shouldAnimate
-            ),
-            actionButton: ActionButton(
-                style: .glass(icon: "ellipsis"),
-                action: onOptions
             )
         )
     }
@@ -347,6 +348,7 @@ extension HeaderConfiguration {
     static func settings(selectedColor: Color, onColorPicker: @escaping () -> Void) -> HeaderConfiguration {
         HeaderConfiguration(
             categoryLabel: "PREFERENCES",
+            categoryColor: DesignTokens.Colors.Settings.primary,
             title: "Settings"
         )
     }

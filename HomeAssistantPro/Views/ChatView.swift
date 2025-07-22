@@ -42,6 +42,7 @@ struct ChatView: View {
     // Services
     @StateObject private var imService = IMService.shared
     @StateObject private var socketManager = SocketManager.shared
+    @StateObject private var restrictionViewModel = AnonymousRestrictionViewModel()
     
     // Environment
     @EnvironmentObject var tabBarVisibility: TabBarVisibilityManager
@@ -149,6 +150,26 @@ struct ChatView: View {
             }
         }
         .dismissKeyboardOnSwipeDown()
+        .overlay {
+            if restrictionViewModel.showModal {
+                CustomConfirmationModal(
+                    isPresented: $restrictionViewModel.showModal,
+                    config: ConfirmationConfig.primary(
+                        title: restrictionViewModel.restrictedAction.title,
+                        message: restrictionViewModel.restrictedAction.message,
+                        icon: "message.fill",
+                        confirmText: restrictionViewModel.restrictedAction.primaryButtonText,
+                        cancelText: restrictionViewModel.restrictedAction.secondaryButtonText,
+                        onConfirm: {
+                            restrictionViewModel.navigateToLogin(appViewModel: appViewModel)
+                        },
+                        onCancel: {
+                            restrictionViewModel.dismissModal()
+                        }
+                    )
+                )
+            }
+        }
     }
     
     // MARK: - Keyboard Handling
@@ -223,7 +244,7 @@ struct ChatView: View {
                             .id("typing-indicator")
                     }
                 }
-                .padding(.horizontal, DesignTokens.ResponsiveSpacing.lg)
+                .padding(.horizontal, DesignTokens.ResponsiveSpacing.sm)
                 .padding(.vertical, 16)
             }
             .background(Color.clear)
@@ -285,11 +306,20 @@ struct ChatView: View {
                 
                 // Message input field
                 HStack(spacing: 12) {
-                    TextField("Type your message...", text: $message)
-                        .focused($isMessageFieldFocused)
-                        .font(.system(size: 16))
-                        .padding(.vertical, 12)
-                        .padding(.horizontal, 16)
+                    if appViewModel.isAnonymousUser {
+                        // Show a button that looks like a text field for anonymous users
+                        Button(action: {
+                            restrictionViewModel.showRestrictionModal(for: .sendChatMessage)
+                        }) {
+                            HStack {
+                                Text("Log in to send messages...")
+                                    .font(.system(size: 16))
+                                    .foregroundColor(.secondary)
+                                Spacer()
+                            }
+                            .padding(.vertical, 12)
+                            .padding(.horizontal, 16)
+                        }
                         .background(
                             RoundedRectangle(cornerRadius: 20)
                                 .fill(.ultraThinMaterial)
@@ -298,9 +328,25 @@ struct ChatView: View {
                                         .stroke(Color.primary.opacity(0.1), lineWidth: 1)
                                 )
                         )
-                        .onSubmit {
-                            sendMessage()
-                        }
+                    } else {
+                        // Show normal TextField for logged-in users
+                        TextField("Type your message...", text: $message)
+                            .focused($isMessageFieldFocused)
+                            .font(.system(size: 16))
+                            .padding(.vertical, 12)
+                            .padding(.horizontal, 16)
+                            .background(
+                                RoundedRectangle(cornerRadius: 20)
+                                    .fill(.ultraThinMaterial)
+                                    .overlay(
+                                        RoundedRectangle(cornerRadius: 20)
+                                            .stroke(Color.primary.opacity(0.1), lineWidth: 1)
+                                    )
+                            )
+                            .onSubmit {
+                                sendMessage()
+                            }
+                    }
                     
                     // Emoji button
                     Button(action: { showEmojiPicker.toggle() }) {
@@ -326,7 +372,7 @@ struct ChatView: View {
                             )
                             .frame(width: 44, height: 44)
                         
-                        Image(systemName: message.isEmpty ? "mic.fill" : "arrow.up")
+                        Image(systemName: "arrow.up")
                             .font(.system(size: 18, weight: .medium))
                             .foregroundColor(.white)
                             .scaleEffect(message.isEmpty ? 1.0 : 1.1)
@@ -335,7 +381,7 @@ struct ChatView: View {
                 .scaleButtonStyle()
                 .disabled(message.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && !message.isEmpty)
             }
-            .padding(.horizontal, DesignTokens.ResponsiveSpacing.lg)
+            .padding(.horizontal, DesignTokens.ResponsiveSpacing.md)
             .padding(.top, 12)
             .padding(.bottom, 20)
             .background(
@@ -352,6 +398,12 @@ struct ChatView: View {
     private func sendMessage() {
         let trimmedMessage = message.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmedMessage.isEmpty else { return }
+        
+        // Check if user is anonymous
+        if appViewModel.isAnonymousUser {
+            restrictionViewModel.showRestrictionModal(for: .sendChatMessage)
+            return
+        }
         
         // Get current user ID
         guard let currentUserId = imService.currentUserId else {

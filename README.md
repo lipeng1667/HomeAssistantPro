@@ -1,43 +1,46 @@
 # HomeAssistantPro
 
 **Created:** March 3, 2025  
-**Last Updated:** June 26, 2025  
-**Version:** 2.0.0  
-**iOS Target:** 15.6+  
+**Last Updated:** July 21, 2025  
+**Version:** 2.2.0  
+**iOS Target:** 16.0+  
 **Xcode:** 17+  
+**Swift:** 5.10  
 
-**HomeAssistantPro** is a modern SwiftUI-based iOS application designed for smart home enthusiasts. Built with 2025 iOS design principles, it features glassmorphism effects, dark mode support, responsive design, and a comprehensive design system.
+**HomeAssistantPro** is a modern SwiftUI-based iOS application designed for smart home enthusiasts. Built with MVVM + Clean-DI architecture and 2025 iOS design principles, it features glassmorphism effects, responsive design, comprehensive design system, and real-time communication capabilities.
 
 ## 🌟 Features
 
 ### Core Functionality
 
-- **🏠 Home Dashboard**: Curated smart home case studies and daily tips
-- **💬 Community Forum**: Discussion platform with hot topics and categories  
-- **🔧 Tech Support Chat**: Real-time support with typing indicators
-- **⚙️ Settings Hub**: Profile management and app preferences
+- **🏠 Home Dashboard**: Curated smart home case studies with demo video player
+- **💬 Community Forum**: Discussion platform with hot topics, categories, and post creation/editing
+- **🔧 Tech Support Chat**: Real-time WebSocket chat with typing indicators and message management
+- **⚙️ Settings Hub**: Profile management, theme switching, and app preferences
 - **✨ Splash Screen**: Modern glassmorphism launch screen with floating animations
 - **🎯 Intro Experience**: Beautiful onboarding flow for new users
-- **🔐 Authentication**: Anonymous login with persistent session management
+- **🔐 Authentication**: Anonymous/registered login with persistent session management
 
 ### Design & UX
 
-- **🌙 Dark Mode**: Automatic light/dark theme switching
-- **📱 Responsive Design**: Optimized for iPhone 15 to iPhone 15 Pro Max
-- **✨ Glassmorphism**: Modern iOS 2025 design aesthetics
-- **🎨 Design System**: Centralized tokens for colors, spacing, typography
-- **⚡ Smooth Animations**: Fluid transitions and haptic feedback
-- **🎪 Floating Elements**: Dynamic orbs and animated backgrounds
+- **🌙 Dark Mode**: Automatic light/dark theme switching with adaptive colors
+- **📱 Responsive Design**: Device-adaptive layouts for compact/regular/large screen sizes
+- **✨ Glassmorphism**: Modern iOS design aesthetics with blur effects
+- **🎨 Design System**: Centralized DesignTokens.swift for colors, spacing, typography
+- **⚡ Smooth Animations**: Fluid spring transitions with haptic feedback integration
+- **🎪 Floating Elements**: Dynamic orbs and animated gradient backgrounds
+- **♿ Accessibility**: VoiceOver support and Dynamic Type scaling
 
 ### Technical Excellence
 
-- **🏗️ MVVM Architecture**: Clean separation of concerns
-- **🔧 Modular Components**: Reusable UI components with 40% less code duplication
-- **📐 Responsive Layouts**: Adaptive spacing and typography
-- **🎯 Type Safety**: Comprehensive Swift type system usage
-- **♿ Accessibility**: VoiceOver and accessibility label support
-- **🌐 Network Layer**: HMAC-SHA256 authenticated API client with session management
-- **🔒 Security**: Keychain-based device identification and secure storage
+- **🏗️ MVVM + Clean-DI**: Architecture with dependency injection using @Environment
+- **🔧 Modular Components**: Reusable UI components with standardized styling
+- **📐 Responsive Layouts**: Three-tier device size system (compact/regular/large)
+- **🎯 Type Safety**: Comprehensive Swift 5.10 type system with async/await
+- **🌐 Network Layer**: URLSession-based API client with HMAC-SHA256 authentication
+- **🔒 Security**: Keychain-based device identification and UserDefaults caching
+- **⚡ Performance**: BackgroundDataPreloader with CacheManager for optimized loading
+- **🔌 Real-time**: WebSocket integration with SocketIO for live chat features
 
 ## 🚀 Quick Start
 
@@ -45,9 +48,10 @@
 
 ```text
 - Xcode 17+
-- iOS 15.6+ deployment target
+- iOS 16.0+ deployment target
 - Swift 5.10+
 - macOS Sonoma 14.0+
+- Swift Package Manager (SPM)
 ```
 
 ### Installation
@@ -69,43 +73,65 @@ open HomeAssistantPro.xcodeproj
 
 ```text
 HomeAssistantPro/
-├── HomeAssistantProApp.swift            # App entry point
+├── HomeAssistantProApp.swift            # App entry point with splash screen logic
 ├── 🧠 ViewModels/
 │   ├── AppViewModel.swift               # Global app state & authentication
-│   └── SettingsStore.swift             # Onboarding and user preferences
+│   ├── AnonymousRestrictionViewModel.swift # Anonymous user access management
+│   └── ImageViewerModal.swift           # Image viewing modal state
 ├── 🛠️ Utils/
-│   ├── DesignTokens.swift               # Colors, spacing, typography tokens
-│   ├── AnimationPresets.swift           # Consistent animations
+│   ├── DesignTokens.swift               # Complete design system (colors, spacing, typography)
+│   ├── AnimationPresets.swift           # Consistent spring animations
 │   ├── HapticManager.swift              # Haptic feedback patterns
 │   ├── SharedButtonStyles.swift         # Unified button behaviors
 │   ├── KeyboardDismissModifier.swift    # Keyboard handling utilities
 │   ├── LocalizationManager.swift       # Multi-language support
-│   └── DeviceIdentifier.swift          # Secure device ID management
+│   ├── DateUtils.swift                  # Date formatting utilities
+│   └── PhoneNumberUtils.swift           # Phone number validation
 ├── 🖥️ Views/
-│   ├── SplashView.swift                 # Modern glassmorphism splash screen
-│   ├── MainTabView.swift                # Tab navigation controller
-│   ├── HomeView.swift                   # Home dashboard
-│   ├── ForumView.swift                  # Community forum
-│   ├── ChatView.swift                   # Support chat
-│   ├── SettingsView.swift               # Settings & profile
-│   ├── LoginView.swift                  # Authentication interface
-│   ├── IntroView.swift                  # Onboarding flow
-│   ├── TopicDetailView.swift            # Forum topic details
-│   └── Components/                      # Reusable components
-│       ├── StandardTabHeader.swift      # Unified headers
-│       ├── StandardTabBackground.swift  # Animated backgrounds
-│       ├── GlassmorphismCard.swift      # Glass effect cards
-│       └── CustomConfirmationModal.swift # Configurable confirmation modals
+│   ├── SplashView.swift                 # Glassmorphism splash with floating orbs
+│   ├── Components/
+│   │   ├── MainTabView.swift            # Tab navigation controller
+│   │   ├── StandardTabHeader.swift      # Unified headers with glassmorphism
+│   │   ├── StandardTabBackground.swift  # Animated gradient backgrounds
+│   │   ├── GlassmorphismCard.swift      # Glass effect cards
+│   │   ├── CustomConfirmationModal.swift # Configurable confirmation modals
+│   │   └── ReviewStatusBadge.swift      # Post status indicators
+│   ├── HomeView.swift                   # Home dashboard with video player
+│   ├── Forum/
+│   │   ├── ForumView.swift              # Community forum with categories
+│   │   ├── TopicDetailView.swift        # Forum topic details with replies
+│   │   ├── CreatePostView.swift         # Post creation interface
+│   │   └── EditReplyView.swift          # Reply editing interface
+│   ├── ChatView.swift                   # Real-time WebSocket chat
+│   ├── SettingsView.swift               # Settings & profile management
+│   ├── Login/
+│   │   ├── AuthenticationView.swift     # Main auth flow controller
+│   │   ├── LoginView.swift              # Login interface
+│   │   └── RegisterView.swift           # Registration interface
+│   └── IntroView.swift                  # Onboarding flow
 ├── 🌐 Services/
-│   └── APIClient.swift                  # HMAC authenticated HTTP client
+│   ├── APIClient.swift                  # HMAC authenticated HTTP client
+│   ├── ForumService.swift               # Forum API integration
+│   ├── IMService.swift                  # Chat messaging service
+│   ├── SocketManager.swift              # WebSocket connection manager
+│   ├── SettingsStore.swift              # UserDefaults + Keychain wrapper
+│   ├── BackgroundDataPreloader.swift    # Performance optimization service
+│   └── CacheManager.swift               # Memory caching system
 ├── 📦 Models/
-│   └── AuthModels.swift                 # Authentication request/response models
-├── 📱 Extensions/
-│   └── ColorExtension.swift             # Color utilities
+│   ├── AuthModels.swift                 # Authentication request/response models
+│   ├── ForumModels.swift                # Forum post and topic models
+│   ├── IMModels.swift                   # Chat message models
+│   └── LocalVideoAssets.swift           # Video player models
+├── 🎬 Components/
+│   └── VideoPlayer/
+│       ├── VideoPlayerView.swift        # Main video player component
+│       ├── LocalVideoPlayer.swift       # Local video playback
+│       └── FullscreenVideoModal.swift   # Fullscreen video modal
 ├── 🏛️ Legacy/
 │   └── AppDelegate.swift                # Legacy app delegate
 └── 🧪 Tests/
     ├── HomeAssistantProTests/           # Unit tests
+    ├── SettingsStoreTests.swift         # Settings store test suite
     └── HomeAssistantProUITests/         # UI tests
 ```
 
@@ -115,19 +141,20 @@ HomeAssistantPro/
 
 The foundation of our design system providing:
 
-- **Adaptive Colors**: Automatic light/dark mode switching
-- **Responsive Spacing**: Device-aware spacing (iPhone 15 → Pro Max)
-- **Typography Scale**: Consistent font sizing and weights
-- **Shadow Presets**: Elevation system for depth
-- **Device Detection**: Screen size categorization
+- **Adaptive Colors**: Automatic light/dark mode switching with brand colors
+- **Responsive Spacing**: Three-tier device system (compact/regular/large)
+- **Typography Scale**: Device-aware font sizing with responsive scaling
+- **Shadow Presets**: Elevation system with adaptive opacity
+- **Device Detection**: Screen size categorization and responsive utilities
 
 #### 🧩 Component System
 
-- **StandardTabHeader**: Unified header component with ForumView-style layout
+- **StandardTabHeader**: Unified header with glassmorphism background
 - **StandardTabBackground**: Animated gradient backgrounds with floating orbs
-- **GlassmorphismCard**: Reusable card component with material effects
-- **CustomConfirmationModal**: Configurable confirmation dialogs with glassmorphism design
-- **SharedButtonStyles**: Centralized button behaviors and animations
+- **GlassmorphismCard**: Material design cards with blur effects
+- **CustomConfirmationModal**: Themed confirmation dialogs (.destructive/.primary/.success)
+- **ReviewStatusBadge**: Post status indicators with color coding
+- **VideoPlayerView**: Full-featured video player with fullscreen support
 
 ## 🎨 Design System
 
@@ -146,161 +173,179 @@ backgroundSecondary  #F8FAFC → #1A1A1A
 backgroundTertiary   #F4F4F5 → #262626
 ```
 
-### Responsive Spacing
+### Responsive Spacing System
 
 ```swift
-Device Sizes:
-- Compact (iPhone 15): Base spacing
-- Regular (iPhone 15 Plus): +20% spacing
-- Large (iPhone 15 Pro Max+): +40% spacing
+Device Categories:
+- Compact (<385pt width): iPhone SE, mini series - base spacing
+- Regular (385-415pt width): iPhone standard models - enhanced spacing  
+- Large (>415pt width): iPhone Plus/Pro Max - maximum spacing
 
-Examples:
-- Card padding: 20pt → 24pt → 28pt
-- Section spacing: 28pt → 32pt → 36pt
+Responsive Spacing Examples:
+- contentMargins(): 16pt → 20pt → 24pt
+- responsivePadding(): 12pt → 16pt → 20pt
+- Section spacing: 24pt → 28pt → 32pt
 ```
 
 ### Typography Scale
 
 ```swift
-// Responsive Typography
-Display Large:  32pt → 36pt → 40pt
-Heading Large:  24pt → 26pt → 28pt
-Body Large:     16pt → 17pt → 18pt
+// DesignTokens.ResponsiveTypography
+headingLarge:   28pt → 32pt → 36pt
+headingMedium:  24pt → 26pt → 28pt
+bodyLarge:      18pt → 19pt → 20pt
+bodyMedium:     16pt → 17pt → 18pt
+bodySmall:      14pt → 15pt → 16pt
+caption:        12pt → 13pt → 14pt
 ```
 
 ## 🔧 Development
+
+### Dependencies
+
+```swift
+// Package.swift - Swift Package Manager
+dependencies: [
+    .package(url: "https://github.com/socketio/socket.io-client-swift", from: "16.0.0")
+]
+```
 
 ### Building
 
 ```bash
 # Debug build
-xcodebuild -project HomeAssistantPro.xcodeproj -scheme HomeAssistantPro -destination 'platform=iOS Simulator,name=iPhone 15' build
+xcodebuild -project HomeAssistantPro.xcodeproj -scheme HomeAssistantPro -destination 'platform=iOS Simulator,name=iPhone 15 Pro' build
 
-# Release build
-xcodebuild -project HomeAssistantPro.xcodeproj -scheme HomeAssistantPro -configuration Release -destination 'platform=iOS Simulator,name=iPhone 15' build
+# Release build  
+xcodebuild -project HomeAssistantPro.xcodeproj -scheme HomeAssistantPro -configuration Release -destination 'platform=iOS Simulator,name=iPhone 15 Pro' build
 ```
 
 ### Testing
 
 ```bash
 # Run unit tests
-xcodebuild test -project HomeAssistantPro.xcodeproj -scheme HomeAssistantPro -destination 'platform=iOS Simulator,name=iPhone 15'
+xcodebuild test -project HomeAssistantPro.xcodeproj -scheme HomeAssistantPro -destination 'platform=iOS Simulator,name=iPhone 15 Pro'
 
 # Run UI tests
-xcodebuild test -project HomeAssistantPro.xcodeproj -scheme HomeAssistantProUITests -destination 'platform=iOS Simulator,name=iPhone 15'
+xcodebuild test -project HomeAssistantPro.xcodeproj -scheme HomeAssistantProUITests -destination 'platform=iOS Simulator,name=iPhone 15 Pro'
 ```
 
-### Code Quality
+### Code Quality Standards
 
-- **SwiftLint**: Enforced code style and best practices
-- **Type Safety**: Comprehensive use of Swift's type system
-- **MVVM Pattern**: Clear separation between View, ViewModel, and Model
-- **Component Reusability**: 40% reduction in code duplication
+- **SwiftLint**: Enforced strict code style and best practices
+- **swift-format**: Auto-formatting with Google style guidelines
+- **Type Safety**: Comprehensive Swift 5.10 type system usage
+- **MVVM + Clean-DI**: Clear separation with dependency injection
+- **Async/Await**: Structured concurrency, no Combine usage
+- **os.Logger**: Unified logging with subsystem tagging
 
 ## 🔐 Authentication & Network Architecture
 
 ### Security Implementation
 
 - **Device Identification**: UUID-based device ID stored securely in iOS Keychain
-- **HMAC Authentication**: SHA-256 signature validation for all API requests
-- **App Transport Security**: HTTP exception configured for backend server
-- **Session Persistence**: UserDefaults for login state, Keychain for sensitive data
+- **HMAC Authentication**: SHA-256 signature validation for all API requests  
+- **Session Management**: UserDefaults for state, Keychain for sensitive data
+- **Anonymous + Registered**: Dual authentication modes with permission restrictions
 
-### API Integration
+### API Integration & Services
 
 ```swift
-// Anonymous Login Flow
-DeviceID (Keychain) → Backend API → UserID (UserDefaults) → Session State
+// Service Architecture
+APIClient (HMAC Auth) → ForumService/IMService → ViewModels → SwiftUI Views
+                     ↳ SocketManager (WebSocket) → Real-time Chat
 ```
 
-### Session Management
+### Network Layer Services
 
-- **Lazy Validation**: Session checked only when API calls are made
-- **Automatic Restoration**: App remembers login state across launches
-- **Session Expiry**: Global handler for expired sessions with auto-logout
-- **Network Resilience**: Graceful handling of connectivity issues
+- **APIClient**: URLSession-based HTTP client with HMAC-SHA256 authentication
+- **ForumService**: Forum posts, topics, replies API integration
+- **IMService**: Chat messaging service with real-time capabilities  
+- **SocketManager**: WebSocket connection management using SocketIO
+- **BackgroundDataPreloader**: Performance optimization with CacheManager
 
-### Backend Communication
+### Session & Cache Management
 
-- **Base URL**: `http://47.94.108.189:10000`
-- **Authentication Headers**: `X-Timestamp`, `X-Signature`
-- **API Endpoints**: `/api/auth/anonymous`, `/api/auth/logout`
-- **Error Handling**: Standardized error responses with user feedback
+- **SettingsStore**: UserDefaults + Keychain wrapper for user data
+- **CacheManager**: Memory-based caching with 30-minute expiration
+- **Automatic Restoration**: Persistent login state across app launches
+- **Permission System**: Anonymous users have view-only access restrictions
 
-#### Features
+## 📱 Device Support & Compatibility
 
-- **Three Themes**: Destructive (red), Primary (cyan), Success (green)
-- **Background Blur**: Blurs and blocks interaction with content behind modal
-- **Smooth Animations**: Spring-based scale and opacity transitions
-- **Configurable Content**: Custom titles, messages, icons, and button text
-- **Haptic Feedback**: Built-in haptic responses for all interactions
-- **Tap Outside**: Dismisses modal when tapping backdrop
-- **Glassmorphism Design**: Matches app's overall visual aesthetic
+### Supported Device Categories
 
-## 📱 Device Support
+```swift
+// DesignTokens.DeviceSize detection
+.compact: <385pt width  (iPhone SE, mini series)
+.regular: 385-415pt     (iPhone 12-15 standard)  
+.large:   >415pt width  (iPhone Plus/Pro Max series)
+```
 
-### Screen Sizes
+### iOS Compatibility
 
-- **iPhone 15 (Compact)**: 393pt width - base spacing
-- **iPhone 15 Plus (Regular)**: 430pt width - enhanced spacing  
-- **iPhone 15 Pro Max (Large)**: 430pt+ width - maximum spacing
+- **iOS 16.0+**: Minimum deployment target (updated from 15.6+)
+- **iOS 18.0+**: Recommended for optimal performance
+- **Swift 5.10**: Latest language features and concurrency
+- **SwiftUI**: Native UI framework with backward compatibility
 
-### OS Support
+### Accessibility & Responsive Design
 
-- **iOS 15.6+**: Minimum deployment target
-- **iOS 18.0+**: Recommended for latest features
-- **Dark Mode**: Automatic system theme detection
-- **Dynamic Type**: Accessibility font scaling support
+- **Dark Mode**: Automatic system theme detection with adaptive colors
+- **Dynamic Type**: Font scaling support for accessibility
+- **VoiceOver**: Screen reader compatibility
+- **Responsive Layouts**: Auto-adapting to screen sizes and orientations
 
-## 🎯 Key Achievements
+## 🎯 Technical Achievements
 
-### Performance Optimizations
+### Architecture & Performance
 
-- **40% Code Reduction**: Eliminated duplicate styling code
-- **Centralized Design**: Single source of truth for all visual elements
-- **Responsive Layouts**: Automatic adaptation to screen sizes
-- **Material Efficiency**: Proper glassmorphism performance
+- **MVVM + Clean-DI**: Structured architecture with dependency injection
+- **Centralized Design System**: DesignTokens.swift eliminates styling inconsistencies  
+- **Background Preloading**: 3-second splash screen preloads forum data
+- **Memory Caching**: CacheManager reduces redundant API calls
+- **Responsive Design**: Automatic adaptation across device sizes
 
-### User Experience
+### User Experience Excellence
 
-- **Seamless Dark Mode**: No manual switching required
-- **Consistent Interactions**: Unified haptic feedback patterns
-- **Smooth Animations**: 60fps fluid transitions
-- **Accessibility**: VoiceOver and Dynamic Type support
+- **Seamless Authentication**: Anonymous and registered modes with session persistence
+- **Real-time Communication**: WebSocket-powered chat with typing indicators
+- **Glassmorphism UI**: Modern iOS design with blur effects and floating animations
+- **Accessibility First**: VoiceOver, Dynamic Type, and responsive layouts
+- **Haptic Integration**: Consistent tactile feedback throughout the app
 
-## 🚀 Recent Updates
+## 🚀 Version History
 
-### v2.2.0 (July 5, 2025)
+### v2.2.0 (Current - July 21, 2025)
 
-- **✨ Modern Splash Screen**: Glassmorphism design with floating orb animations
-- **🎪 Launch Experience**: Smooth transitions with haptic feedback integration
-- **🌈 Adaptive Design**: Responsive animations that scale with device size
-- **🔧 Enhanced Navigation**: Seamless app flow from splash to main content
+- **🔌 WebSocket Integration**: Real-time chat with SocketIO and typing indicators
+- **📹 Video Player**: Full-featured video player with fullscreen modal support
+- **🎨 Enhanced Components**: ReviewStatusBadge and improved forum interfaces
+- **📱 Chat System**: Complete instant messaging with message management
+- **⚡ Performance**: BackgroundDataPreloader with CacheManager optimization
 
 ### v2.1.0 (July 4, 2025)
 
-- **🌐 Network Integration**: Real API authentication with backend server
-- **🔐 Anonymous Login**: Persistent session management with secure device identification
-- **🔒 Security**: HMAC-SHA256 authenticated requests with app-level validation
-- **💾 Session Persistence**: Automatic login state restoration across app launches
-- **⚡ Lazy Validation**: Efficient session validation only when needed
-- **🔄 Logout Feature**: Secure logout with custom confirmation modal
-- **🎨 Reusable Modals**: CustomConfirmationModal component with multiple themes
+- **🌐 Network Integration**: Complete API authentication with backend server
+- **🔐 Dual Authentication**: Anonymous and registered login modes
+- **🔒 Security**: HMAC-SHA256 authenticated requests with device identification
+- **💾 Session Persistence**: Automatic login state restoration via SettingsStore
+- **🎨 Confirmation System**: CustomConfirmationModal with themed variants
 
 ### v2.0.0 (June 26, 2025)
 
-- **✨ Dark Mode**: Complete adaptive color system
-- **📱 Responsive Design**: Multi-device screen support
-- **🎨 Design System**: Centralized tokens and components
-- **⚡ Performance**: 40% code duplication reduction
-- **🎪 Animations**: Smooth transitions and haptic feedback
+- **✨ Design System**: Complete DesignTokens.swift implementation
+- **🌙 Dark Mode**: Adaptive color system with light/dark switching
+- **📱 Responsive Design**: Three-tier device size system (compact/regular/large)
+- **🎪 Glassmorphism**: Modern UI with blur effects and floating animations
+- **🏗️ Architecture**: MVVM + Clean-DI with dependency injection
 
 ### v1.0.0 (March 3, 2025)
 
-- **🏗️ Initial Release**: Core MVVM architecture
-- **🎬 Intro Views**: Onboarding flow implementation
-- **📱 Tab Navigation**: Four-tab app structure
-- **🔐 Authentication**: Login and anonymous mode
+- **🏗️ Foundation**: Initial MVVM architecture setup
+- **🎬 Onboarding**: Complete intro flow and authentication system
+- **📱 Navigation**: Four-tab app structure with SwiftUI
+- **🔐 Authentication**: Basic login and anonymous mode implementation
 
 ## 📄 License
 

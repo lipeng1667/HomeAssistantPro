@@ -174,10 +174,10 @@ struct ForumView: View {
                         confirmText: restrictionViewModel.restrictedAction.primaryButtonText,
                         cancelText: restrictionViewModel.restrictedAction.secondaryButtonText,
                         onConfirm: {
-                            restrictionViewModel.navigateToRegistration()
+                            restrictionViewModel.navigateToLogin(appViewModel: appViewModel)
                         },
                         onCancel: {
-                            restrictionViewModel.navigateToLogin()
+                            restrictionViewModel.dismissModal()
                         }
                     )
                 )
