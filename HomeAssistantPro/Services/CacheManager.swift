@@ -205,6 +205,11 @@ class CacheManager {
         logger.info("Cleared chat history cache from memory")
     }
     
+    /// Public method to clear chat history cache (called during logout)
+    func clearChatCache() {
+        clearChatHistoryCache()
+    }
+    
     /// Clears all cached data
     func clearAllCache() {
         clearForumTopicsCache()

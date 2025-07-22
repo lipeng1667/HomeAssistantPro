@@ -53,9 +53,10 @@ class BackgroundDataPreloader: ObservableObject {
     // MARK: - Public Methods
     
     /// Starts background preloading of essential app data
+    /// - Parameter isAnonymousUser: Whether the current user is anonymous (skips chat preloading if true)
     /// - Note: This method is non-blocking and runs in background
-    func startPreloading() {
-        logger.info("Starting background data preloading")
+    func startPreloading(isAnonymousUser: Bool = false) {
+        logger.info("Starting background data preloading (anonymous: \(isAnonymousUser))")
         
         // Cancel any existing preloading tasks
         stopPreloading()
@@ -69,19 +70,34 @@ class BackgroundDataPreloader: ObservableObject {
             await preloadCategories()
         }
         
-        let chatTask = Task {
-            await preloadChatHistory()
+        // Only preload chat history for authenticated users
+        var tasks = [forumTask, categoriesTask]
+        
+        if !isAnonymousUser {
+            let chatTask = Task {
+                await preloadChatHistory()
+            }
+            tasks.append(chatTask)
+            logger.info("Including chat history preloading for authenticated user")
+        } else {
+            logger.info("Skipping chat history preloading for anonymous user")
         }
         
         // Store tasks for potential cancellation
-        preloadingTasks = [forumTask, categoriesTask, chatTask]
+        preloadingTasks = tasks
         
         // Monitor completion
         Task {
             await withTaskGroup(of: Void.self) { group in
                 group.addTask { await forumTask.value }
                 group.addTask { await categoriesTask.value }
-                group.addTask { await chatTask.value }
+                
+                // Only wait for chat task if it was created
+                if !isAnonymousUser {
+                    if let chatTask = tasks.last {
+                        group.addTask { await chatTask.value }
+                    }
+                }
             }
             
             await MainActor.run {

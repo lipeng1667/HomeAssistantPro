@@ -143,6 +143,9 @@ final class AppViewModel: ObservableObject {
             isLoggedIn = false
             isUserLoggedIn = false // Clear from UserDefaults
             
+            // Clear chat cache to prevent data leakage between users
+            CacheManager.shared.clearChatCache()
+            
             logger.info("Logout successful")
             isLoading = false
             return true
@@ -160,6 +163,10 @@ final class AppViewModel: ObservableObject {
             currentUser = nil
             isLoggedIn = false
             isUserLoggedIn = false // Clear from UserDefaults
+            
+            // Clear chat cache to prevent data leakage between users
+            CacheManager.shared.clearChatCache()
+            
             isLoading = false
             return false
         } catch {
@@ -170,6 +177,10 @@ final class AppViewModel: ObservableObject {
             currentUser = nil
             isLoggedIn = false
             isUserLoggedIn = false // Clear from UserDefaults
+            
+            // Clear chat cache to prevent data leakage between users
+            CacheManager.shared.clearChatCache()
+            
             isLoading = false
             return false
         }

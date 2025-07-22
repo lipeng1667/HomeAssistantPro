@@ -34,8 +34,9 @@ struct SplashView: View {
     /// Callback when splash screen completes
     let onComplete: () -> Void
     
-    // Services
+    // Services and ViewModels
     @Environment(\.backgroundDataPreloader) private var backgroundDataPreloader
+    @EnvironmentObject private var appViewModel: AppViewModel
     private let logger = Logger(subsystem: "com.homeassistant.ios", category: "SplashView")
     
     var body: some View {
@@ -250,9 +251,9 @@ struct SplashView: View {
     private func startAnimations() {
         logger.info("Starting splash screen animations")
         
-        // Start background data preloading immediately
-        backgroundDataPreloader.startPreloading()
-        logger.info("Background data preloading initiated")
+        // Start background data preloading immediately (skip chat for anonymous users)
+        backgroundDataPreloader.startPreloading(isAnonymousUser: appViewModel.isAnonymousUser)
+        logger.info("Background data preloading initiated (anonymous: \(appViewModel.isAnonymousUser))")
         
         // Haptic feedback for app launch
         HapticManager.soft()

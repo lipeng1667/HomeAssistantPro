@@ -149,6 +149,20 @@ struct ChatView: View {
                 }
             }
         }
+        .onChange(of: appViewModel.isAnonymousUser) { isAnonymous in
+            print("💬 CHAT: User status changed, isAnonymous: \(isAnonymous)")
+            
+            if isAnonymous {
+                // User became anonymous (logged out) - clear all chat data
+                clearChatData()
+            } else {
+                // User is no longer anonymous (logged in) - load fresh data
+                if !hasLoadedInitialData {
+                    loadInitialData()
+                    hasLoadedInitialData = true
+                }
+            }
+        }
         .dismissKeyboardOnSwipeDown()
         .overlay {
             if restrictionViewModel.showModal {
@@ -213,35 +227,65 @@ struct ChatView: View {
         ScrollViewReader { proxy in
             ScrollView {
                 LazyVStack(spacing: 16) {
-                    // Pull-to-refresh indicator for loading older messages
-                    if isLoadingMore {
-                        ProgressView("Loading older messages...")
-                            .frame(maxWidth: .infinity)
-                            .foregroundColor(.secondary)
-                            .padding(.vertical, 8)
-                    }
-                    
-                    // Loading indicator for initial load
-                    if isLoading {
-                        ProgressView("Loading messages...")
-                            .frame(maxWidth: .infinity, maxHeight: .infinity)
-                            .foregroundColor(.secondary)
-                    }
-                    
-                    ForEach(messages) { message in
-                        MessageBubble(message: message)
-                            .transition(.asymmetric(
-                                insertion: .move(edge: .bottom).combined(with: .opacity),
-                                removal: .move(edge: .top).combined(with: .opacity)
-                            ))
-                            .id(message.id)
-                    }
-                    
-                    // Typing indicator
-                    if isTyping {
-                        TypingIndicator()
-                            .transition(.scale.combined(with: .opacity))
-                            .id("typing-indicator")
+                    // Show empty state for anonymous users
+                    if appViewModel.isAnonymousUser {
+                        VStack(spacing: 24) {
+                            Spacer()
+                            
+                            // Chat icon
+                            Image(systemName: "message.fill")
+                                .font(.system(size: 48, weight: .light))
+                                .foregroundColor(DesignTokens.Colors.primaryGreen.opacity(0.6))
+                            
+                            // Message
+                            VStack(spacing: 12) {
+                                Text("Chat with Support")
+                                    .font(DesignTokens.ResponsiveTypography.headingLarge)
+                                    .foregroundColor(DesignTokens.Colors.textPrimary)
+                                
+                                Text("Log in to view your chat history and get help from our support team.")
+                                    .font(DesignTokens.ResponsiveTypography.bodyLarge)
+                                    .foregroundColor(DesignTokens.Colors.textSecondary)
+                                    .multilineTextAlignment(.center)
+                                    .padding(.horizontal, 32)
+                            }
+                            
+                            Spacer()
+                        }
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    } else {
+                        // Show normal chat messages for logged-in users
+                        
+                        // Pull-to-refresh indicator for loading older messages
+                        if isLoadingMore {
+                            ProgressView("Loading older messages...")
+                                .frame(maxWidth: .infinity)
+                                .foregroundColor(.secondary)
+                                .padding(.vertical, 8)
+                        }
+                        
+                        // Loading indicator for initial load
+                        if isLoading {
+                            ProgressView("Loading messages...")
+                                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                                .foregroundColor(.secondary)
+                        }
+                        
+                        ForEach(messages) { message in
+                            MessageBubble(message: message)
+                                .transition(.asymmetric(
+                                    insertion: .move(edge: .bottom).combined(with: .opacity),
+                                    removal: .move(edge: .top).combined(with: .opacity)
+                                ))
+                                .id(message.id)
+                        }
+                        
+                        // Typing indicator
+                        if isTyping {
+                            TypingIndicator()
+                                .transition(.scale.combined(with: .opacity))
+                                .id("typing-indicator")
+                        }
                     }
                 }
                 .padding(.horizontal, DesignTokens.ResponsiveSpacing.sm)
@@ -453,6 +497,13 @@ struct ChatView: View {
     // MARK: - Data Loading
     
     private func loadInitialData() {
+        // Check if user is anonymous first - don't load any chat data for anonymous users
+        if appViewModel.isAnonymousUser {
+            print("💬 CHAT: Anonymous user detected, skipping chat history loading")
+            clearChatData()
+            return
+        }
+        
         // Get current user ID from app view model
         guard let userId = getUserId() else {
             errorMessage = "User not authenticated"
@@ -603,6 +654,43 @@ struct ChatView: View {
         
         // Wait for the task to complete
         await loadMoreTask?.value
+    }
+    
+    /// Clears all chat data and state (used for anonymous users and logout)
+    private func clearChatData() {
+        print("💬 CHAT: Clearing all chat data and state")
+        
+        // Clear messages
+        messages.removeAll()
+        
+        // Reset pagination state
+        currentPage = 1
+        hasMoreMessages = true
+        
+        // Clear loading states
+        isLoading = false
+        isLoadingMore = false
+        isLoadingOlderMessages = false
+        
+        // Clear input state
+        message = ""
+        isTyping = false
+        
+        // Clear error state
+        errorMessage = nil
+        
+        // Cancel any ongoing tasks
+        loadMoreTask?.cancel()
+        loadMoreTask = nil
+        
+        // Disconnect WebSocket
+        socketManager.disconnect()
+        
+        // Clear IM service user ID
+        imService.setCurrentUserId(nil)
+        
+        // Reset data loading flag to allow fresh load on next login
+        hasLoadedInitialData = false
     }
     
     

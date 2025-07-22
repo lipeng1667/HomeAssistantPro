@@ -288,8 +288,8 @@ class IMService: ObservableObject {
     }
     
     /// Set current user ID
-    /// - Parameter userId: User ID to set
-    func setCurrentUserId(_ userId: Int) {
+    /// - Parameter userId: User ID to set (or nil to clear)
+    func setCurrentUserId(_ userId: Int?) {
         currentUserId = userId
     }
     
