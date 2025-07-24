@@ -235,8 +235,8 @@ final class APIClient {
             // Store updated user ID and profile data
             do {
                 try settingsStore.storeUserId(String(response.data.user.id))
-                // Store profile data with registered status (2)
-                settingsStore.storeUserProfile(status: 2, accountName: accountName, phoneNumber: phoneNumber)
+                // Store profile data with actual status from API (default to registered if missing)
+                settingsStore.storeUserProfile(status: response.data.user.status ?? 2, accountName: accountName, phoneNumber: phoneNumber)
                 logger.info("User ID and profile data stored successfully after registration")
             } catch {
                 logger.error("Failed to store user credentials after registration: \(error.localizedDescription)")
@@ -260,7 +260,7 @@ final class APIClient {
     ///   - password: Plain text password (will be double-hashed)
     /// - Returns: LoginResponse with user information
     /// - Throws: APIError for login failures
-    func login(userId: String, phoneNumber: String, password: String) async throws -> LoginResponse {
+    func login(userId: String?, phoneNumber: String, password: String) async throws -> LoginResponse {
         // Generate timestamp once for both password hashing and request headers
         let timestamp = String(Int(Date().timeIntervalSince1970 * 1000))
         
@@ -280,15 +280,15 @@ final class APIClient {
         switch statusCode {
         case 200:
             let response = try JSONDecoder().decode(LoginResponse.self, from: data)
-            logger.info("Login successful for user: \(userId)")
+            logger.info("Login successful for phone: \(phoneNumber), user_id: \(response.data.user.id)")
             
             // Store user ID and update status to registered (in case it changed)
             do {
                 try settingsStore.storeUserId(String(response.data.user.id))
-                // Update status to registered (2) and preserve existing profile data
+                // Update status with actual API response and preserve existing profile data
                 let existingAccountName = settingsStore.retrieveAccountName()
                 let existingPhoneNumber = settingsStore.retrievePhoneNumber()
-                settingsStore.storeUserProfile(status: 2, accountName: existingAccountName, phoneNumber: existingPhoneNumber ?? phoneNumber)
+                settingsStore.storeUserProfile(status: response.data.user.status ?? 2, accountName: existingAccountName ?? response.data.user.name, phoneNumber: existingPhoneNumber ?? phoneNumber)
                 logger.info("User ID confirmed and status updated after login")
             } catch {
                 logger.error("Failed to store user credentials after login: \(error.localizedDescription)")

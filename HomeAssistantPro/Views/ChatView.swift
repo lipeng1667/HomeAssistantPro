@@ -577,9 +577,15 @@ struct ChatView: View {
     }
     
     private func getUserId() -> Int? {
-        // Try to get user ID from app view model or authentication service
-        // This is a placeholder - you'll need to implement based on your auth system
-        return 53 // Placeholder user ID
+        // Get user ID from stored authentication
+        let settingsStore = SettingsStore()
+        guard let userIdString = try? settingsStore.retrieveUserId(),
+              let userId = Int(userIdString) else {
+            print("No valid user ID found for chat")
+            return nil
+        }
+        print("Using user ID \(userId) for chat")
+        return userId
     }
     
     /// Load older messages for pagination (triggered by pull-to-refresh)

@@ -486,18 +486,8 @@ struct ModernLoginView: View {
         
         hapticFeedback(.medium)
         
-        // Check if user has a stored user ID from previous sessions
-        guard let userId = appViewModel.currentUserId, !userId.isEmpty else {
-            withAnimation(.easeInOut(duration: 0.3)) {
-                isLoading = false
-                showError = true
-                errorMessage = "Please register for an account first or continue as guest to get started."
-            }
-            
-            let notificationFeedback = UINotificationFeedbackGenerator()
-            notificationFeedback.notificationOccurred(.error)
-            return
-        }
+        // Get stored user ID if available (optional for login)
+        let userId = appViewModel.currentUserId
         
         // Remove spaces from phone number for API
         let cleanPhoneNumber = phoneNumber.replacingOccurrences(of: " ", with: "")
@@ -505,7 +495,7 @@ struct ModernLoginView: View {
         Task {
             do {
                 let response = try await APIClient.shared.login(
-                    userId: userId,
+                    userId: userId, // Optional - can be nil for first-time login on this device
                     phoneNumber: cleanPhoneNumber,
                     password: password
                 )
@@ -522,16 +512,19 @@ struct ModernLoginView: View {
                     appViewModel.currentUserId = String(response.data.user.id)
                     appViewModel.isLoggedIn = true
                     appViewModel.isUserLoggedIn = true // Persist login state to UserDefaults
+                    print("DEBUG LOGIN: Set appViewModel state - currentUserId: \(String(response.data.user.id)), isLoggedIn: true, isUserLoggedIn: true")
                     
                     // Create registered user object with available data
                     // Note: APIClient already stored the profile data in SettingsStore
-                    appViewModel.currentUser = User(
+                    let newUser = User(
                         id: response.data.user.id,
                         deviceId: nil, // Will be populated from SettingsStore
-                        status: 2, // Registered user
+                        status: response.data.user.status ?? 2, // Use actual status from API, default to registered if missing
                         accountName: response.data.user.name, // Will be restored from SettingsStore
                         phoneNumber: cleanPhoneNumber
                     )
+                    appViewModel.currentUser = newUser
+                    print("DEBUG LOGIN: Set currentUser to \(newUser.id), name: \(newUser.accountName ?? "nil"), status: \(newUser.status)")
                 }
             } catch {
                 await MainActor.run {

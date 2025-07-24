@@ -251,9 +251,10 @@ struct SplashView: View {
     private func startAnimations() {
         logger.info("Starting splash screen animations")
         
-        // Start background data preloading immediately (skip chat for anonymous users)
-        backgroundDataPreloader.startPreloading(isAnonymousUser: appViewModel.isAnonymousUser)
-        logger.info("Background data preloading initiated (anonymous: \(appViewModel.isAnonymousUser))")
+        // Start background data preloading immediately (skip chat for users without valid authentication)
+        let shouldSkipChat = appViewModel.currentUser == nil || appViewModel.isAnonymousUser
+        backgroundDataPreloader.startPreloading(isAnonymousUser: shouldSkipChat)
+        logger.info("Background data preloading initiated (skip chat: \(shouldSkipChat), currentUser: \(appViewModel.currentUser?.id ?? -1), status: \(appViewModel.currentUser?.status ?? -1))")
         
         // Haptic feedback for app launch
         HapticManager.soft()

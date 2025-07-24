@@ -195,6 +195,7 @@ final class AppViewModel: ObservableObject {
     
     /// Restores login state from secure storage on app launch
     private func restoreLoginState() {
+        logger.info("DEBUG RESTORE: Restoring login state - isUserLoggedIn: \(self.isUserLoggedIn), currentUserId: \(self.currentUserId ?? "nil")")
         if isUserLoggedIn, let userId = currentUserId {
             // Restore user session from stored data
             do {
@@ -203,15 +204,19 @@ final class AppViewModel: ObservableObject {
                 let accountName = settingsStore.retrieveAccountName()
                 let phoneNumber = settingsStore.retrievePhoneNumber()
                 
-                currentUser = User(
+                logger.info("DEBUG RESTORE: Retrieved data - userId: \(userId), userStatus: \(userStatus), accountName: \(accountName ?? "nil")")
+                
+                let restoredUser = User(
                     id: Int(userId) ?? 0,
                     deviceId: deviceId,
                     status: userStatus,
                     accountName: accountName,
                     phoneNumber: phoneNumber
                 )
+                currentUser = restoredUser
+                logger.info("DEBUG RESTORE: Set currentUser to \(restoredUser.id), name: \(restoredUser.accountName ?? "nil"), status: \(restoredUser.status)")
             } catch {
-                logger.error("Failed to restore device ID: \(error.localizedDescription)")
+                logger.error("DEBUG RESTORE: Failed to restore device ID: \(error.localizedDescription)")
                 // Fallback to logged out state if device ID cannot be retrieved
                 isLoggedIn = false
                 return

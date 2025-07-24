@@ -757,7 +757,7 @@ struct RegisterView: View {
                     appViewModel.currentUser = User(
                         id: response.data.user.id,
                         deviceId: nil, // Will be populated on next app launch
-                        status: 2, // Registered user
+                        status: response.data.user.status ?? 2, // Use actual status from API, default to registered if missing
                         accountName: fullName,
                         phoneNumber: phoneNumber
                     )

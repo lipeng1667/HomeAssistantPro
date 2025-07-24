@@ -30,18 +30,21 @@ struct SettingsView: View {
     
     /// Display name based on user authentication status
     private var displayName: String {
+        print("DEBUG SETTINGS: Checking currentUser: \(appViewModel.currentUser?.id ?? -1)")
         guard let currentUser = appViewModel.currentUser else { 
-            print("DEBUG: No currentUser found")
+            print("DEBUG SETTINGS: No currentUser found - appViewModel.currentUser is nil")
             return "Not Logged In" 
         }
         
-        print("DEBUG: User status = \(currentUser.status), userStatus = \(currentUser.userStatus)")
+        print("DEBUG SETTINGS: Found currentUser - id: \(currentUser.id), name: \(currentUser.accountName ?? "nil"), status: \(currentUser.status), userStatus: \(currentUser.userStatus)")
         
         switch currentUser.userStatus {
         case .anonymous:
             return "Guest User"
         case .registered:
             return currentUser.accountName ?? "Registered User"
+        case .admin:
+            return currentUser.accountName ?? "Administrator"
         case .notLoggedIn:
             return "Not Logged In"
         }
@@ -56,6 +59,8 @@ struct SettingsView: View {
             return "Anonymous Access"
         case .registered:
             return "Premium Member"
+        case .admin:
+            return "Administrator"
         case .notLoggedIn:
             return "Offline"
         }
@@ -70,6 +75,8 @@ struct SettingsView: View {
             return DesignTokens.Colors.primaryAmber
         case .registered:
             return DesignTokens.Colors.primaryGreen
+        case .admin:
+            return Color.init(red: 1.0, green: 0.84, blue: 0.0) // Gold color for admin
         case .notLoggedIn:
             return DesignTokens.Colors.primaryRed
         }
@@ -84,6 +91,8 @@ struct SettingsView: View {
             return "person.crop.circle.dashed"
         case .registered:
             return "person.fill"
+        case .admin:
+            return "crown.fill" // Crown icon for admin
         case .notLoggedIn:
             return "person.slash"
         }
@@ -102,6 +111,8 @@ struct SettingsView: View {
             } else {
                 return "Member since registration"
             }
+        case .admin:
+            return "Full system access • Can moderate content"
         case .notLoggedIn:
             return nil
         }
@@ -213,6 +224,8 @@ struct SettingsView: View {
                             switch currentUser.userStatus {
                             case .registered:
                                 quickInfoItem(icon: "checkmark.shield.fill", text: "Verified", color: DesignTokens.Colors.primaryGreen)
+                            case .admin:
+                                quickInfoItem(icon: "star.fill", text: "Admin", color: Color.init(red: 1.0, green: 0.84, blue: 0.0))
                             case .anonymous:
                                 quickInfoItem(icon: "eye.fill", text: "View Only", color: DesignTokens.Colors.primaryAmber)
                             case .notLoggedIn:
@@ -232,6 +245,40 @@ struct SettingsView: View {
                     HStack(spacing: DesignTokens.ResponsiveSpacing.md) {
                         if let currentUser = appViewModel.currentUser {
                             switch currentUser.userStatus {
+                            case .admin:
+                                Button(action: {
+                                    // Admin-specific settings could go here
+                                    HapticManager.buttonTap()
+                                }) {
+                                    HStack(spacing: DesignTokens.DeviceSize.current.spacing(6, 7, 8)) {
+                                        Image(systemName: "gearshape.2.fill")
+                                            .font(.system(size: DesignTokens.DeviceSize.current.fontSize(11, 12.5, 14), weight: .semibold))
+                                        
+                                        Text("Admin Settings")
+                                            .font(DesignTokens.ResponsiveTypography.buttonMedium)
+                                    }
+                                    .foregroundColor(.white)
+                                    .responsiveHorizontalPadding(12, 16, 20)
+                                    .responsiveVerticalPadding(10, 12, 14)
+                                    .frame(maxWidth: .infinity)
+                                    .background(
+                                        RoundedRectangle(cornerRadius: DesignTokens.DeviceSize.current.spacing(10, 11, 12))
+                                            .fill(
+                                                LinearGradient(
+                                                    colors: [Color.init(red: 1.0, green: 0.84, blue: 0.0), Color.init(red: 1.0, green: 0.84, blue: 0.0).opacity(0.8)],
+                                                    startPoint: .topLeading,
+                                                    endPoint: .bottomTrailing
+                                                )
+                                            )
+                                            .shadow(
+                                                color: Color.init(red: 1.0, green: 0.84, blue: 0.0).opacity(0.3),
+                                                radius: DesignTokens.DeviceSize.current.spacing(6, 7, 8),
+                                                x: 0,
+                                                y: DesignTokens.DeviceSize.current.spacing(3, 3.5, 4)
+                                            )
+                                    )
+                                }
+                                .enhancedButtonStyle()
                             case .anonymous:
                                 Button(action: {
                                     restrictionViewModel.showRestrictionModal(for: .upgradeAccount)

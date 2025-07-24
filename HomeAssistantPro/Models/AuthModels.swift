@@ -93,7 +93,7 @@ struct RegisterRequest: Codable {
 
 /// Request payload for user login
 struct LoginRequest: Codable {
-    let userId: String
+    let userId: String?
     let phoneNumber: String
     let password: String
     
@@ -105,11 +105,11 @@ struct LoginRequest: Codable {
     
     /// Creates login request with double-hashed password
     /// - Parameters:
-    ///   - userId: User ID from previous session
+    ///   - userId: Optional user ID from previous session (can be nil for first-time login on device)
     ///   - phoneNumber: User's phone number
     ///   - password: Plain text password (will be double-hashed)
     ///   - timestamp: Current timestamp for password hashing
-    init(userId: String, phoneNumber: String, password: String, timestamp: String) {
+    init(userId: String?, phoneNumber: String, password: String, timestamp: String) {
         self.userId = userId
         self.phoneNumber = phoneNumber
         self.password = Self.hashPasswordWithTimestamp(password, timestamp: timestamp)
@@ -169,7 +169,8 @@ struct LoginResponse: Codable {
         
         struct User: Codable {
             let id: Int
-            let name: String
+            let name: String?
+            let status: Int?
         }
     }
 }
@@ -193,13 +194,30 @@ enum UserStatus: Int, Codable {
     case notLoggedIn = 0    // Default state, not logged in
     case anonymous = 1      // Anonymous user, view-only access
     case registered = 2     // Registered user, full access
+    case admin = 87         // Admin user, can moderate posts and chat as support agent
     
     var description: String {
         switch self {
         case .notLoggedIn: return "Not Logged In"
         case .anonymous: return "Anonymous User"
         case .registered: return "Registered User"
+        case .admin: return "Administrator"
         }
+    }
+    
+    /// Whether this user has admin privileges
+    var isAdmin: Bool {
+        return self == .admin
+    }
+    
+    /// Whether this user can moderate content
+    var canModerate: Bool {
+        return self == .admin
+    }
+    
+    /// Whether this user can act as support agent in chat
+    var canProvideSupportChat: Bool {
+        return self == .admin
     }
 }
 

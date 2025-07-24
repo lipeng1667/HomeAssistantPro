@@ -195,8 +195,15 @@ class BackgroundDataPreloader: ObservableObject {
     private func preloadChatHistory() async {
         logger.info("Starting chat history preload")
         
-        // Get user ID for chat history (placeholder - you'll need to implement proper user ID retrieval)
-        let userId = 53 // TODO: Replace with actual user ID from authentication
+        // Get user ID from stored authentication
+        let settingsStore = SettingsStore()
+        guard let userIdString = try? settingsStore.retrieveUserId(),
+              let userId = Int(userIdString) else {
+            logger.warning("No valid user ID found, skipping chat history preload")
+            return
+        }
+        
+        logger.info("Preloading chat history for user ID: \(userId)")
         
         do {
             let messages = try await imService.fetchMessages(userId: userId, page: 1, limit: 20)
