@@ -569,7 +569,7 @@ struct EditReplyView: View {
         reply: ForumReply(
             id: 1,
             content: "This is a test reply content",
-            author: ForumAuthor(id: 1, name: "Test User"),
+            author: ForumAuthor(id: 1, name: "Test User", status: 0),
             parentReplyId: nil,
             parentReply: nil,
             likeCount: 3,

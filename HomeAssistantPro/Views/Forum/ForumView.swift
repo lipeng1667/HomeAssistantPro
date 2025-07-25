@@ -24,6 +24,7 @@ struct ForumView: View {
     @State private var showCreateMenu = false
     @StateObject private var draftManager = DraftManager.shared
     @StateObject private var restrictionViewModel = AnonymousRestrictionViewModel()
+    @StateObject private var moderationViewModel = AdminModerationViewModel()
     @EnvironmentObject private var appViewModel: AppViewModel
     
     // Forum data state
@@ -181,6 +182,24 @@ struct ForumView: View {
                         }
                     )
                 )
+            }
+        }
+        .alert("Moderation Success", isPresented: .constant(moderationViewModel.successMessage != nil)) {
+            Button("OK") {
+                moderationViewModel.clearMessages()
+            }
+        } message: {
+            if let successMessage = moderationViewModel.successMessage {
+                Text(successMessage)
+            }
+        }
+        .alert("Moderation Error", isPresented: .constant(moderationViewModel.errorMessage != nil)) {
+            Button("OK") {
+                moderationViewModel.clearMessages()
+            }
+        } message: {
+            if let errorMessage = moderationViewModel.errorMessage {
+                Text(errorMessage)
             }
         }
     }
@@ -521,7 +540,7 @@ struct ForumView: View {
                 
                 // Content
                 VStack(alignment: .leading, spacing: 8) {
-                    // Category, review status, and time
+                    // Category, admin badge, review status, and time
                     HStack {
                         // Review status badge for user's under-review content
                         if topic.isUnderReview && isCurrentUserTopic(topic) {
@@ -538,6 +557,11 @@ struct ForumView: View {
                                     .fill(DesignTokens.Colors.primaryCyan.opacity(0.15))
                             )
                         
+                        // Admin badge for admin authors
+                        if topic.isAuthorAdmin {
+                            AdminBadge.compact
+                        }
+                        
                         Spacer()
                         
                         Text(topic.timeAgo)
@@ -545,12 +569,25 @@ struct ForumView: View {
                             .foregroundColor(DesignTokens.Colors.textTertiary)
                     }
                     
-                    // Title
-                    Text(topic.title)
-                        .font(DesignTokens.ResponsiveTypography.bodyLarge)
-                        .foregroundColor(DesignTokens.Colors.textPrimary)
-                        .multilineTextAlignment(.leading)
-                        .lineLimit(2)
+                    // Title with author info
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(topic.title)
+                            .font(DesignTokens.ResponsiveTypography.bodyLarge)
+                            .foregroundColor(DesignTokens.Colors.textPrimary)
+                            .multilineTextAlignment(.leading)
+                            .lineLimit(2)
+                        
+                        // Author info with admin badge
+                        HStack(spacing: 6) {
+                            Text("by \(topic.authorDisplayName)")
+                                .font(.system(size: DesignTokens.DeviceSize.current.fontSize(11, 12, 13), weight: .medium))
+                                .foregroundColor(DesignTokens.Colors.textSecondary)
+                            
+                            if topic.isAuthorAdmin {
+                                AdminBadge(style: .compact, showText: false)
+                            }
+                        }
+                    }
                     
                     // Stats
                     HStack(spacing: 16) {
@@ -576,9 +613,40 @@ struct ForumView: View {
                         
                         Spacer()
                         
-                        Image(systemName: "chevron.right")
-                            .font(.system(size: 12, weight: .semibold))
-                            .foregroundColor(.primary.opacity(0.4))
+                        // Admin moderation actions for under-review posts
+                        if moderationViewModel.canModerate(appViewModel: appViewModel) && topic.isUnderReview {
+                            HStack(spacing: 8) {
+                                // Approve button
+                                Button(action: {
+                                    Task {
+                                        await moderationViewModel.moderatePost(topic, action: .approve)
+                                    }
+                                }) {
+                                    Image(systemName: "checkmark.circle.fill")
+                                        .font(.system(size: 16, weight: .medium))
+                                        .foregroundColor(DesignTokens.Colors.primaryGreen)
+                                }
+                                .scaleButtonStyle()
+                                .disabled(moderationViewModel.isLoading)
+                                
+                                // Reject button
+                                Button(action: {
+                                    Task {
+                                        await moderationViewModel.moderatePost(topic, action: .reject)
+                                    }
+                                }) {
+                                    Image(systemName: "xmark.circle.fill")
+                                        .font(.system(size: 16, weight: .medium))
+                                        .foregroundColor(DesignTokens.Colors.primaryRed)
+                                }
+                                .scaleButtonStyle()
+                                .disabled(moderationViewModel.isLoading)
+                            }
+                        } else {
+                            Image(systemName: "chevron.right")
+                                .font(.system(size: 12, weight: .semibold))
+                                .foregroundColor(.primary.opacity(0.4))
+                        }
                     }
                 }
                 
@@ -594,6 +662,19 @@ struct ForumView: View {
                     )
                     .shadow(color: Color.black.opacity(0.06), radius: 16, x: 0, y: 6)
             )
+            .overlay {
+                // Loading overlay for moderation actions
+                if moderationViewModel.isLoading {
+                    RoundedRectangle(cornerRadius: 20)
+                        .fill(.ultraThinMaterial)
+                        .overlay {
+                            ProgressView()
+                                .progressViewStyle(CircularProgressViewStyle())
+                                .scaleEffect(0.8)
+                        }
+                }
+            }
+            .opacity(moderationViewModel.isLoading ? 0.7 : 1.0)
         }
         .buttonStyle(PlainButtonStyle())
     }

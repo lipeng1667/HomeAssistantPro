@@ -5,10 +5,11 @@
 //  Purpose: Data models for forum API requests and responses
 //  Author: Michael
 //  Created: 2025-07-10
-//  Modified: 2025-07-10
+//  Modified: 2025-07-25
 //
 //  Modification Log:
 //  - 2025-07-10: Initial creation with forum topic and reply models
+//  - 2025-07-25: Added admin detection helpers and author display properties
 //
 //  Functions:
 //  - Codable models for forum API communication
@@ -77,6 +78,16 @@ struct ForumTopic: Codable, Identifiable {
     /// Computed property for formatted time ago
     var timeAgo: String {
         return DateUtils.formatTimeAgo(from: createdAt)
+    }
+    
+    /// Author display name with fallback
+    var authorDisplayName: String {
+        return author?.name ?? "Anonymous"
+    }
+    
+    /// Whether the author is an admin user
+    var isAuthorAdmin: Bool {
+        return author?.isAdmin ?? false
     }
 }
 
@@ -149,6 +160,18 @@ struct ParentReplyInfo {
 struct ForumAuthor: Codable {
     let id: Int
     let name: String
+    let status: Int? // User status (87 = admin, 2 = registered, etc.)
+    
+    /// Computed property to check if author is admin
+    var isAdmin: Bool {
+        return status == 87
+    }
+    
+    /// Gets user status enum from raw value
+    var userStatus: UserStatus {
+        guard let status = status else { return .notLoggedIn }
+        return UserStatus(rawValue: status) ?? .notLoggedIn
+    }
 }
 
 /// Forum category model
