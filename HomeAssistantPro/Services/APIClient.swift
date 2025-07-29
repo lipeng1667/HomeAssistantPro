@@ -300,7 +300,7 @@ final class APIClient {
                 // Update status with actual API response and preserve existing profile data
                 let existingAccountName = settingsStore.retrieveAccountName()
                 let existingPhoneNumber = settingsStore.retrievePhoneNumber()
-                settingsStore.storeUserProfile(status: response.data.user.status ?? 2, accountName: existingAccountName ?? response.data.user.name, phoneNumber: existingPhoneNumber ?? phoneNumber)
+                settingsStore.storeUserProfile(status: response.data.user.status ?? 0, accountName: existingAccountName ?? response.data.user.name, phoneNumber: existingPhoneNumber ?? phoneNumber)
                 logger.info("User ID confirmed and status updated after login")
             } catch {
                 logger.error("Failed to store user credentials after login: \(error.localizedDescription)")

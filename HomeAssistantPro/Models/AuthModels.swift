@@ -198,16 +198,16 @@ struct ErrorResponse: Codable {
 
 /// User status enumeration for authentication levels
 enum UserStatus: Int, Codable {
-    case notLoggedIn = 0    // Default state, not logged in
+    case deleted = -1       // Soft-deleted user (excluded from queries)
+    case normal = 0         // Normal registered user (matches API documentation)
     case anonymous = 1      // Anonymous user, view-only access
-    case registered = 2     // Registered user, full access
     case admin = 87         // Admin user, can moderate posts and chat as support agent
     
     var description: String {
         switch self {
-        case .notLoggedIn: return "Not Logged In"
+        case .deleted: return "Deleted User"
+        case .normal: return "Registered User"
         case .anonymous: return "Anonymous User"
-        case .registered: return "Registered User"
         case .admin: return "Administrator"
         }
     }
@@ -248,7 +248,7 @@ struct User: Codable {
     
     /// Computed property for type-safe status access
     var userStatus: UserStatus {
-        return UserStatus(rawValue: status) ?? .notLoggedIn
+        return UserStatus(rawValue: status) ?? .normal
     }
     
     /// Initializer for creating user with specified status

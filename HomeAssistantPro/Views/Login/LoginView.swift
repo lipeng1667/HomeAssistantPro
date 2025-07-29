@@ -514,12 +514,12 @@ struct ModernLoginView: View {
                     appViewModel.isUserLoggedIn = true // Persist login state to UserDefaults
                     print("DEBUG LOGIN: Set appViewModel state - currentUserId: \(String(response.data.user.id)), isLoggedIn: true, isUserLoggedIn: true")
                     
+                    // APIClient already stored the profile data in SettingsStore
                     // Create registered user object with available data
-                    // Note: APIClient already stored the profile data in SettingsStore
                     let newUser = User(
                         id: response.data.user.id,
                         deviceId: nil, // Will be populated from SettingsStore
-                        status: response.data.user.status ?? 2, // Use actual status from API, default to registered if missing
+                        status: response.data.user.status ?? 0, // Use actual status from API
                         accountName: response.data.user.name, // Will be restored from SettingsStore
                         phoneNumber: cleanPhoneNumber
                     )

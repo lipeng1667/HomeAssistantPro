@@ -35,11 +35,12 @@ final class AppViewModel: ObservableObject {
     @Published var isLoading: Bool = false
     
     private let apiClient = APIClient.shared
-    private let settingsStore = SettingsStore()
+    private var settingsStore: SettingsStore
     private let logger = Logger(subsystem: "com.homeassistant.ios", category: "AppViewModel")
     
-    /// Initialize AppViewModel and restore previous login state
-    init() {
+    /// Initialize AppViewModel with optional SettingsStore injection
+    init(settingsStore: SettingsStore = SettingsStore()) {
+        self.settingsStore = settingsStore
         restoreLoginState()
     }
     
@@ -214,7 +215,6 @@ final class AppViewModel: ObservableObject {
                     phoneNumber: phoneNumber
                 )
                 currentUser = restoredUser
-                logger.info("DEBUG RESTORE: Set currentUser to \(restoredUser.id), name: \(restoredUser.accountName ?? "nil"), status: \(restoredUser.status)")
             } catch {
                 logger.error("DEBUG RESTORE: Failed to restore device ID: \(error.localizedDescription)")
                 // Fallback to logged out state if device ID cannot be retrieved

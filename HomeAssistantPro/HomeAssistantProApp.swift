@@ -20,10 +20,16 @@ import SwiftUI
 
 @main
 struct HomeAssistantProApp: App {
-    @StateObject private var appViewModel = AppViewModel()
-    @StateObject private var settingsStore = SettingsStore()
+    @StateObject private var settingsStore: SettingsStore
+    @StateObject private var appViewModel: AppViewModel
     @StateObject private var backgroundDataPreloader = BackgroundDataPreloader.shared
     @State private var showSplash = true
+    
+    init() {
+        let sharedSettingsStore = SettingsStore()
+        _settingsStore = StateObject(wrappedValue: sharedSettingsStore)
+        _appViewModel = StateObject(wrappedValue: AppViewModel(settingsStore: sharedSettingsStore))
+    }
     
     /// Converts stored theme preference to SwiftUI ColorScheme
     private var preferredColorScheme: ColorScheme? {

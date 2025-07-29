@@ -41,11 +41,11 @@ struct SettingsView: View {
         switch currentUser.userStatus {
         case .anonymous:
             return "Guest User"
-        case .registered:
+        case .normal:
             return currentUser.accountName ?? "Registered User"
         case .admin:
             return currentUser.accountName ?? "Administrator"
-        case .notLoggedIn:
+        case .deleted:
             return "Not Logged In"
         }
     }
@@ -57,11 +57,11 @@ struct SettingsView: View {
         switch currentUser.userStatus {
         case .anonymous:
             return "Anonymous Access"
-        case .registered:
+        case .normal:
             return "Premium Member"
         case .admin:
             return "Administrator"
-        case .notLoggedIn:
+        case .deleted:
             return "Offline"
         }
     }
@@ -73,11 +73,11 @@ struct SettingsView: View {
         switch currentUser.userStatus {
         case .anonymous:
             return DesignTokens.Colors.primaryAmber
-        case .registered:
+        case .normal:
             return DesignTokens.Colors.primaryGreen
         case .admin:
             return Color.init(red: 1.0, green: 0.84, blue: 0.0) // Gold color for admin
-        case .notLoggedIn:
+        case .deleted:
             return DesignTokens.Colors.primaryRed
         }
     }
@@ -89,11 +89,11 @@ struct SettingsView: View {
         switch currentUser.userStatus {
         case .anonymous:
             return "person.crop.circle.dashed"
-        case .registered:
+        case .normal:
             return "person.fill"
         case .admin:
             return "crown.fill" // Crown icon for admin
-        case .notLoggedIn:
+        case .deleted:
             return "person.slash"
         }
     }
@@ -105,7 +105,7 @@ struct SettingsView: View {
         switch currentUser.userStatus {
         case .anonymous:
             return "Upgrade to unlock full features"
-        case .registered:
+        case .normal:
             if let phoneNumber = currentUser.phoneNumber {
                 return "Phone: \(PhoneNumberUtils.formatPhoneNumber(phoneNumber))"
             } else {
@@ -113,7 +113,7 @@ struct SettingsView: View {
             }
         case .admin:
             return "Full system access • Can moderate content"
-        case .notLoggedIn:
+        case .deleted:
             return nil
         }
     }
@@ -222,13 +222,13 @@ struct SettingsView: View {
                         
                         if let currentUser = appViewModel.currentUser {
                             switch currentUser.userStatus {
-                            case .registered:
+                            case .normal:
                                 quickInfoItem(icon: "checkmark.shield.fill", text: "Verified", color: DesignTokens.Colors.primaryGreen)
                             case .admin:
                                 quickInfoItem(icon: "star.fill", text: "Admin", color: Color.init(red: 1.0, green: 0.84, blue: 0.0))
                             case .anonymous:
                                 quickInfoItem(icon: "eye.fill", text: "View Only", color: DesignTokens.Colors.primaryAmber)
-                            case .notLoggedIn:
+                            case .deleted:
                                 quickInfoItem(icon: "person.slash", text: "Offline", color: DesignTokens.Colors.primaryRed)
                             }
                         }
@@ -312,14 +312,14 @@ struct SettingsView: View {
                                     )
                                 }
                                 .enhancedButtonStyle()
-                            case .registered:
+                            case .normal:
                                 modernActionButton(
                                     title: "Edit Profile",
                                     icon: "pencil.circle.fill",
                                     color: DesignTokens.Colors.primaryCyan,
                                     style: .secondary
                                 )
-                            case .notLoggedIn:
+                            case .deleted:
                                 modernActionButton(
                                     title: "Sign In",
                                     icon: "person.crop.circle.fill",

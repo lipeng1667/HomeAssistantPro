@@ -169,8 +169,8 @@ struct ForumAuthor: Codable {
     
     /// Gets user status enum from raw value
     var userStatus: UserStatus {
-        guard let status = status else { return .notLoggedIn }
-        return UserStatus(rawValue: status) ?? .notLoggedIn
+        guard let status = status else { return .normal }
+        return UserStatus(rawValue: status) ?? .normal
     }
 }
 
