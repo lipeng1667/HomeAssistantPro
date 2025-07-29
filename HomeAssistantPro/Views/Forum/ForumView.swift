@@ -22,6 +22,7 @@ struct ForumView: View {
     @State private var searchFocused = false
     @State private var showCreatePost = false
     @State private var showCreateMenu = false
+    @State private var showAdminReviewQueue = false
     @StateObject private var draftManager = DraftManager.shared
     @StateObject private var restrictionViewModel = AnonymousRestrictionViewModel()
     @StateObject private var moderationViewModel = AdminModerationViewModel()
@@ -121,6 +122,13 @@ struct ForumView: View {
             startAnimations()
             loadCurrentUserId()
             loadInitialData()
+            
+            // Load admin stats if user is admin
+            if moderationViewModel.canModerate(appViewModel: appViewModel) {
+                Task {
+                    await moderationViewModel.fetchForumStats()
+                }
+            }
         }
         .refreshable {
             await refreshTopics()
@@ -131,6 +139,10 @@ struct ForumView: View {
                     await refreshTopics()
                 }
             }
+        }
+        .sheet(isPresented: $showAdminReviewQueue) {
+            AdminReviewQueueView()
+                .environmentObject(appViewModel)
         }
         .confirmationDialog("Create Post", isPresented: $showCreateMenu, titleVisibility: .visible) {
             Button("New Topic") {
@@ -241,6 +253,58 @@ struct ForumView: View {
                                     .fill(DesignTokens.Colors.textSecondary.opacity(0.15))
                             )
                     }
+                    
+                    // Admin indicator with review queue access
+                    if moderationViewModel.canModerate(appViewModel: appViewModel) {
+                        Button(action: {
+                            HapticManager.buttonTap()
+                            showAdminReviewQueue = true
+                        }) {
+                            ZStack {
+                                HStack(spacing: 4) {
+                                    Text("ADMIN")
+                                        .font(.system(size: DesignTokens.DeviceSize.current.fontSize(10, 11, 12), weight: .semibold))
+                                    
+                                    Image(systemName: "crown.fill")
+                                        .font(.system(size: DesignTokens.DeviceSize.current.fontSize(10, 11, 12), weight: .semibold))
+                                }
+                                .foregroundColor(.white)
+                                .padding(.horizontal, 8)
+                                .padding(.vertical, 3)
+                                .background(
+                                    Capsule()
+                                        .fill(
+                                            LinearGradient(
+                                                colors: [DesignTokens.Colors.primaryPurple, DesignTokens.Colors.primaryPurple.opacity(0.8)],
+                                                startPoint: .topLeading,
+                                                endPoint: .bottomTrailing
+                                            )
+                                        )
+                                )
+                                
+                                // Notification badge for pending reviews
+                                if let stats = moderationViewModel.forumStats,
+                                   stats.pendingReview.total > 0 {
+                                    VStack {
+                                        HStack {
+                                            Spacer()
+                                            Circle()
+                                                .fill(DesignTokens.Colors.primaryRed)
+                                                .frame(width: 16, height: 16)
+                                                .overlay(
+                                                    Text("\(min(stats.pendingReview.total, 99))")
+                                                        .font(.system(size: 10, weight: .bold))
+                                                        .foregroundColor(.white)
+                                                )
+                                                .offset(x: 8, y: -8)
+                                        }
+                                        Spacer()
+                                    }
+                                }
+                            }
+                        }
+                        .scaleButtonStyle()
+                    }
                 }
                 
                 Text("Forum")
@@ -326,6 +390,25 @@ struct ForumView: View {
                             HapticManager.buttonTap()
                         } label: {
                             Label("Delete Draft", systemImage: "trash")
+                        }
+                    }
+                    
+                    // Admin-only options
+                    if moderationViewModel.canModerate(appViewModel: appViewModel) {
+                        Divider()
+                        
+                        Button {
+                            showAdminReviewQueue = true
+                        } label: {
+                            Label("Review Queue", systemImage: "checklist")
+                        }
+                        
+                        Button {
+                            Task {
+                                await moderationViewModel.fetchForumStats()
+                            }
+                        } label: {
+                            Label("Forum Stats", systemImage: "chart.bar")
                         }
                     }
                 } else {

@@ -149,6 +149,7 @@ final class APIClient {
         
         // Override timestamp if provided (for password hashing consistency)
         if let customTimestamp = timestamp {
+            request.setValue("application/json", forHTTPHeaderField: "Content-Type")
             request.setValue(customTimestamp, forHTTPHeaderField: "X-Timestamp")
             request.setValue(apiConfig.generateSignature(timestamp: customTimestamp), forHTTPHeaderField: "X-Signature")
         } else {
