@@ -9,6 +9,7 @@
 //
 //  Modification Log:
 //  - 2025-07-25: Initial creation with moderation action support
+//  - 2025-07-25: Updated to use real AdminForumService API calls
 //
 //  Functions:
 //  - moderatePost(_:action:reason:): Handles post approval/rejection
@@ -41,9 +42,16 @@ class AdminModerationViewModel: ObservableObject {
     /// Replies awaiting moderation review  
     @Published var pendingReplies: [ForumReply] = []
     
+    /// Forum statistics for admin dashboard
+    @Published var forumStats: ForumStats?
+    
+    /// Last refresh time for stats
+    @Published var lastStatsRefresh: Date?
+    
     // MARK: - Private Properties
     
     private let logger = Logger(subsystem: "com.homeassistant.ios", category: "AdminModerationViewModel")
+    private let adminForumService = AdminForumService.shared
     
     // MARK: - Moderation Actions
     
@@ -96,14 +104,16 @@ class AdminModerationViewModel: ObservableObject {
             isLoading = false
         }
         
-        // TODO: Replace with actual API call when backend is ready
         do {
-            // Simulate API call delay
-            try await Task.sleep(nanoseconds: 1_000_000_000) // 1 second
+            let result = try await adminForumService.moderatePost(
+                postId: post.id,
+                postType: "topic",
+                action: action.rawValue,
+                reason: reason
+            )
             
-            // Simulate success
             successMessage = "Post \(action.displayName.lowercased())d successfully"
-            logger.info("Post moderation completed successfully")
+            logger.info("Post moderation completed successfully: \(result.actionTaken)")
             
             // Remove from review queue if approved/rejected
             if action == .approve || action == .reject {
@@ -132,14 +142,16 @@ class AdminModerationViewModel: ObservableObject {
             isLoading = false
         }
         
-        // TODO: Replace with actual API call when backend is ready
         do {
-            // Simulate API call delay
-            try await Task.sleep(nanoseconds: 1_000_000_000) // 1 second
+            let result = try await adminForumService.moderatePost(
+                postId: reply.id,
+                postType: "reply",
+                action: action.rawValue,
+                reason: reason
+            )
             
-            // Simulate success
             successMessage = "Reply \(action.displayName.lowercased())d successfully"
-            logger.info("Reply moderation completed successfully")
+            logger.info("Reply moderation completed successfully: \(result.actionTaken)")
             
             // Remove from pending list if approved/rejected
             if action == .approve || action == .reject {
@@ -165,20 +177,86 @@ class AdminModerationViewModel: ObservableObject {
             isLoading = false
         }
         
-        // TODO: Replace with actual API calls when backend is ready
         do {
-            // Simulate API call delay
-            try await Task.sleep(nanoseconds: 500_000_000) // 0.5 seconds
+            let queue = try await adminForumService.fetchReviewQueue()
             
-            // Simulate empty queue for now
-            reviewQueue = []
-            pendingReplies = []
+            // Separate topics and replies for easier management
+            let topics = queue.pendingItems.compactMap { item -> ForumTopic? in
+                guard item.type == "topic" else { return nil }
+                
+                return ForumTopic(
+                    id: item.id,
+                    title: item.title ?? "Untitled",
+                    content: item.content,
+                    category: item.category ?? "General",
+                    author: ForumAuthor(
+                        id: item.author.id,
+                        name: item.author.name,
+                        status: item.author.role == "admin" ? 87 : 2
+                    ),
+                    replyCount: 0,
+                    likeCount: 0,
+                    isLiked: false,
+                    status: -1, // Under review
+                    images: [],
+                    createdAt: item.createdAt,
+                    updatedAt: item.createdAt
+                )
+            }
             
-            logger.info("Review queue fetched successfully")
+            let replies = queue.pendingItems.compactMap { item -> ForumReply? in
+                guard item.type == "reply", let topicId = item.topicId else { return nil }
+                
+                return ForumReply(
+                    id: item.id,
+                    content: item.content,
+                    author: ForumAuthor(
+                        id: item.author.id,
+                        name: item.author.name,
+                        status: item.author.role == "admin" ? 87 : 2
+                    ),
+                    parentReplyId: nil,
+                    likeCount: 0,
+                    isLiked: false,
+                    status: -1, // Under review
+                    images: [],
+                    createdAt: item.createdAt,
+                    updatedAt: item.createdAt
+                )
+            }
+            
+            reviewQueue = topics
+            pendingReplies = replies
+            
+            logger.info("Review queue fetched successfully: \(topics.count) topics, \(replies.count) replies")
             
         } catch {
             errorMessage = "Failed to fetch review queue: \(error.localizedDescription)"
             logger.error("Review queue fetch failed: \(error.localizedDescription)")
+        }
+    }
+    
+    /// Fetches forum statistics for admin dashboard
+    func fetchForumStats() async {
+        logger.info("Fetching forum statistics")
+        
+        isLoading = true
+        errorMessage = nil
+        
+        defer {
+            isLoading = false
+        }
+        
+        do {
+            let stats = try await adminForumService.fetchForumStats()
+            forumStats = stats
+            lastStatsRefresh = Date()
+            
+            logger.info("Forum stats fetched successfully")
+            
+        } catch {
+            errorMessage = "Failed to fetch forum stats: \(error.localizedDescription)"
+            logger.error("Forum stats fetch failed: \(error.localizedDescription)")
         }
     }
     

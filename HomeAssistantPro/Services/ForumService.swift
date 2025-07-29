@@ -5,10 +5,11 @@
 //  Purpose: Forum API service layer with URLSession and structured concurrency
 //  Author: Michael
 //  Created: 2025-07-10
-//  Modified: 2025-07-10
+//  Modified: 2025-07-25
 //
 //  Modification Log:
 //  - 2025-07-10: Initial creation with forum API methods
+//  - 2025-07-25: Refactored to use shared APIConfiguration to eliminate code duplication
 //
 //  Functions:
 //  - ForumService.shared: Singleton instance
@@ -37,6 +38,7 @@ final class ForumService {
     static let shared = ForumService()
     
     private let apiClient: APIClient
+    private let apiConfig = APIConfiguration.shared
     private let settingsStore: SettingsStore
     private let logger = Logger(subsystem: "com.homeassistant.ios", category: "ForumService")
     
@@ -75,25 +77,20 @@ final class ForumService {
     ///   - body: Request body data
     /// - Returns: Configured URLRequest
     private func createForumRequest(endpoint: String, method: String, body: Data? = nil) -> URLRequest {
-        let baseURL = "http://47.94.108.189:10000"
-        let appSecret = "EJFIDNFNGIUHq32923HDFHIHsdf866HU"
-        
-        guard let url = URL(string: baseURL + endpoint) else {
-            fatalError("Invalid URL: \(baseURL + endpoint)")
+        guard let url = URL(string: apiConfig.baseURL + endpoint) else {
+            fatalError("Invalid URL: \(apiConfig.baseURL + endpoint)")
         }
         
         var request = URLRequest(url: url)
         request.httpMethod = method
-        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         
-        // Add authentication headers
-        let timestamp = String(Int(Date().timeIntervalSince1970 * 1000))
-        let signature = generateSignature(timestamp: timestamp, appSecret: appSecret)
+        // Add authentication headers using shared configuration
+        let headers = apiConfig.createAuthHeaders()
+        for (key, value) in headers {
+            request.setValue(value, forHTTPHeaderField: key)
+        }
         
-        logger.info("🔐 Auth Headers - Timestamp: \(timestamp), Signature: \(signature.prefix(10))...")
-        
-        request.setValue(timestamp, forHTTPHeaderField: "X-Timestamp")
-        request.setValue(signature, forHTTPHeaderField: "X-Signature")
+        logger.info("🔐 Auth Headers added for endpoint: \(endpoint)")
         
         if let body = body {
             request.httpBody = body
@@ -102,16 +99,6 @@ final class ForumService {
         return request
     }
     
-    /// Generates HMAC-SHA256 signature for app-level authentication
-    /// - Parameters:
-    ///   - timestamp: Current timestamp in milliseconds
-    ///   - appSecret: App secret key
-    /// - Returns: Hex-encoded signature string
-    private func generateSignature(timestamp: String, appSecret: String) -> String {
-        let key = SymmetricKey(data: appSecret.data(using: .utf8)!)
-        let signature = HMAC<SHA256>.authenticationCode(for: timestamp.data(using: .utf8)!, using: key)
-        return signature.compactMap { String(format: "%02x", $0) }.joined()
-    }
     
     /// Performs authenticated request and handles response
     /// - Parameter request: URLRequest to execute
@@ -704,10 +691,8 @@ final class ForumService {
         logger.info("📤 uploadFile called - fileName: \(uploadRequest.fileName), type: \(uploadRequest.type), fileSize: \(uploadRequest.file.count) bytes")
         
         let userId = try getCurrentUserId()
-        let baseURL = "http://47.94.108.189:10000"
-        let appSecret = "EJFIDNFNGIUHq32923HDFHIHsdf866HU"
         
-        guard let url = URL(string: baseURL + "/api/forum/uploads") else {
+        guard let url = URL(string: apiConfig.baseURL + "/api/forum/uploads") else {
             throw ForumError.invalidResponse
         }
         
@@ -717,14 +702,16 @@ final class ForumService {
         request.httpMethod = "POST"
         request.setValue("multipart/form-data; boundary=\(boundary)", forHTTPHeaderField: "Content-Type")
         
-        // Add authentication headers
-        let timestamp = String(Int(Date().timeIntervalSince1970 * 1000))
-        let signature = generateSignature(timestamp: timestamp, appSecret: appSecret)
+        // Add authentication headers using shared configuration
+        let headers = apiConfig.createAuthHeaders()
+        for (key, value) in headers {
+            // Skip Content-Type as it's set by multipart form
+            if key != "Content-Type" {
+                request.setValue(value, forHTTPHeaderField: key)
+            }
+        }
         
-        logger.info("🔐 Upload Auth Headers - Timestamp: \(timestamp), Signature: \(signature.prefix(10))...")
-        
-        request.setValue(timestamp, forHTTPHeaderField: "X-Timestamp")
-        request.setValue(signature, forHTTPHeaderField: "X-Signature")
+        logger.info("🔐 Upload Auth Headers added")
         
         // Build multipart form data
         var body = Data()

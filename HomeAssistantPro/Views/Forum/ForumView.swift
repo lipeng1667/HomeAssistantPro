@@ -544,7 +544,7 @@ struct ForumView: View {
                     HStack {
                         // Review status badge for user's under-review content
                         if topic.isUnderReview && isCurrentUserTopic(topic) {
-                            ReviewStatusBadge(status: topic.status)
+                            PostStatusIndicator(status: topic.status, style: .badge)
                         }
                         
                         Text(topic.category)

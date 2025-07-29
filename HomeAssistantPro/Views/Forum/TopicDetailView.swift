@@ -5,10 +5,11 @@
 //  Purpose: Forum topic detail view with replies and interactions
 //  Author: Michael
 //  Created: 2025-07-10
-//  Modified: 2025-07-10
+//  Modified: 2025-07-25
 //
 //  Modification Log:
 //  - 2025-07-10: Initial creation with topic detail and replies
+//  - 2025-07-25: Added admin badges for topic author and reply authors
 //
 //  Functions:
 //  - Topic display with full content and metadata
@@ -417,6 +418,11 @@ struct TopicDetailView: View {
                             Text(author.name)
                                 .font(DesignTokens.ResponsiveTypography.bodyLarge)
                                 .foregroundColor(DesignTokens.Colors.textPrimary)
+                            
+                            // Admin badge for topic author
+                            if author.isAdmin {
+                                AdminBadge(style: .compact, showText: false)
+                            }
                         }
                         
                         Spacer()
@@ -810,9 +816,14 @@ struct TopicDetailView: View {
                                 .font(reply.isNestedReply ? DesignTokens.ResponsiveTypography.bodySmall : DesignTokens.ResponsiveTypography.bodyMedium)
                                 .foregroundColor(DesignTokens.Colors.textPrimary)
                             
+                            // Admin badge for reply author
+                            if reply.author.isAdmin {
+                                AdminBadge(style: .compact, showText: false)
+                            }
+                            
                             // Review status badge for user's under-review replies
                             if reply.isUnderReview && isCurrentUserReply(reply) {
-                                ReviewStatusBadge(status: reply.status)
+                                PostStatusIndicator(status: reply.status, style: .badge)
                             }
                         }
                         

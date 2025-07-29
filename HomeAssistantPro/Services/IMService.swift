@@ -5,10 +5,11 @@
 //  Purpose: Service for instant messaging API integration
 //  Author: Michael
 //  Created: 2025-07-14
-//  Modified: 2025-07-14
+//  Modified: 2025-07-25
 //
 //  Modification Log:
 //  - 2025-07-14: Initial creation with chat message API integration
+//  - 2025-07-25: Refactored to use shared APIConfiguration to eliminate code duplication
 //
 //  Functions:
 //  - fetchMessages: Get chat history from API
@@ -29,11 +30,8 @@ class IMService: ObservableObject {
     /// Shared instance
     static let shared = IMService()
     
-    /// Base URL for API requests
-    private let baseURL = "http://47.94.108.189:10000"
-    
-    /// App secret for HMAC authentication
-    private let appSecret = "EJFIDNFNGIUHq32923HDFHIHsdf866HU"
+    /// API configuration
+    private let apiConfig = APIConfiguration.shared
     
     /// URL session for network requests with custom configuration
     private let urlSession: URLSession = {
@@ -84,7 +82,7 @@ class IMService: ObservableObject {
         }
         
         // Create URL with query parameters
-        var components = URLComponents(string: "\(baseURL)/api/chat/messages")
+        var components = URLComponents(string: "\(apiConfig.baseURL)/api/chat/messages")
         components?.queryItems = [
             URLQueryItem(name: "user_id", value: String(userId)),
             URLQueryItem(name: "page", value: String(page)),
@@ -98,12 +96,11 @@ class IMService: ObservableObject {
         var request = URLRequest(url: url)
         request.httpMethod = "GET"
         
-        // Add authentication headers
-        let timestamp = String(Int(Date().timeIntervalSince1970 * 1000))
-        let signature = generateSignature(timestamp: timestamp)
-        
-        request.setValue(timestamp, forHTTPHeaderField: "X-Timestamp")
-        request.setValue(signature, forHTTPHeaderField: "X-Signature")
+        // Add authentication headers using shared configuration
+        let headers = apiConfig.createAuthHeaders()
+        for (key, value) in headers {
+            request.setValue(value, forHTTPHeaderField: key)
+        }
         
         // Log request details
         logger.debug("Request URL: \(request.url?.absoluteString ?? "unknown")")
@@ -181,19 +178,18 @@ class IMService: ObservableObject {
         }
         
         // Create request
-        guard let url = URL(string: "\(baseURL)/api/chat/messages") else {
+        guard let url = URL(string: "\(apiConfig.baseURL)/api/chat/messages") else {
             throw IMServiceError.networkError("Invalid URL")
         }
         
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         
-        // Add authentication headers
-        let timestamp = String(Int(Date().timeIntervalSince1970 * 1000))
-        let signature = generateSignature(timestamp: timestamp)
-        
-        request.setValue(timestamp, forHTTPHeaderField: "X-Timestamp")
-        request.setValue(signature, forHTTPHeaderField: "X-Signature")
+        // Add authentication headers using shared configuration
+        let headers = apiConfig.createAuthHeaders()
+        for (key, value) in headers {
+            request.setValue(value, forHTTPHeaderField: key)
+        }
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         
         // Add request body with user_id and message
@@ -263,14 +259,6 @@ class IMService: ObservableObject {
     
     // MARK: - Helper Methods
     
-    /// Generate HMAC-SHA256 signature for authentication
-    /// - Parameter timestamp: Current timestamp
-    /// - Returns: Hex-encoded signature
-    private func generateSignature(timestamp: String) -> String {
-        let key = SymmetricKey(data: appSecret.data(using: .utf8)!)
-        let signature = HMAC<SHA256>.authenticationCode(for: timestamp.data(using: .utf8)!, using: key)
-        return Data(signature).map { String(format: "%02hhx", $0) }.joined()
-    }
     
     /// Get current user ID from service
     /// - Returns: User ID string

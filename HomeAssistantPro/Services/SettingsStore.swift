@@ -4,8 +4,9 @@
 //
 //  Purpose: Secure storage service for user settings and authentication data
 //  In KeyChain:
-//      - device id:    created at the first time app launched
-//      - user id:      server will return when user login(or anonymous login)
+//      - device id:        created at the first time app launched
+//      - user id:          server will return when user login(or anonymous login)
+//      - session_token:    UUID v4 token for enhanced admin security
 //  In UserDefaults:
 //      - isFirstLaunch:    if it's first launch to show the intro views
 //      - theme:
@@ -13,16 +14,20 @@
 //
 //  Author: Michael
 //  Created: 2025-07-06
-//  Modified: 2025-07-06
+//  Modified: 2025-07-25
 //
 //  Modification Log:
 //  - 2025-07-06: Initial creation with Keychain and UserDefaults wrappers
+//  - 2025-07-25: Added session token support for enhanced admin security
 //
 //  Functions:
 //  - init(): Initialize with default service configuration
 //  - storeUserId(_:): Securely store user ID in Keychain
 //  - retrieveUserId(): Retrieve stored user ID from Keychain
 //  - removeUserId(): Remove user ID from Keychain
+//  - storeSessionToken(_:): Securely store session token in Keychain
+//  - retrieveSessionToken(): Retrieve stored session token from Keychain
+//  - removeSessionToken(): Remove session token from Keychain
 //  - storeDeviceId(_:): Store device ID in Keychain
 //  - retrieveDeviceId(): Retrieve device ID from Keychain
 //  - setIntroShown(): Marks intro as completed (legacy compatibility)
@@ -54,6 +59,7 @@ final class SettingsStore: ObservableObject {
     private enum KeychainKeys {
         static let userId = "user_id"
         static let deviceId = "device_id"
+        static let sessionToken = "session_token"
     }
     
     private enum UserDefaultsKeys {
@@ -156,6 +162,89 @@ final class SettingsStore: ObservableObject {
         }
         
         logger.info("User ID removed from Keychain")
+    }
+    
+    // MARK: - Session Token Management (Keychain)
+    
+    /// Securely stores session token in Keychain
+    /// - Parameter sessionToken: Session token string to store
+    /// - Throws: SettingsStoreError for storage failures
+    func storeSessionToken(_ sessionToken: String) throws {
+        let data = Data(sessionToken.utf8)
+        
+        let query: [String: Any] = [
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrService as String: keychainService,
+            kSecAttrAccount as String: KeychainKeys.sessionToken,
+            kSecValueData as String: data,
+            kSecAttrAccessible as String: kSecAttrAccessibleWhenUnlockedThisDeviceOnly
+        ]
+        
+        // Delete existing item first
+        SecItemDelete(query as CFDictionary)
+        
+        let status = SecItemAdd(query as CFDictionary, nil)
+        
+        if status != errSecSuccess {
+            logger.error("Failed to store session token in Keychain: \(status)")
+            throw SettingsStoreError.keychainStorageError(status)
+        }
+        
+        logger.info("Session token stored successfully in Keychain")
+    }
+    
+    /// Retrieves session token from Keychain
+    /// - Returns: Session token string if found, nil otherwise
+    /// - Throws: SettingsStoreError for retrieval failures
+    func retrieveSessionToken() throws -> String? {
+        let query: [String: Any] = [
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrService as String: keychainService,
+            kSecAttrAccount as String: KeychainKeys.sessionToken,
+            kSecReturnData as String: kCFBooleanTrue!,
+            kSecMatchLimit as String: kSecMatchLimitOne
+        ]
+        
+        var dataTypeRef: AnyObject?
+        let status = SecItemCopyMatching(query as CFDictionary, &dataTypeRef)
+        
+        switch status {
+        case errSecSuccess:
+            guard let data = dataTypeRef as? Data,
+                  let sessionToken = String(data: data, encoding: .utf8) else {
+                logger.error("Failed to decode session token from Keychain data")
+                throw SettingsStoreError.dataDecodingError
+            }
+            logger.info("Session token retrieved successfully from Keychain")
+            return sessionToken
+            
+        case errSecItemNotFound:
+            logger.info("No session token found in Keychain")
+            return nil
+            
+        default:
+            logger.error("Failed to retrieve session token from Keychain: \(status)")
+            throw SettingsStoreError.keychainRetrievalError(status)
+        }
+    }
+    
+    /// Removes session token from Keychain
+    /// - Throws: SettingsStoreError for removal failures
+    func removeSessionToken() throws {
+        let query: [String: Any] = [
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrService as String: keychainService,
+            kSecAttrAccount as String: KeychainKeys.sessionToken
+        ]
+        
+        let status = SecItemDelete(query as CFDictionary)
+        
+        if status != errSecSuccess && status != errSecItemNotFound {
+            logger.error("Failed to remove session token from Keychain: \(status)")
+            throw SettingsStoreError.keychainDeletionError(status)
+        }
+        
+        logger.info("Session token removed from Keychain")
     }
     
     // MARK: - Device ID Management (Keychain)
@@ -380,6 +469,14 @@ final class SettingsStore: ObservableObject {
         // Clear profile data on logout
         userDefaults.removeObject(forKey: UserDefaultsKeys.accountName)
         userDefaults.removeObject(forKey: UserDefaultsKeys.phoneNumber)
+        
+        // Clear session token on logout for security
+        do {
+            try removeSessionToken()
+        } catch {
+            logger.error("Failed to remove session token during logout: \(error.localizedDescription)")
+        }
+        
         logger.info("Authentication session cleared (user_id and device_id preserved)")
     }
     
@@ -405,6 +502,19 @@ final class SettingsStore: ObservableObject {
         if deviceStatus != errSecSuccess && deviceStatus != errSecItemNotFound {
             logger.error("Failed to remove device ID from Keychain: \(deviceStatus)")
             throw SettingsStoreError.keychainDeletionError(deviceStatus)
+        }
+        
+        // Clear session token from Keychain
+        let sessionQuery: [String: Any] = [
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrService as String: keychainService,
+            kSecAttrAccount as String: KeychainKeys.sessionToken
+        ]
+        
+        let sessionStatus = SecItemDelete(sessionQuery as CFDictionary)
+        if sessionStatus != errSecSuccess && sessionStatus != errSecItemNotFound {
+            logger.error("Failed to remove session token from Keychain: \(sessionStatus)")
+            throw SettingsStoreError.keychainDeletionError(sessionStatus)
         }
         
         // Clear UserDefaults

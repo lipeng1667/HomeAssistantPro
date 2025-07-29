@@ -5,12 +5,13 @@
 //  Purpose: Data models for authentication API requests and responses
 //  Author: Michael
 //  Created: 2025-07-04
-//  Modified: 2025-07-06
+//  Modified: 2025-07-25
 //
 //  Modification Log:
 //  - 2025-07-04: Initial creation with anonymous login and logout models
 //  - 2025-07-05: Added register and login request/response models
 //  - 2025-07-06: Enhanced User model with status tracking and profile data
+//  - 2025-07-25: Added session_token support for enhanced admin security
 //
 //  Functions:
 //  - Codable models for API communication
@@ -171,6 +172,12 @@ struct LoginResponse: Codable {
             let id: Int
             let name: String?
             let status: Int?
+            let sessionToken: String?
+            
+            enum CodingKeys: String, CodingKey {
+                case id, name, status
+                case sessionToken = "session_token"
+            }
         }
     }
 }
@@ -228,6 +235,7 @@ struct User: Codable {
     let status: Int
     let accountName: String?
     let phoneNumber: String?
+    let sessionToken: String?
     
     enum CodingKeys: String, CodingKey {
         case id
@@ -235,6 +243,7 @@ struct User: Codable {
         case status
         case accountName = "name"
         case phoneNumber = "phone_number"
+        case sessionToken = "session_token"
     }
     
     /// Computed property for type-safe status access
@@ -246,14 +255,16 @@ struct User: Codable {
     /// - Parameters:
     ///   - id: User ID from server
     ///   - deviceId: Device identifier
-    ///   - status: User authentication status (0=not logged in, 1=anonymous, 2=registered)
+    ///   - status: User authentication status (0=not logged in, 1=anonymous, 2=registered, 87=admin)
     ///   - accountName: User's full name (for registered users)
     ///   - phoneNumber: User's phone number (for registered users)
-    init(id: Int, deviceId: String?, status: Int = 0, accountName: String? = nil, phoneNumber: String? = nil) {
+    ///   - sessionToken: Session token for enhanced admin security
+    init(id: Int, deviceId: String?, status: Int = 0, accountName: String? = nil, phoneNumber: String? = nil, sessionToken: String? = nil) {
         self.id = id
         self.deviceId = deviceId
         self.status = status
         self.accountName = accountName
         self.phoneNumber = phoneNumber
+        self.sessionToken = sessionToken
     }
 }

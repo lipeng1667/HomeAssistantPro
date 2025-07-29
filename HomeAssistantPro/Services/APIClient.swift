@@ -5,11 +5,13 @@
 //  Purpose: Network service layer for API communication with authentication headers
 //  Author: Michael
 //  Created: 2025-07-04
-//  Modified: 2025-07-06
+//  Modified: 2025-07-25
 //
 //  Modification Log:
 //  - 2025-07-04: Initial creation with HMAC-SHA256 signature generation
 //  - 2025-07-06: Added SettingsStore integration for user ID storage
+//  - 2025-07-25: Added session token support for enhanced admin security
+//  - 2025-07-25: Refactored to use shared APIConfiguration for DRY principle
 //
 //  Functions:
 //  - APIClient.shared: Singleton instance
@@ -31,8 +33,7 @@ import os.log
 final class APIClient {
     static let shared = APIClient()
     
-    private let baseURL = "http://47.94.108.189:10000"
-    private let appSecret = "EJFIDNFNGIUHq32923HDFHIHsdf866HU"
+    private let apiConfig = APIConfiguration.shared
     private let logger = Logger(subsystem: "com.homeassistant.ios", category: "APIClient")
     private let settingsStore: SettingsStore
     
@@ -42,14 +43,6 @@ final class APIClient {
         self.settingsStore = settingsStore
     }
     
-    /// Generates HMAC-SHA256 signature for app-level authentication
-    /// - Parameter timestamp: Current timestamp in milliseconds
-    /// - Returns: Hex-encoded signature string
-    private func generateSignature(timestamp: String) -> String {
-        let key = SymmetricKey(data: appSecret.data(using: .utf8)!)
-        let signature = HMAC<SHA256>.authenticationCode(for: timestamp.data(using: .utf8)!, using: key)
-        return signature.compactMap { String(format: "%02x", $0) }.joined()
-    }
     
     /// Performs HTTP request with authentication headers
     /// - Parameter request: URLRequest to execute
@@ -143,20 +136,26 @@ final class APIClient {
     ///   - timestamp: Optional pre-generated timestamp (for password hashing consistency)
     /// - Returns: Configured URLRequest
     private func createAuthenticatedRequest(endpoint: String, method: String, body: Data?, timestamp: String? = nil) -> URLRequest {
-        guard let url = URL(string: baseURL + endpoint) else {
-            fatalError("Invalid URL: \(baseURL + endpoint)")
+        guard let url = URL(string: apiConfig.baseURL + endpoint) else {
+            fatalError("Invalid URL: \(apiConfig.baseURL + endpoint)")
         }
         
         var request = URLRequest(url: url)
         request.httpMethod = method
-        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         
-        // Add authentication headers
+        // Add authentication headers using shared configuration
         let requestTimestamp = timestamp ?? String(Int(Date().timeIntervalSince1970 * 1000))
-        let signature = generateSignature(timestamp: requestTimestamp)
+        let headers = apiConfig.createAuthHeaders()
         
-        request.setValue(requestTimestamp, forHTTPHeaderField: "X-Timestamp")
-        request.setValue(signature, forHTTPHeaderField: "X-Signature")
+        // Override timestamp if provided (for password hashing consistency)
+        if let customTimestamp = timestamp {
+            request.setValue(customTimestamp, forHTTPHeaderField: "X-Timestamp")
+            request.setValue(apiConfig.generateSignature(timestamp: customTimestamp), forHTTPHeaderField: "X-Signature")
+        } else {
+            for (key, value) in headers {
+                request.setValue(value, forHTTPHeaderField: key)
+            }
+        }
         
         if let body = body {
             request.httpBody = body
@@ -186,6 +185,10 @@ final class APIClient {
                 try settingsStore.storeUserId(String(response.data.user.id))
                 // Store device ID for future use
                 try settingsStore.storeDeviceId(loginRequest.deviceId)
+                // Store session token if provided (usually not for anonymous users)
+                if let sessionToken = response.data.user.sessionToken {
+                    try settingsStore.storeSessionToken(sessionToken)
+                }
                 logger.info("User ID and device ID stored successfully")
             } catch {
                 logger.error("Failed to store user credentials: \(error.localizedDescription)")
@@ -235,6 +238,10 @@ final class APIClient {
             // Store updated user ID and profile data
             do {
                 try settingsStore.storeUserId(String(response.data.user.id))
+                // Store session token if provided
+                if let sessionToken = response.data.user.sessionToken {
+                    try settingsStore.storeSessionToken(sessionToken)
+                }
                 // Store profile data with actual status from API (default to registered if missing)
                 settingsStore.storeUserProfile(status: response.data.user.status ?? 2, accountName: accountName, phoneNumber: phoneNumber)
                 logger.info("User ID and profile data stored successfully after registration")
@@ -285,6 +292,10 @@ final class APIClient {
             // Store user ID and update status to registered (in case it changed)
             do {
                 try settingsStore.storeUserId(String(response.data.user.id))
+                // Store session token if provided
+                if let sessionToken = response.data.user.sessionToken {
+                    try settingsStore.storeSessionToken(sessionToken)
+                }
                 // Update status with actual API response and preserve existing profile data
                 let existingAccountName = settingsStore.retrieveAccountName()
                 let existingPhoneNumber = settingsStore.retrievePhoneNumber()
