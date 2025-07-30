@@ -25,8 +25,7 @@ struct AdminReviewQueueView: View {
     @EnvironmentObject private var appViewModel: AppViewModel
     
     @State private var selectedFilter: ReviewFilter = .all
-    @State private var showingModerationSheet = false
-    @State private var selectedItem: ReviewItem?
+    @State private var moderationItem: ReviewItem?
     @State private var moderationReason = ""
     
     private let logger = Logger(subsystem: "com.homeassistant.ios", category: "AdminReviewQueueView")
@@ -58,17 +57,98 @@ struct AdminReviewQueueView: View {
                 }
             }
         }
-        .sheet(isPresented: $showingModerationSheet) {
-            if let item = selectedItem {
-                ModerationActionSheet(
-                    item: item,
-                    reason: $moderationReason,
-                    onModerate: { action in
-                        Task {
-                            await performModeration(item: item, action: action)
+        .sheet(item: $moderationItem) { item in
+            NavigationView {
+                VStack(spacing: 24) {
+                    // Header
+                    VStack(spacing: 12) {
+                        Text("Moderate \(item.isReply ? "Reply" : "Topic")")
+                            .font(.title2)
+                            .foregroundColor(.primary)
+                        
+                        Text("by \(item.authorName)")
+                            .font(.body)
+                            .foregroundColor(.secondary)
+                    }
+                    
+                    // Content preview
+                    VStack(alignment: .leading, spacing: 8) {
+                        if let title = item.title {
+                            Text(title)
+                                .font(.headline)
+                                .foregroundColor(.primary)
+                        }
+                        
+                        ScrollView {
+                            Text(item.content)
+                                .font(.body)
+                                .foregroundColor(.secondary)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                        }
+                        .frame(maxHeight: 200)
+                        .padding(16)
+                        .background(Color(.systemGray6))
+                        .cornerRadius(12)
+                    }
+                    
+                    // Reason input
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("Reason (Optional)")
+                            .font(.body)
+                            .foregroundColor(.primary)
+                        
+                        TextEditor(text: $moderationReason)
+                            .frame(minHeight: 80, maxHeight: 120)
+                            .padding(8)
+                            .background(Color(.systemGray6))
+                            .cornerRadius(8)
+                    }
+                    
+                    Spacer()
+                    
+                    // Action buttons
+                    VStack(spacing: 12) {
+                        Button(action: {
+                            Task {
+                                await performModeration(item: item, action: .reject)
+                            }
+                        }) {
+                            HStack {
+                                Image(systemName: "xmark.circle.fill")
+                                Text("Reject Post")
+                            }
+                            .frame(maxWidth: .infinity)
+                            .padding()
+                            .background(Color.red)
+                            .foregroundColor(.white)
+                            .cornerRadius(12)
+                        }
+                        
+                        Button(action: {
+                            moderationItem = nil
+                            moderationReason = ""
+                        }) {
+                            Text("Cancel")
+                                .frame(maxWidth: .infinity)
+                                .padding()
+                                .background(Color(.systemGray5))
+                                .foregroundColor(.primary)
+                                .cornerRadius(12)
                         }
                     }
-                )
+                }
+                .padding(24)
+                .navigationTitle("Moderate Post")
+                .navigationBarTitleDisplayMode(.inline)
+                .toolbar {
+                    ToolbarItem(placement: .navigationBarTrailing) {
+                        Button("Cancel") {
+                            moderationItem = nil
+                            moderationReason = ""
+                        }
+                        .foregroundColor(.secondary)
+                    }
+                }
             }
         }
         .alert("Moderation Success", isPresented: .constant(moderationViewModel.successMessage != nil)) {
@@ -221,8 +301,6 @@ struct AdminReviewQueueView: View {
                         PendingItemCard(
                             item: item,
                             onModerate: { action in
-                                selectedItem = item
-                                moderationReason = ""
                                 if action == .approve {
                                     // Auto-approve without reason
                                     Task {
@@ -230,7 +308,9 @@ struct AdminReviewQueueView: View {
                                     }
                                 } else {
                                     // Show sheet for reject/delete actions
-                                    showingModerationSheet = true
+                                    logger.info("🔍 Setting moderationItem: \(item.id), showing sheet")
+                                    moderationItem = item
+                                    moderationReason = ""
                                 }
                             }
                         )
@@ -379,8 +459,7 @@ struct AdminReviewQueueView: View {
         await moderationViewModel.fetchForumStats()
         
         // Close sheet and clear state
-        showingModerationSheet = false
-        selectedItem = nil
+        moderationItem = nil
         moderationReason = ""
     }
 }
@@ -566,12 +645,12 @@ struct ModerationActionSheet: View {
                 // Header
                 VStack(spacing: 12) {
                     Text("Moderate \(item.isReply ? "Reply" : "Topic")")
-                        .font(DesignTokens.ResponsiveTypography.headingLarge)
-                        .foregroundColor(DesignTokens.Colors.textPrimary)
+                        .font(.title2)
+                        .foregroundColor(.primary)
                     
                     Text("by \(item.authorName)")
-                        .font(DesignTokens.ResponsiveTypography.bodyMedium)
-                        .foregroundColor(DesignTokens.Colors.textSecondary)
+                        .font(.body)
+                        .foregroundColor(.secondary)
                 }
                 
                 // Content preview
@@ -683,14 +762,16 @@ struct ModerationActionSheet: View {
                 }
             }
             .padding(24)
+            .navigationTitle("Moderate Post")
             .navigationBarTitleDisplayMode(.inline)
-//            .toolbar {
-//                ToolbarItem(placement: .navigationBarTrailing) {
-//                    Button("Done") {
-//                        dismiss()
-//                    }
-//                }
-//            }
+            .toolbar {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button("Cancel") {
+                        dismiss()
+                    }
+                    .foregroundColor(DesignTokens.Colors.textSecondary)
+                }
+            }
         }
     }
 }
@@ -721,7 +802,7 @@ enum ReviewFilter: String, CaseIterable {
 }
 
 /// Unified review item type
-enum ReviewItem {
+enum ReviewItem: Identifiable {
     case topic(ForumTopic)
     case reply(ForumReply)
     
