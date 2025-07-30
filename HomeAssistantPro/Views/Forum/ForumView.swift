@@ -260,13 +260,23 @@ struct ForumView: View {
                             HapticManager.buttonTap()
                             showAdminReviewQueue = true
                         }) {
-                            ZStack {
+                            HStack {
                                 HStack(spacing: 4) {
                                     Text("ADMIN")
                                         .font(.system(size: DesignTokens.DeviceSize.current.fontSize(10, 11, 12), weight: .semibold))
                                     
-                                    Image(systemName: "crown.fill")
-                                        .font(.system(size: DesignTokens.DeviceSize.current.fontSize(10, 11, 12), weight: .semibold))
+                                    // Notification badge for pending reviews
+                                    if let stats = moderationViewModel.forumStats,
+                                       stats.pendingReview.total > 0 {
+                                        Circle()
+                                            .fill(DesignTokens.Colors.primaryRed)
+                                            .frame(width: 16, height: 16)
+                                            .overlay(
+                                                Text("\(min(stats.pendingReview.total, 99))")
+                                                    .font(.system(size: 10, weight: .bold))
+                                                    .foregroundColor(.white)
+                                            )
+                                    }
                                 }
                                 .foregroundColor(.white)
                                 .padding(.horizontal, 8)
@@ -281,26 +291,6 @@ struct ForumView: View {
                                             )
                                         )
                                 )
-                                
-                                // Notification badge for pending reviews
-                                if let stats = moderationViewModel.forumStats,
-                                   stats.pendingReview.total > 0 {
-                                    VStack {
-                                        HStack {
-                                            Spacer()
-                                            Circle()
-                                                .fill(DesignTokens.Colors.primaryRed)
-                                                .frame(width: 16, height: 16)
-                                                .overlay(
-                                                    Text("\(min(stats.pendingReview.total, 99))")
-                                                        .font(.system(size: 10, weight: .bold))
-                                                        .foregroundColor(.white)
-                                                )
-                                                .offset(x: 8, y: -8)
-                                        }
-                                        Spacer()
-                                    }
-                                }
                             }
                         }
                         .scaleButtonStyle()

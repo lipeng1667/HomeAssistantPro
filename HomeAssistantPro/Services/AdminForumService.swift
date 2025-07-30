@@ -81,9 +81,14 @@ final class AdminForumService {
             guard let httpResponse = response as? HTTPURLResponse else {
                 throw AdminForumError.invalidResponse
             }
-            
-            logger.info("📥 ADMIN API RESPONSE: Status \(httpResponse.statusCode)")
-            
+
+            // Log response body
+            if let responseString = String(data: data, encoding: .utf8) {
+                logger.info("📄 Response Body: \(responseString)")
+            } else {
+                logger.info("📄 Response Body: [Binary data, \(data.count) bytes]")
+            }
+
             return (data, httpResponse.statusCode)
         } catch {
             logger.error("Admin API request failed: \(error.localizedDescription)")
@@ -153,20 +158,29 @@ final class AdminForumService {
     ///   - page: Page number (1-based)
     ///   - limit: Number of items per page
     ///   - type: Filter by type ("topic", "reply", or "all")
+    ///   - sort: Sort order ("newest", "oldest", "priority")
+    ///   - category: Filter by forum category (optional)
     /// - Returns: Review queue with pending items and pagination info
     /// - Throws: AdminForumError for fetch failures
-    func fetchReviewQueue(page: Int = 1, limit: Int = 20, type: String = "all") async throws -> ReviewQueue {
+    func fetchReviewQueue(page: Int = 1, limit: Int = 20, type: String = "all", sort: String = "newest", category: String? = nil) async throws -> ReviewQueue {
         // Get current user ID for authentication
         guard let userIdString = try? settingsStore.retrieveUserId(),
               let userId = Int(userIdString) else {
             throw AdminForumError.notAuthenticated
         }
         
-        let queryItems = [
+        var queryItems = [
+            URLQueryItem(name: "user_id", value: String(userId)),
             URLQueryItem(name: "page", value: String(page)),
             URLQueryItem(name: "limit", value: String(limit)),
-            URLQueryItem(name: "type", value: type)
+            URLQueryItem(name: "type", value: type),
+            URLQueryItem(name: "sort", value: sort)
         ]
+        
+        // Add optional category filter
+        if let category = category {
+            queryItems.append(URLQueryItem(name: "category", value: category))
+        }
         
         var urlComponents = URLComponents(string: apiConfig.baseURL + "/admin/forum/review-queue")
         urlComponents?.queryItems = queryItems
@@ -175,9 +189,7 @@ final class AdminForumService {
             throw AdminForumError.invalidEndpoint
         }
         
-        let userRequest = AdminUserRequest(userId: userId)
-        let body = try JSONEncoder().encode(userRequest)
-        
+        // GET request with no body - user_id is now in query parameters
         var request = URLRequest(url: url)
         request.httpMethod = "GET"
         
@@ -187,8 +199,6 @@ final class AdminForumService {
         for (key, value) in headers {
             request.setValue(value, forHTTPHeaderField: key)
         }
-        
-        request.httpBody = body
         
         let (data, statusCode) = try await performRequest(request)
         
@@ -225,9 +235,25 @@ final class AdminForumService {
             throw AdminForumError.notAuthenticated
         }
         
-        let userRequest = AdminUserRequest(userId: userId)
-        let body = try JSONEncoder().encode(userRequest)
-        let request = try createAdminRequest(endpoint: "/admin/forum/stats", method: "GET", body: body)
+        // Add user_id as query parameter for GET requests
+        let queryItems = [URLQueryItem(name: "user_id", value: String(userId))]
+        var urlComponents = URLComponents(string: apiConfig.baseURL + "/admin/forum/stats")
+        urlComponents?.queryItems = queryItems
+        
+        guard let url = urlComponents?.url else {
+            throw AdminForumError.invalidEndpoint
+        }
+        
+        // GET request with no body - user_id is now in query parameters
+        var request = URLRequest(url: url)
+        request.httpMethod = "GET"
+        
+        // Add authentication headers using shared configuration
+        let sessionToken = try? settingsStore.retrieveSessionToken()
+        let headers = apiConfig.createAuthHeaders(sessionToken: sessionToken)
+        for (key, value) in headers {
+            request.setValue(value, forHTTPHeaderField: key)
+        }
         
         let (data, statusCode) = try await performRequest(request)
         
