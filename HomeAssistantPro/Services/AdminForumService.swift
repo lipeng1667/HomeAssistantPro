@@ -163,11 +163,16 @@ final class AdminForumService {
     /// - Returns: Review queue with pending items and pagination info
     /// - Throws: AdminForumError for fetch failures
     func fetchReviewQueue(page: Int = 1, limit: Int = 20, type: String = "all", sort: String = "newest", category: String? = nil) async throws -> ReviewQueue {
+        logger.info("🔍 Fetching review queue: page=\(page), limit=\(limit), type=\(type), sort=\(sort)")
+        
         // Get current user ID for authentication
         guard let userIdString = try? settingsStore.retrieveUserId(),
               let userId = Int(userIdString) else {
+            logger.error("❌ fetchReviewQueue failed: user not authenticated")
             throw AdminForumError.notAuthenticated
         }
+        
+        logger.info("✅ User authenticated: userId=\(userId)")
         
         var queryItems = [
             URLQueryItem(name: "user_id", value: String(userId)),
@@ -335,8 +340,9 @@ struct ReviewQueueResponse: Codable {
         let stats: QueueStats
         
         enum CodingKeys: String, CodingKey {
-            case pendingItems = "pending_items"
-            case pagination, stats
+            case pendingItems = "posts"
+            case pagination
+            case stats = "queue_stats"
         }
     }
 }
@@ -375,27 +381,27 @@ struct PendingItem: Codable, Identifiable {
     let type: String
     let title: String?
     let content: String
-    let author: ItemAuthor
+    let userId: Int
+    let authorName: String
     let category: String?
-    let topicId: Int?
-    let topicTitle: String?
+    let topicId: String?
+    let parentReplyId: String?
     let createdAt: String
-    let priority: String
+    let updatedAt: String
+    let priority: String? // Optional since API doesn't always provide it
     
     enum CodingKeys: String, CodingKey {
-        case id, type, title, content, author, category, priority
+        case id, type, title, content, category
+        case userId = "user_id"
+        case authorName = "author_name"
         case topicId = "topic_id"
-        case topicTitle = "topic_title"
+        case parentReplyId = "parent_reply_id"
         case createdAt = "created_at"
+        case updatedAt = "updated_at"
+        case priority
     }
 }
 
-/// Author information for pending items
-struct ItemAuthor: Codable {
-    let id: Int
-    let name: String
-    let role: String
-}
 
 /// Pagination information
 struct Pagination: Codable {
@@ -417,15 +423,17 @@ struct Pagination: Codable {
 /// Queue statistics
 struct QueueStats: Codable {
     let totalPending: Int
-    let topicsPending: Int
-    let repliesPending: Int
-    let averageWaitTimeHours: Double
+    let topicsPending: Int?
+    let repliesPending: Int?
+    let averageWaitTimeHours: Double?
+    let typeFilter: String?
     
     enum CodingKeys: String, CodingKey {
         case totalPending = "total_pending"
         case topicsPending = "topics_pending"
         case repliesPending = "replies_pending"
         case averageWaitTimeHours = "average_wait_time_hours"
+        case typeFilter = "type_filter"
     }
 }
 

@@ -166,6 +166,7 @@ struct AdminReviewQueueView: View {
                         
                         Text(filter.displayName)
                             .font(.system(size: 14, weight: .semibold))
+                            .fixedSize()
                         
                         // Count badge
                         let count = getFilterCount(for: filter)
@@ -181,6 +182,7 @@ struct AdminReviewQueueView: View {
                                 )
                         }
                     }
+                    .fixedSize(horizontal: true, vertical: false)
                     .foregroundColor(selectedFilter == filter ? .white : DesignTokens.Colors.textSecondary)
                     .padding(.horizontal, 16)
                     .padding(.vertical, 10)
@@ -372,6 +374,9 @@ struct AdminReviewQueueView: View {
         case .reply(let reply):
             await moderationViewModel.moderateReply(reply, action: action, reason: reason)
         }
+        
+        // Refresh stats after successful moderation
+        await moderationViewModel.fetchForumStats()
         
         // Close sheet and clear state
         showingModerationSheet = false

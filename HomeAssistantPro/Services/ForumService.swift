@@ -64,10 +64,20 @@ final class ForumService {
     }
     
     /// Checks if current user is authenticated (not anonymous)
-    /// - Returns: True if user is authenticated (status = 2), false if anonymous (status = 1) or not logged in (status = 0)
+    /// - Returns: True if user is authenticated, false if anonymous or not logged in
     private func isUserAuthenticated() -> Bool {
         let userStatus = settingsStore.retrieveUserStatus()
-        return userStatus == 2 // Only authenticated users (status = 2)
+        logger.info("🔐 User status check: \(userStatus) (2=registered, 87=admin, 1=anonymous, 0=not logged in)")
+        
+        // Also check if we have a valid user ID as fallback for status inconsistencies
+        let hasValidUserId = (try? getCurrentUserId()) != nil
+        logger.info("🔐 Has valid user ID: \(hasValidUserId)")
+        
+        // User is authenticated if they have proper status OR have a valid user ID
+        let isAuthenticated = (userStatus == 2 || userStatus == 87) || hasValidUserId
+        logger.info("🔐 Final authentication result: \(isAuthenticated)")
+        
+        return isAuthenticated
     }
     
     /// Creates authenticated URLRequest for forum endpoints
@@ -220,11 +230,18 @@ final class ForumService {
         }
         
         // Include user_id to get under-review topics for current user (only for authenticated users)
-        if includeUserReviews && isUserAuthenticated() {
-            if let userId = try? getCurrentUserId() {
+        logger.info("🔍 Debug fetchTopics: includeUserReviews=\(includeUserReviews), isUserAuthenticated=\(self.isUserAuthenticated())")
+        
+        if includeUserReviews && self.isUserAuthenticated() {
+            do {
+                let userId = try self.getCurrentUserId()
                 components.queryItems?.append(URLQueryItem(name: "user_id", value: userId))
                 logger.info("👤 Including user_id \(userId) for under-review content")
+            } catch {
+                logger.error("❌ Failed to get current user ID in fetchTopics: \(error)")
             }
+        } else {
+            logger.info("⚠️ Not including user_id in fetchTopics - includeUserReviews: \(includeUserReviews), authenticated: \(self.isUserAuthenticated())")
         }
         
         let queryString = components.query ?? ""
@@ -257,11 +274,18 @@ final class ForumService {
         ]
         
         // Include user_id to get under-review replies for current user (only for authenticated users)
-        if includeUserReviews && isUserAuthenticated() {
-            if let userId = try? getCurrentUserId() {
+        logger.info("🔍 Debug: includeUserReviews=\(includeUserReviews), isUserAuthenticated=\(self.isUserAuthenticated())")
+        
+        if includeUserReviews && self.isUserAuthenticated() {
+            do {
+                let userId = try self.getCurrentUserId()
                 components.queryItems?.append(URLQueryItem(name: "user_id", value: userId))
                 logger.info("👤 Including user_id \(userId) for under-review replies")
+            } catch {
+                logger.error("❌ Failed to get current user ID: \(error)")
             }
+        } else {
+            logger.info("⚠️ Not including user_id - includeUserReviews: \(includeUserReviews), authenticated: \(self.isUserAuthenticated())")
         }
         
         let queryString = components.query ?? ""

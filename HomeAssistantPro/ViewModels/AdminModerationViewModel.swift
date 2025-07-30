@@ -190,9 +190,9 @@ class AdminModerationViewModel: ObservableObject {
                     content: item.content,
                     category: item.category ?? "General",
                     author: ForumAuthor(
-                        id: item.author.id,
-                        name: item.author.name,
-                        status: item.author.role == "admin" ? 87 : 2
+                        id: item.userId,
+                        name: item.authorName,
+                        status: 2 // Default to regular user since we don't have role info
                     ),
                     replyCount: 0,
                     likeCount: 0,
@@ -211,9 +211,9 @@ class AdminModerationViewModel: ObservableObject {
                     id: item.id,
                     content: item.content,
                     author: ForumAuthor(
-                        id: item.author.id,
-                        name: item.author.name,
-                        status: item.author.role == "admin" ? 87 : 2
+                        id: item.userId,
+                        name: item.authorName,
+                        status: 2 // Default to regular user since we don't have role info
                     ),
                     parentReplyId: nil,
                     likeCount: 0,
