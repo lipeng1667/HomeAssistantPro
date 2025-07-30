@@ -108,6 +108,13 @@ struct CreatePostView: View {
             self._selectedCategory = State(initialValue: "Smart Home")
             
         case .edit(let topic):
+            print("🔧 CreatePostView: Initializing in EDIT mode")
+            print("🔧 Topic ID: \(topic.id)")
+            print("🔧 Topic Title: '\(topic.title)'")
+            print("🔧 Topic Content: '\(String(topic.content.prefix(100)))...'")
+            print("🔧 Topic Category: '\(topic.category)'")
+            print("🔧 Topic Images: \(topic.images)")
+            
             self._postTitle = State(initialValue: topic.title)
             self._postContent = State(initialValue: topic.content)
             self._selectedCategory = State(initialValue: topic.category)
@@ -116,6 +123,9 @@ struct CreatePostView: View {
     }
     
     var body: some View {
+        let _ = print("🔧 CreatePostView: Body rendering - Mode: \(mode.title)")
+        let _ = print("🔧 CreatePostView: Title: '\(postTitle)', Content: '\(String(postContent.prefix(50)))...'")
+        
         NavigationView {
             ZStack {
                 // Responsive background
@@ -143,9 +153,13 @@ struct CreatePostView: View {
             }
             .navigationBarHidden(true)
             .onAppear {
+                print("🔧 CreatePostView: onAppear called - Mode: \(mode.title)")
+                
                 // Only load draft for create mode
                 if case .create = mode {
                     loadDraftIfAvailable()
+                } else {
+                    print("🔧 CreatePostView: Edit mode - skipping draft loading")
                 }
                 loadCategories()
             }

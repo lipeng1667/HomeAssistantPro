@@ -51,12 +51,14 @@ struct PostStatusIndicator: View {
         case underReview = -1
         case published = 0
         case deleted = 1
+        case rejected = 2
         
         var displayName: String {
             switch self {
             case .underReview: return "Under Review"
             case .published: return "Published"
             case .deleted: return "Deleted"
+            case .rejected: return "Rejected"
             }
         }
         
@@ -65,6 +67,7 @@ struct PostStatusIndicator: View {
             case .underReview: return "clock.fill"
             case .published: return "checkmark.circle.fill"
             case .deleted: return "trash.fill"
+            case .rejected: return "xmark.circle.fill"
             }
         }
         
@@ -73,6 +76,7 @@ struct PostStatusIndicator: View {
             case .underReview: return DesignTokens.Colors.primaryAmber
             case .published: return DesignTokens.Colors.primaryGreen
             case .deleted: return DesignTokens.Colors.primaryRed
+            case .rejected: return DesignTokens.Colors.primaryRed
             }
         }
         
@@ -81,6 +85,7 @@ struct PostStatusIndicator: View {
             case .underReview: return DesignTokens.Colors.primaryAmber.opacity(0.15)
             case .published: return DesignTokens.Colors.primaryGreen.opacity(0.15)
             case .deleted: return DesignTokens.Colors.primaryRed.opacity(0.15)
+            case .rejected: return DesignTokens.Colors.primaryRed.opacity(0.2)
             }
         }
         
@@ -89,6 +94,7 @@ struct PostStatusIndicator: View {
             case .underReview: return "This post is awaiting admin approval before it becomes visible to other users."
             case .published: return "This post is visible to all community members."
             case .deleted: return "This post has been removed by an administrator."
+            case .rejected: return "This post was not approved and is only visible to you. You can edit and resubmit it."
             }
         }
         
@@ -251,6 +257,7 @@ extension ForumReply {
             HStack(spacing: 12) {
                 PostStatusIndicator(status: .underReview, style: .badge)
                 PostStatusIndicator(status: .published, style: .badge)
+                PostStatusIndicator(status: .rejected, style: .badge)
                 PostStatusIndicator(status: .deleted, style: .badge)
             }
         }
@@ -263,6 +270,7 @@ extension ForumReply {
             HStack(spacing: 12) {
                 PostStatusIndicator(status: .underReview, style: .inline)
                 PostStatusIndicator(status: .published, style: .inline)
+                PostStatusIndicator(status: .rejected, style: .inline)
                 PostStatusIndicator(status: .deleted, style: .inline)
             }
         }
@@ -275,6 +283,7 @@ extension ForumReply {
             VStack(spacing: 8) {
                 PostStatusIndicator(status: .underReview, style: .banner)
                 PostStatusIndicator(status: .published, style: .banner)
+                PostStatusIndicator(status: .rejected, style: .banner)
                 PostStatusIndicator(status: .deleted, style: .banner)
             }
         }

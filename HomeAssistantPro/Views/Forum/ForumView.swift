@@ -615,8 +615,8 @@ struct ForumView: View {
                 VStack(alignment: .leading, spacing: 8) {
                     // Category, admin badge, review status, and time
                     HStack {
-                        // Review status badge for user's under-review content
-                        if topic.isUnderReview && isCurrentUserTopic(topic) {
+                        // Status badge for user's under-review and rejected content
+                        if (topic.isUnderReview || topic.status == 2) && isCurrentUserTopic(topic) {
                             PostStatusIndicator(status: topic.status, style: .badge)
                         }
                         

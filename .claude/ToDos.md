@@ -7,5 +7,7 @@
 - [x] add hint for 'reviewing' badget to let user know before approve, it's only visiable to himself
 - [x] update the layout for reply to reply
 - [] Chinese localization
-- [] Plan forum post moderation features for admin
+- [x] Plan forum post moderation features for admin
 - [] Plan chat support agent features for admin
+- [x] normal user can modify his replys/posts rejected
+- [] add image to reply a reply

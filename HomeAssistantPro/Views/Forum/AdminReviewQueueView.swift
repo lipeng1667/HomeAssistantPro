@@ -437,12 +437,8 @@ struct AdminReviewQueueView: View {
             items.append(contentsOf: moderationViewModel.pendingReplies.map { ReviewItem.reply($0) })
         }
         
-        return items.sorted { item1, item2 in
-            // Sort by creation date, newest first
-            let date1 = DateUtils.parseTimestamp(item1.createdAt) ?? Date.distantPast
-            let date2 = DateUtils.parseTimestamp(item2.createdAt) ?? Date.distantPast
-            return date1 > date2
-        }
+        return items
+        
     }
     
     private func performModeration(item: ReviewItem, action: AdminModerationViewModel.ModerationAction) async {

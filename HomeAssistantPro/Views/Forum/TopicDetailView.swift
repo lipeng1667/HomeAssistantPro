@@ -60,7 +60,6 @@ struct TopicDetailView: View {
     
     // Edit/Delete state
     @State private var showEditTopic = false
-    @State private var showEditReply = false
     @State private var editingReply: ForumReply? = nil
     @State private var showDeleteTopicConfirmation = false
     @State private var showDeleteReplyConfirmation = false
@@ -176,6 +175,9 @@ struct TopicDetailView: View {
         }
         .sheet(isPresented: $showEditTopic) {
             if let currentTopic = topic {
+                let _ = print("🔧 TopicDetailView: Presenting edit sheet for topic ID: \(currentTopic.id)")
+                let _ = print("🔧 TopicDetailView: Topic status: \(currentTopic.status)")
+                
                 CreatePostView(
                     mode: .edit(currentTopic),
                     onCompletion: {
@@ -184,20 +186,25 @@ struct TopicDetailView: View {
                         }
                     }
                 )
+            } else {
+                let _ = print("🚨 TopicDetailView: ERROR - currentTopic is nil when trying to edit!")
+                Text("Error: Topic not available")
+                    .foregroundColor(.red)
+                    .padding()
             }
         }
-        .sheet(isPresented: $showEditReply) {
-            if let editingReply = editingReply {
-                EditReplyView(
-                    reply: editingReply,
-                    topicId: topicId,
-                    onReplyUpdated: {
-                        Task {
-                            await refreshTopic()
-                        }
+        .sheet(item: $editingReply) { reply in
+            let _ = print("🔧 TopicDetailView: Presenting EditReplyView for reply ID: \(reply.id)")
+            
+            EditReplyView(
+                reply: reply,
+                topicId: topicId,
+                onReplyUpdated: {
+                    Task {
+                        await refreshTopic()
                     }
-                )
-            }
+                }
+            )
         }
         .overlay {
             // Delete Topic Confirmation Modal
@@ -822,7 +829,7 @@ struct TopicDetailView: View {
                             }
                             
                             // Review status badge for user's under-review replies
-                            if reply.isUnderReview && isCurrentUserReply(reply) {
+                            if (reply.isUnderReview || reply.status == 2) && isCurrentUserReply(reply) {
                                 PostStatusIndicator(status: reply.status, style: .badge)
                             }
                         }
@@ -914,8 +921,10 @@ struct TopicDetailView: View {
                     if isCurrentUserReply(reply) {
                         Menu {
                             Button(action: {
+                                print("🔧 TopicDetailView: Setting editingReply = \(reply.id)")
+                                print("🔧 TopicDetailView: Reply status: \(reply.status)")
+                                print("🔧 TopicDetailView: Reply content: '\(String(reply.content.prefix(50)))...'")
                                 editingReply = reply
-                                showEditReply = true
                             }) {
                                 Label("Edit Reply", systemImage: "pencil")
                             }

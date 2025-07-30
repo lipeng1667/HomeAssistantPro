@@ -23,6 +23,8 @@ struct SettingsView: View {
     @State private var showLanguageSelection = false
     @State private var showLogoutConfirmation = false
     @State private var showThemeSelection = false
+    @State private var showClearCacheConfirmation = false
+    @State private var isClearingCache = false
     @FocusState private var isFieldFocused: Bool
     
     
@@ -135,9 +137,9 @@ struct SettingsView: View {
                         profileSection
                         preferencesSection
                         
-                        // Only show security section for authenticated users
-                        if let currentUser = appViewModel.currentUser,
-                           currentUser.userStatus != .anonymous {
+                        // Show security section for all users except anonymous
+                        // This allows "Not logged in" users to access clear cache
+                        if appViewModel.currentUser?.userStatus != .anonymous {
                             securitySection
                         }
                     }
@@ -173,6 +175,20 @@ struct SettingsView: View {
                 onConfirm: {
                     Task {
                         await handleLogout()
+                    }
+                }
+            )
+        )
+        .confirmationModal(
+            isPresented: $showClearCacheConfirmation,
+            config: .destructive(
+                title: "Clear Cache",
+                message: "This will remove all cached data and keychain information. You will need to log in again. This action cannot be undone.",
+                icon: "trash.fill",
+                confirmText: "Clear Cache",
+                onConfirm: {
+                    Task {
+                        await handleClearCache()
                     }
                 }
             )
@@ -320,20 +336,34 @@ struct SettingsView: View {
                                     style: .secondary
                                 )
                             case .deleted:
-                                modernActionButton(
-                                    title: "Sign In",
-                                    icon: "person.crop.circle.fill",
+                                Button(action: {
+                                    HapticManager.buttonTap()
+                                    // Navigate to login by setting isLoggedIn to false
+                                    appViewModel.isLoggedIn = false
+                                }) {
+                                    actionButtonContent(
+                                        title: "Sign In",
+                                        icon: "person.crop.circle.fill",
+                                        color: DesignTokens.Colors.primaryCyan,
+                                        style: .primary
+                                    )
+                                }
+                                .enhancedButtonStyle()
+                            }
+                        } else {
+                            Button(action: {
+                                HapticManager.buttonTap()
+                                // Navigate to login by setting isLoggedIn to false
+                                appViewModel.isLoggedIn = false
+                            }) {
+                                actionButtonContent(
+                                    title: "Get Started",
+                                    icon: "arrow.right.circle.fill",
                                     color: DesignTokens.Colors.primaryCyan,
                                     style: .primary
                                 )
                             }
-                        } else {
-                            modernActionButton(
-                                title: "Get Started",
-                                icon: "arrow.right.circle.fill",
-                                color: DesignTokens.Colors.primaryCyan,
-                                style: .primary
-                            )
+                            .enhancedButtonStyle()
                         }
                     }
                 }
@@ -366,45 +396,50 @@ struct SettingsView: View {
         Button(action: {
             HapticManager.buttonTap()
         }) {
-            HStack(spacing: DesignTokens.DeviceSize.current.spacing(6, 7, 8)) {
-                Image(systemName: icon)
-                    .font(.system(size: DesignTokens.DeviceSize.current.fontSize(11, 12.5, 14), weight: .semibold))
-                
-                Text(title)
-                    .font(DesignTokens.ResponsiveTypography.buttonMedium)
-            }
-            .foregroundColor(style == .primary ? .white : color)
-            .responsiveHorizontalPadding(12, 16, 20)
-            .responsiveVerticalPadding(10, 12, 14)
-            .frame(maxWidth: .infinity)
-            .background(
-                RoundedRectangle(cornerRadius: DesignTokens.DeviceSize.current.spacing(10, 11, 12))
-                    .fill(
-                        style == .primary ?
-                        LinearGradient(
-                            colors: [color, color.opacity(0.8)],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        ) :
-                        LinearGradient(
-                            colors: [color.opacity(0.15)],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        )
-                    )
-                    .overlay(
-                        RoundedRectangle(cornerRadius: DesignTokens.DeviceSize.current.spacing(10, 11, 12))
-                            .stroke(style == .primary ? Color.clear : color.opacity(0.3), lineWidth: 1)
-                    )
-                    .shadow(
-                        color: style == .primary ? color.opacity(0.3) : Color.clear,
-                        radius: style == .primary ? DesignTokens.DeviceSize.current.spacing(6, 7, 8) : 0,
-                        x: 0,
-                        y: DesignTokens.DeviceSize.current.spacing(3, 3.5, 4)
-                    )
-            )
+            actionButtonContent(title: title, icon: icon, color: color, style: style)
         }
         .enhancedButtonStyle()
+    }
+    
+    /// Action button content for reuse in custom button implementations
+    private func actionButtonContent(title: String, icon: String, color: Color, style: ButtonStyle) -> some View {
+        HStack(spacing: DesignTokens.DeviceSize.current.spacing(6, 7, 8)) {
+            Image(systemName: icon)
+                .font(.system(size: DesignTokens.DeviceSize.current.fontSize(11, 12.5, 14), weight: .semibold))
+            
+            Text(title)
+                .font(DesignTokens.ResponsiveTypography.buttonMedium)
+        }
+        .foregroundColor(style == .primary ? .white : color)
+        .responsiveHorizontalPadding(12, 16, 20)
+        .responsiveVerticalPadding(10, 12, 14)
+        .frame(maxWidth: .infinity)
+        .background(
+            RoundedRectangle(cornerRadius: DesignTokens.DeviceSize.current.spacing(10, 11, 12))
+                .fill(
+                    style == .primary ?
+                    LinearGradient(
+                        colors: [color, color.opacity(0.8)],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    ) :
+                    LinearGradient(
+                        colors: [color.opacity(0.15)],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: DesignTokens.DeviceSize.current.spacing(10, 11, 12))
+                        .stroke(style == .primary ? Color.clear : color.opacity(0.3), lineWidth: 1)
+                )
+                .shadow(
+                    color: style == .primary ? color.opacity(0.3) : Color.clear,
+                    radius: style == .primary ? DesignTokens.DeviceSize.current.spacing(6, 7, 8) : 0,
+                    x: 0,
+                    y: DesignTokens.DeviceSize.current.spacing(3, 3.5, 4)
+                )
+        )
     }
     
     enum ButtonStyle {
@@ -609,50 +644,104 @@ struct SettingsView: View {
             VStack(alignment: .leading, spacing: DesignTokens.DeviceSize.current.spacing(20, 22, 24)) {
                 sectionHeader(title: "Security", icon: "shield.fill")
                 
-                // Logout Button
-                Button(action: {
-                    HapticManager.buttonTap()
-                    showLogoutConfirmation = true
-                }) {
-                    HStack(spacing: DesignTokens.DeviceSize.current.spacing(12, 14, 16)) {
-                        ZStack {
-                            Circle()
-                                .fill(DesignTokens.Colors.primaryRed.opacity(0.15))
-                                .frame(
-                                    width: DesignTokens.DeviceSize.current.spacing(35, 39.5, 44),
-                                    height: DesignTokens.DeviceSize.current.spacing(35, 39.5, 44)
-                                )
-                            
-                            if appViewModel.isLoading {
-                                ProgressView()
-                                    .progressViewStyle(CircularProgressViewStyle(tint: DesignTokens.Colors.primaryRed))
-                                    .scaleEffect(0.8)
-                            } else {
-                                Image(systemName: "arrow.right.square.fill")
-                                    .font(.system(size: DesignTokens.DeviceSize.current.fontSize(14, 16, 18), weight: .semibold))
-                                    .foregroundColor(DesignTokens.Colors.primaryRed)
+                VStack(spacing: DesignTokens.DeviceSize.current.spacing(16, 18, 20)) {
+                    // Clear Cache Button - Always available for non-anonymous users
+                    Button(action: {
+                        HapticManager.buttonTap()
+                        showClearCacheConfirmation = true
+                    }) {
+                        HStack(spacing: DesignTokens.DeviceSize.current.spacing(12, 14, 16)) {
+                            ZStack {
+                                Circle()
+                                    .fill(DesignTokens.Colors.primaryAmber.opacity(0.15))
+                                    .frame(
+                                        width: DesignTokens.DeviceSize.current.spacing(35, 39.5, 44),
+                                        height: DesignTokens.DeviceSize.current.spacing(35, 39.5, 44)
+                                    )
+                                
+                                if isClearingCache {
+                                    ProgressView()
+                                        .progressViewStyle(CircularProgressViewStyle(tint: DesignTokens.Colors.primaryAmber))
+                                        .scaleEffect(0.8)
+                                } else {
+                                    Image(systemName: "trash.fill")
+                                        .font(.system(size: DesignTokens.DeviceSize.current.fontSize(14, 16, 18), weight: .semibold))
+                                        .foregroundColor(DesignTokens.Colors.primaryAmber)
+                                }
                             }
+                            
+                            VStack(alignment: .leading, spacing: DesignTokens.DeviceSize.current.spacing(1.5, 1.75, 2)) {
+                                Text("Clear Cache")
+                                    .font(.system(size: DesignTokens.DeviceSize.current.fontSize(12, 14, 16), weight: .semibold))
+                                    .foregroundColor(.primary)
+                                Text("Clear all cached data and keychain")
+                                    .font(.system(size: DesignTokens.DeviceSize.current.fontSize(11, 12.5, 14), weight: .medium))
+                                    .foregroundColor(.secondary)
+                            }
+                            
+                            Spacer()
+                            
+                            Image(systemName: "chevron.right")
+                                .font(.system(size: DesignTokens.DeviceSize.current.fontSize(11, 12.5, 14), weight: .semibold))
+                                .foregroundColor(.secondary.opacity(0.6))
                         }
-                        
-                        VStack(alignment: .leading, spacing: DesignTokens.DeviceSize.current.spacing(1.5, 1.75, 2)) {
-                            Text("Sign Out")
-                                .font(.system(size: DesignTokens.DeviceSize.current.fontSize(12, 14, 16), weight: .semibold))
-                                .foregroundColor(.primary)
-                            Text("End your current session")
-                                .font(.system(size: DesignTokens.DeviceSize.current.fontSize(11, 12.5, 14), weight: .medium))
-                                .foregroundColor(.secondary)
-                        }
-                        
-                        Spacer()
-                        
-                        Image(systemName: "chevron.right")
-                            .font(.system(size: DesignTokens.DeviceSize.current.fontSize(11, 12.5, 14), weight: .semibold))
-                            .foregroundColor(.secondary.opacity(0.6))
+                        .contentShape(Rectangle())
                     }
-                    .contentShape(Rectangle())
+                    .disabled(isClearingCache)
+                    .cardButtonStyle()
+                    
+                    // Only show logout button and divider for authenticated users
+                    if let currentUser = appViewModel.currentUser,
+                       currentUser.userStatus != .anonymous {
+                        
+                        Divider().opacity(0.5)
+                        
+                        // Logout Button
+                        Button(action: {
+                            HapticManager.buttonTap()
+                            showLogoutConfirmation = true
+                        }) {
+                            HStack(spacing: DesignTokens.DeviceSize.current.spacing(12, 14, 16)) {
+                                ZStack {
+                                    Circle()
+                                        .fill(DesignTokens.Colors.primaryRed.opacity(0.15))
+                                        .frame(
+                                            width: DesignTokens.DeviceSize.current.spacing(35, 39.5, 44),
+                                            height: DesignTokens.DeviceSize.current.spacing(35, 39.5, 44)
+                                        )
+                                    
+                                    if appViewModel.isLoading {
+                                        ProgressView()
+                                            .progressViewStyle(CircularProgressViewStyle(tint: DesignTokens.Colors.primaryRed))
+                                            .scaleEffect(0.8)
+                                    } else {
+                                        Image(systemName: "arrow.right.square.fill")
+                                            .font(.system(size: DesignTokens.DeviceSize.current.fontSize(14, 16, 18), weight: .semibold))
+                                            .foregroundColor(DesignTokens.Colors.primaryRed)
+                                    }
+                                }
+                                
+                                VStack(alignment: .leading, spacing: DesignTokens.DeviceSize.current.spacing(1.5, 1.75, 2)) {
+                                    Text("Sign Out")
+                                        .font(.system(size: DesignTokens.DeviceSize.current.fontSize(12, 14, 16), weight: .semibold))
+                                        .foregroundColor(.primary)
+                                    Text("End your current session")
+                                        .font(.system(size: DesignTokens.DeviceSize.current.fontSize(11, 12.5, 14), weight: .medium))
+                                        .foregroundColor(.secondary)
+                                }
+                                
+                                Spacer()
+                                
+                                Image(systemName: "chevron.right")
+                                    .font(.system(size: DesignTokens.DeviceSize.current.fontSize(11, 12.5, 14), weight: .semibold))
+                                    .foregroundColor(.secondary.opacity(0.6))
+                            }
+                            .contentShape(Rectangle())
+                        }
+                        .disabled(appViewModel.isLoading)
+                        .cardButtonStyle()
+                    }
                 }
-                .disabled(appViewModel.isLoading)
-                .cardButtonStyle()
             }
             .padding(.vertical, DesignTokens.DeviceSize.current.spacing(16, 18, 20))
         }
@@ -669,6 +758,50 @@ struct SettingsView: View {
             HapticManager.error()
         } else {
             HapticManager.success()
+        }
+    }
+    
+    /// Handles clearing all cached data and keychain information
+    private func handleClearCache() async {
+        await MainActor.run {
+            isClearingCache = true
+        }
+        
+        HapticManager.medium()
+        
+        do {
+            // Store current first launch state to preserve it
+            let preserveFirstLaunch = !settingsStore.isFirstLaunch
+            
+            // Clear in-memory cache
+            CacheManager.shared.clearAllCache()
+            
+            // Clear all keychain and UserDefaults data
+            try settingsStore.clearAllData()
+            
+            // Restore first launch state to avoid showing IntroView again
+            if preserveFirstLaunch {
+                settingsStore.storeFirstLaunchFlag(false)
+            }
+            
+            await MainActor.run {
+                // Reset app state to initial state
+                appViewModel.currentUser = nil
+                appViewModel.isLoggedIn = false
+                
+                // Success feedback
+                HapticManager.success()
+                isClearingCache = false
+            }
+            
+        } catch {
+            await MainActor.run {
+                // Error feedback
+                HapticManager.error()
+                isClearingCache = false
+            }
+            
+            print("Error clearing cache: \(error.localizedDescription)")
         }
     }
     

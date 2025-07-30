@@ -65,6 +65,11 @@ struct ForumTopic: Codable, Identifiable {
         return status == -1
     }
     
+    /// Computed property to check if topic is rejected
+    var isRejected: Bool {
+        return status == 2
+    }
+    
     /// Computed property to check if topic is deleted
     var isDeleted: Bool {
         return status == 1
@@ -126,6 +131,11 @@ struct ForumReply: Codable, Identifiable {
     /// Computed property to check if reply is under review
     var isUnderReview: Bool {
         return status == -1
+    }
+    
+    /// Computed property to check if reply is rejected
+    var isRejected: Bool {
+        return status == 2
     }
     
     /// Computed property to check if reply is deleted

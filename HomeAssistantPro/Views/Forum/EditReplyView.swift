@@ -57,6 +57,12 @@ struct EditReplyView: View {
     ///   - topicId: The parent topic ID
     ///   - onReplyUpdated: Callback when reply is successfully updated
     init(reply: ForumReply, topicId: Int, onReplyUpdated: @escaping () -> Void) {
+        print("🔧 EditReplyView: Initializing with reply ID: \(reply.id)")
+        print("🔧 EditReplyView: Reply content: '\(String(reply.content.prefix(100)))...'")
+        print("🔧 EditReplyView: Reply status: \(reply.status)")
+        print("🔧 EditReplyView: Reply images: \(reply.images)")
+        print("🔧 EditReplyView: Topic ID: \(topicId)")
+        
         self.reply = reply
         self.topicId = topicId
         self.onReplyUpdated = onReplyUpdated
@@ -65,6 +71,9 @@ struct EditReplyView: View {
     }
     
     var body: some View {
+        let _ = print("🔧 EditReplyView: Body rendering - Reply ID: \(reply.id)")
+        let _ = print("🔧 EditReplyView: Content: '\(String(replyContent.prefix(50)))...'")
+        
         NavigationView {
             VStack(spacing: 0) {
                 // Header

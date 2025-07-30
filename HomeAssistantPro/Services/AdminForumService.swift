@@ -162,7 +162,7 @@ final class AdminForumService {
     ///   - category: Filter by forum category (optional)
     /// - Returns: Review queue with pending items and pagination info
     /// - Throws: AdminForumError for fetch failures
-    func fetchReviewQueue(page: Int = 1, limit: Int = 20, type: String = "all", sort: String = "newest", category: String? = nil) async throws -> ReviewQueue {
+    func fetchReviewQueue(page: Int = 1, limit: Int = 20, type: String = "all", sort: String = "oldest", category: String? = nil) async throws -> ReviewQueue {
         logger.info("🔍 Fetching review queue: page=\(page), limit=\(limit), type=\(type), sort=\(sort)")
         
         // Get current user ID for authentication
