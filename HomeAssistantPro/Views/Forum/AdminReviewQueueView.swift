@@ -19,6 +19,13 @@
 import SwiftUI
 import os.log
 
+/// Data structure for image viewer
+struct ImageViewerData: Identifiable {
+    let id = UUID()
+    let images: [String]
+    let selectedIndex: Int
+}
+
 /// Admin interface for reviewing pending forum posts and replies
 struct AdminReviewQueueView: View {
     @StateObject private var moderationViewModel = AdminModerationViewModel()
@@ -27,6 +34,7 @@ struct AdminReviewQueueView: View {
     @State private var selectedFilter: ReviewFilter = .all
     @State private var moderationItem: ReviewItem?
     @State private var moderationReason = ""
+    @State private var imageViewerData: ImageViewerData?
     
     private let logger = Logger(subsystem: "com.homeassistant.ios", category: "AdminReviewQueueView")
     
@@ -48,6 +56,16 @@ struct AdminReviewQueueView: View {
                 }
             }
             .navigationBarHidden(true)
+        }
+        .fullScreenCover(item: $imageViewerData) { data in
+            ImageViewerModal(
+                images: data.images,
+                selectedIndex: data.selectedIndex,
+                isPresented: .init(
+                    get: { imageViewerData != nil },
+                    set: { if !$0 { imageViewerData = nil } }
+                )
+            )
         }
         .onAppear {
             if moderationViewModel.canModerate(appViewModel: appViewModel) {
@@ -230,52 +248,88 @@ struct AdminReviewQueueView: View {
         .responsiveVerticalPadding(16, 20, 24)
     }
     
-    // MARK: - Filter Tabs Section
+    // MARK: - Filter Stats Section
     
     private var filterTabsSection: some View {
-        HStack(spacing: 12) {
-            ForEach(ReviewFilter.allCases, id: \.self) { filter in
-                Button(action: {
-                    withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
-                        selectedFilter = filter
-                    }
-                }) {
-                    HStack(spacing: 6) {
-                        Image(systemName: filter.iconName)
-                            .font(.system(size: 14, weight: .medium))
-                        
-                        Text(filter.displayName)
-                            .font(.system(size: 14, weight: .semibold))
-                            .fixedSize()
-                        
-                        // Count badge
-                        let count = getFilterCount(for: filter)
-                        if count > 0 {
-                            Text("\(count)")
-                                .font(.system(size: 12, weight: .bold))
-                                .foregroundColor(.white)
-                                .padding(.horizontal, 6)
-                                .padding(.vertical, 2)
-                                .background(
-                                    Capsule()
-                                        .fill(DesignTokens.Colors.primaryRed)
-                                )
+        VStack(spacing: 12) {
+            // Interactive stats cards for filtering
+            if let stats = moderationViewModel.forumStats {
+                HStack(spacing: 12) {
+                    // Total pending (All filter)
+                    Button(action: {
+                        withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                            selectedFilter = .all
                         }
+                    }) {
+                        InteractiveStatCard(
+                            title: "Total Pending",
+                            value: "\(stats.pendingReview.total)",
+                            icon: "clock.fill",
+                            color: DesignTokens.Colors.primaryAmber,
+                            isSelected: selectedFilter == .all
+                        )
                     }
-                    .fixedSize(horizontal: true, vertical: false)
-                    .foregroundColor(selectedFilter == filter ? .white : DesignTokens.Colors.textSecondary)
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 10)
-                    .background(
-                        Capsule()
-                            .fill(selectedFilter == filter ? DesignTokens.Colors.primaryPurple : .clear)
-                            .animation(.spring(response: 0.3, dampingFraction: 0.7), value: selectedFilter)
-                    )
+                    .scaleButtonStyle()
+                    
+                    // Topics pending
+                    Button(action: {
+                        withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                            selectedFilter = .topics
+                        }
+                    }) {
+                        InteractiveStatCard(
+                            title: "Topics",
+                            value: "\(stats.pendingReview.topics)",
+                            icon: "bubble.left.and.bubble.right.fill",
+                            color: DesignTokens.Colors.primaryCyan,
+                            isSelected: selectedFilter == .topics
+                        )
+                    }
+                    .scaleButtonStyle()
+                    
+                    // Replies pending
+                    Button(action: {
+                        withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                            selectedFilter = .replies
+                        }
+                    }) {
+                        InteractiveStatCard(
+                            title: "Replies",
+                            value: "\(stats.pendingReview.replies)",
+                            icon: "arrowshape.turn.up.left.fill",
+                            color: DesignTokens.Colors.primaryGreen,
+                            isSelected: selectedFilter == .replies
+                        )
+                    }
+                    .scaleButtonStyle()
                 }
-                .scaleButtonStyle()
+                
+                // Queue health indicator
+                HStack {
+                    Image(systemName: stats.queueHealth.status == "healthy" ? "checkmark.circle.fill" : "exclamationmark.triangle.fill")
+                        .foregroundColor(stats.queueHealth.status == "healthy" ? DesignTokens.Colors.primaryGreen : DesignTokens.Colors.primaryAmber)
+                    
+                    Text("Queue Health: \(stats.queueHealth.status.capitalized)")
+                        .font(DesignTokens.ResponsiveTypography.bodyMedium)
+                        .foregroundColor(DesignTokens.Colors.textSecondary)
+                    
+                    Spacer()
+                    
+                    Text("Avg Wait: \(String(format: "%.1f", stats.queueHealth.averageWaitTimeHours))h")
+                        .font(DesignTokens.ResponsiveTypography.bodySmall)
+                        .foregroundColor(DesignTokens.Colors.textTertiary)
+                }
+                .padding(.horizontal, 16)
+                .padding(.vertical, 12)
+                .background(
+                    RoundedRectangle(cornerRadius: 12)
+                        .fill(.ultraThinMaterial)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 12)
+                                .stroke(DesignTokens.Colors.borderPrimary, lineWidth: 1)
+                        )
+                )
             }
-            
-            Spacer()
         }
         .padding(.horizontal, 24)
         .padding(.bottom, 16)
@@ -286,11 +340,6 @@ struct AdminReviewQueueView: View {
     private var contentSection: some View {
         ScrollView(showsIndicators: false) {
             LazyVStack(spacing: 16) {
-                // Statistics cards
-                if let stats = moderationViewModel.forumStats {
-                    statsSection(stats: stats)
-                }
-                
                 // Pending items
                 let filteredItems = getFilteredItems()
                 
@@ -312,6 +361,12 @@ struct AdminReviewQueueView: View {
                                     moderationItem = item
                                     moderationReason = ""
                                 }
+                            },
+                            onImageTap: { images, selectedIndex in
+                                imageViewerData = ImageViewerData(
+                                    images: images,
+                                    selectedIndex: selectedIndex
+                                )
                             }
                         )
                         .transition(.asymmetric(
@@ -330,61 +385,56 @@ struct AdminReviewQueueView: View {
         }
     }
     
-    // MARK: - Statistics Section
+    // MARK: - Interactive Stat Card Component
     
-    private func statsSection(stats: ForumStats) -> some View {
-        VStack(spacing: 12) {
-            HStack(spacing: 12) {
-                // Total pending
-                StatCard(
-                    title: "Total Pending",
-                    value: "\(stats.pendingReview.total)",
-                    icon: "clock.fill",
-                    color: DesignTokens.Colors.primaryAmber
-                )
+    private struct InteractiveStatCard: View {
+        let title: String
+        let value: String
+        let icon: String
+        let color: Color
+        let isSelected: Bool
+        
+        var body: some View {
+            VStack(spacing: 8) {
+                HStack {
+                    Image(systemName: icon)
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundColor(isSelected ? .white : color)
+                    
+                    Spacer()
+                }
                 
-                // Topics pending
-                StatCard(
-                    title: "Topics",
-                    value: "\(stats.pendingReview.topics)",
-                    icon: "bubble.left.and.bubble.right.fill",
-                    color: DesignTokens.Colors.primaryCyan
-                )
-                
-                // Replies pending
-                StatCard(
-                    title: "Replies",
-                    value: "\(stats.pendingReview.replies)",
-                    icon: "arrowshape.turn.up.left.fill",
-                    color: DesignTokens.Colors.primaryGreen
-                )
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(value)
+                        .font(.title2)
+                        .fontWeight(.bold)
+                        .foregroundColor(isSelected ? .white : DesignTokens.Colors.textPrimary)
+                    
+                    Text(title)
+                        .font(.caption)
+                        .fontWeight(.medium)
+                        .foregroundColor(isSelected ? .white.opacity(0.8) : DesignTokens.Colors.textSecondary)
+                        .lineLimit(1)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
             }
-            
-            // Queue health indicator
-            HStack {
-                Image(systemName: stats.queueHealth.status == "healthy" ? "checkmark.circle.fill" : "exclamationmark.triangle.fill")
-                    .foregroundColor(stats.queueHealth.status == "healthy" ? DesignTokens.Colors.primaryGreen : DesignTokens.Colors.primaryAmber)
-                
-                Text("Queue Health: \(stats.queueHealth.status.capitalized)")
-                    .font(DesignTokens.ResponsiveTypography.bodyMedium)
-                    .foregroundColor(DesignTokens.Colors.textSecondary)
-                
-                Spacer()
-                
-                Text("Avg Wait: \(String(format: "%.1f", stats.queueHealth.averageWaitTimeHours))h")
-                    .font(DesignTokens.ResponsiveTypography.bodySmall)
-                    .foregroundColor(DesignTokens.Colors.textTertiary)
-            }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 12)
+            .padding(16)
             .background(
                 RoundedRectangle(cornerRadius: 12)
-                    .fill(.ultraThinMaterial)
+                    .fill(isSelected ? color : DesignTokens.Colors.backgroundSecondary)
                     .overlay(
                         RoundedRectangle(cornerRadius: 12)
-                            .stroke(DesignTokens.Colors.borderPrimary, lineWidth: 1)
+                            .stroke(isSelected ? color.opacity(0.5) : DesignTokens.Colors.borderPrimary, lineWidth: isSelected ? 2 : 1)
+                    )
+                    .shadow(
+                        color: isSelected ? color.opacity(0.3) : .clear,
+                        radius: isSelected ? 8 : 0,
+                        x: 0,
+                        y: isSelected ? 4 : 0
                     )
             )
+            .scaleEffect(isSelected ? 1.02 : 1.0)
+            .animation(.spring(response: 0.3, dampingFraction: 0.7), value: isSelected)
         }
     }
     
@@ -502,6 +552,7 @@ struct StatCard: View {
 struct PendingItemCard: View {
     let item: ReviewItem
     let onModerate: (AdminModerationViewModel.ModerationAction) -> Void
+    let onImageTap: ([String], Int) -> Void
     
     var body: some View {
         HStack(spacing: 16) {
@@ -565,6 +616,38 @@ struct PendingItemCard: View {
                     .font(DesignTokens.ResponsiveTypography.bodyMedium)
                     .foregroundColor(DesignTokens.Colors.textSecondary)
                     .lineLimit(3)
+                
+                // Images
+                if !item.images.isEmpty {
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        LazyHStack(spacing: 12) {
+                            ForEach(0..<item.images.count, id: \.self) { index in
+                                let imageUrl = item.images[index]
+                                
+                                AsyncImage(url: URL(string: imageUrl)) { image in
+                                    image
+                                        .resizable()
+                                        .aspectRatio(contentMode: .fill)
+                                } placeholder: {
+                                    Rectangle()
+                                        .fill(DesignTokens.Colors.backgroundSecondary)
+                                        .overlay(
+                                            ProgressView()
+                                                .progressViewStyle(CircularProgressViewStyle(tint: DesignTokens.Colors.textSecondary))
+                                        )
+                                }
+                                .frame(width: 80, height: 80)
+                                .clipShape(RoundedRectangle(cornerRadius: 8))
+                                .contentShape(Rectangle())
+                                .onTapGesture {
+                                    onImageTap(item.images, index)
+                                }
+                            }
+                        }
+                        .padding(.horizontal, 4)
+                    }
+                    .frame(height: 80)
+                }
                 
                 // Action buttons
                 HStack(spacing: 12) {
@@ -634,6 +717,7 @@ struct ModerationActionSheet: View {
     @Binding var reason: String
     let onModerate: (AdminModerationViewModel.ModerationAction) -> Void
     @Environment(\.dismiss) private var dismiss
+    @State private var imageViewerData: ImageViewerData?
     
     var body: some View {
         NavigationView {
@@ -673,6 +757,47 @@ struct ModerationActionSheet: View {
                                     .stroke(DesignTokens.Colors.borderPrimary, lineWidth: 1)
                             )
                     )
+                }
+                
+                // Images
+                if !item.images.isEmpty {
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("Images (\(item.images.count))")
+                            .font(DesignTokens.ResponsiveTypography.bodyMedium)
+                            .foregroundColor(DesignTokens.Colors.textPrimary)
+                        
+                        ScrollView(.horizontal, showsIndicators: false) {
+                            LazyHStack(spacing: 12) {
+                                ForEach(0..<item.images.count, id: \.self) { index in
+                                    let imageUrl = item.images[index]
+                                    
+                                    AsyncImage(url: URL(string: imageUrl)) { image in
+                                        image
+                                            .resizable()
+                                            .aspectRatio(contentMode: .fill)
+                                    } placeholder: {
+                                        Rectangle()
+                                            .fill(DesignTokens.Colors.backgroundSecondary)
+                                            .overlay(
+                                                ProgressView()
+                                                    .progressViewStyle(CircularProgressViewStyle(tint: DesignTokens.Colors.textSecondary))
+                                            )
+                                    }
+                                    .frame(width: 100, height: 100)
+                                    .clipShape(RoundedRectangle(cornerRadius: 12))
+                                    .contentShape(Rectangle())
+                                    .onTapGesture {
+                                        imageViewerData = ImageViewerData(
+                                            images: item.images,
+                                            selectedIndex: index
+                                        )
+                                    }
+                                }
+                            }
+                            .padding(.horizontal, 4)
+                        }
+                        .frame(height: 100)
+                    }
                 }
                 
                 // Reason input
@@ -769,6 +894,16 @@ struct ModerationActionSheet: View {
                 }
             }
         }
+        .fullScreenCover(item: $imageViewerData) { data in
+            ImageViewerModal(
+                images: data.images,
+                selectedIndex: data.selectedIndex,
+                isPresented: .init(
+                    get: { imageViewerData != nil },
+                    set: { if !$0 { imageViewerData = nil } }
+                )
+            )
+        }
     }
 }
 
@@ -848,6 +983,13 @@ enum ReviewItem: Identifiable {
         switch self {
         case .topic: return false
         case .reply: return true
+        }
+    }
+    
+    var images: [String] {
+        switch self {
+        case .topic(let topic): return topic.images
+        case .reply(let reply): return reply.images
         }
     }
 }

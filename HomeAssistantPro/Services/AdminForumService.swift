@@ -389,9 +389,10 @@ struct PendingItem: Codable, Identifiable {
     let createdAt: String
     let updatedAt: String
     let priority: String? // Optional since API doesn't always provide it
+    let images: [String]
     
     enum CodingKeys: String, CodingKey {
-        case id, type, title, content, category
+        case id, type, title, content, category, images
         case userId = "user_id"
         case authorName = "author_name"
         case topicId = "topic_id"

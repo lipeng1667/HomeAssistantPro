@@ -198,7 +198,7 @@ class AdminModerationViewModel: ObservableObject {
                     likeCount: 0,
                     isLiked: false,
                     status: -1, // Under review
-                    images: [],
+                    images: item.images,
                     createdAt: item.createdAt,
                     updatedAt: item.createdAt
                 )
@@ -219,7 +219,7 @@ class AdminModerationViewModel: ObservableObject {
                     likeCount: 0,
                     isLiked: false,
                     status: -1, // Under review
-                    images: [],
+                    images: item.images,
                     createdAt: item.createdAt,
                     updatedAt: item.createdAt
                 )
