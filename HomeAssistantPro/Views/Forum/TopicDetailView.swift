@@ -1396,7 +1396,7 @@ struct TopicDetailView: View {
 
 // MARK: - Reply Form View
 
-/// Reply form sheet view
+/// Reply form sheet view with image support
 struct ReplyFormView: View {
     let topicId: Int
     let parentReply: ForumReply?
@@ -1404,11 +1404,15 @@ struct ReplyFormView: View {
     
     @Environment(\.presentationMode) var presentationMode
     @State private var replyContent = ""
+    @State private var attachedImages: [UIImage] = []
     @State private var isSubmitting = false
     @State private var errorMessage: String? = nil
+    @State private var showImagePicker = false
     
     private let forumService = ForumService.shared
+    private let logger = Logger(subsystem: "com.homeassistant.ios", category: "ReplyFormView")
     private let maxContentLength = 1000
+    private let maxImages = 2
     
     var body: some View {
         NavigationView {
@@ -1440,94 +1444,144 @@ struct ReplyFormView: View {
                 Divider()
                 
                 // Content
-                VStack(alignment: .leading, spacing: 16) {
-                    // Parent reply context (if replying to a reply)
-                    if let parentReply = parentReply {
-                        VStack(alignment: .leading, spacing: 8) {
-                            Text("Replying to:")
-                                .font(DesignTokens.ResponsiveTypography.caption)
-                                .foregroundColor(DesignTokens.Colors.textSecondary)
-                            
-                            HStack(spacing: 8) {
-                                Circle()
-                                    .fill(DesignTokens.Colors.primaryPurple.opacity(0.2))
-                                    .frame(width: 24, height: 24)
-                                    .overlay(
-                                        Image(systemName: "person.crop.circle.fill")
-                                            .font(.system(size: 12, weight: .medium))
-                                            .foregroundColor(DesignTokens.Colors.primaryPurple)
-                                    )
+                ScrollView(showsIndicators: false) {
+                    VStack(alignment: .leading, spacing: 16) {
+                        // Parent reply context (if replying to a reply)
+                        if let parentReply = parentReply {
+                            VStack(alignment: .leading, spacing: 8) {
+                                Text("Replying to:")
+                                    .font(DesignTokens.ResponsiveTypography.caption)
+                                    .foregroundColor(DesignTokens.Colors.textSecondary)
                                 
-                                VStack(alignment: .leading, spacing: 2) {
-                                    Text(parentReply.author.name)
-                                        .font(DesignTokens.ResponsiveTypography.bodyMedium)
-                                        .foregroundColor(DesignTokens.Colors.textPrimary)
+                                HStack(spacing: 8) {
+                                    Circle()
+                                        .fill(DesignTokens.Colors.primaryPurple.opacity(0.2))
+                                        .frame(width: 24, height: 24)
+                                        .overlay(
+                                            Image(systemName: "person.crop.circle.fill")
+                                                .font(.system(size: 12, weight: .medium))
+                                                .foregroundColor(DesignTokens.Colors.primaryPurple)
+                                        )
                                     
-                                    Text(String(parentReply.content.prefix(100)) + (parentReply.content.count > 100 ? "..." : ""))
-                                        .font(DesignTokens.ResponsiveTypography.caption)
-                                        .foregroundColor(DesignTokens.Colors.textSecondary)
-                                        .lineLimit(2)
+                                    VStack(alignment: .leading, spacing: 2) {
+                                        Text(parentReply.author.name)
+                                            .font(DesignTokens.ResponsiveTypography.bodyMedium)
+                                            .foregroundColor(DesignTokens.Colors.textPrimary)
+                                        
+                                        Text(String(parentReply.content.prefix(100)) + (parentReply.content.count > 100 ? "..." : ""))
+                                            .font(DesignTokens.ResponsiveTypography.caption)
+                                            .foregroundColor(DesignTokens.Colors.textSecondary)
+                                            .lineLimit(2)
+                                    }
+                                    
+                                    Spacer()
                                 }
+                                .padding(12)
+                                .background(
+                                    RoundedRectangle(cornerRadius: 8)
+                                        .fill(DesignTokens.Colors.primaryPurple.opacity(0.05))
+                                        .overlay(
+                                            RoundedRectangle(cornerRadius: 8)
+                                                .stroke(DesignTokens.Colors.primaryPurple.opacity(0.2), lineWidth: 1)
+                                        )
+                                )
+                            }
+                        }
+                        
+                        // Content section
+                        VStack(alignment: .leading, spacing: DesignTokens.ResponsiveSpacing.sm) {
+                            HStack {
+                                Text("Your Reply")
+                                    .font(DesignTokens.ResponsiveTypography.bodyLarge)
+                                    .foregroundColor(DesignTokens.Colors.textPrimary)
                                 
                                 Spacer()
+                                
+                                Text("\(replyContent.count)/\(maxContentLength)")
+                                    .font(DesignTokens.ResponsiveTypography.caption)
+                                    .foregroundColor(contentLengthColor)
                             }
-                            .padding(12)
-                            .background(
-                                RoundedRectangle(cornerRadius: 8)
-                                    .fill(DesignTokens.Colors.primaryPurple.opacity(0.05))
-                                    .overlay(
-                                        RoundedRectangle(cornerRadius: 8)
-                                            .stroke(DesignTokens.Colors.primaryPurple.opacity(0.2), lineWidth: 1)
+                            
+                            ZStack(alignment: .topLeading) {
+                                TextEditor(text: $replyContent)
+                                    .font(DesignTokens.ResponsiveTypography.bodyMedium)
+                                    .frame(minHeight: DesignTokens.DeviceSize.current.spacing(120, 140, 160))
+                                    .padding(12)
+                                    .background(
+                                        RoundedRectangle(cornerRadius: DesignTokens.ResponsiveSpacing.sm)
+                                            .fill(DesignTokens.Colors.backgroundSurface)
+                                            .overlay(
+                                                RoundedRectangle(cornerRadius: DesignTokens.ResponsiveSpacing.sm)
+                                                    .stroke(DesignTokens.Colors.borderPrimary, lineWidth: 1)
+                                            )
                                     )
-                            )
-                        }
-                    }
-                    
-                    HStack {
-                        Text("Your Reply")
-                            .font(DesignTokens.ResponsiveTypography.bodyLarge)
-                            .foregroundColor(DesignTokens.Colors.textPrimary)
-                        
-                        Spacer()
-                        
-                        Text("\(replyContent.count)/\(maxContentLength)")
-                            .font(DesignTokens.ResponsiveTypography.caption)
-                            .foregroundColor(contentLengthColor)
-                    }
-                    
-                    ZStack(alignment: .topLeading) {
-                        TextEditor(text: $replyContent)
-                            .font(DesignTokens.ResponsiveTypography.bodyMedium)
-                            .frame(minHeight: 120)
-                            .padding(12)
-                            .background(
-                                RoundedRectangle(cornerRadius: 12)
-                                    .fill(DesignTokens.Colors.backgroundSurface)
-                                    .overlay(
-                                        RoundedRectangle(cornerRadius: 12)
-                                            .stroke(DesignTokens.Colors.borderPrimary, lineWidth: 1)
-                                    )
-                            )
-                            .onChange(of: replyContent) { newValue in
-                                if newValue.count > maxContentLength {
-                                    replyContent = String(newValue.prefix(maxContentLength))
+                                    .onChange(of: replyContent) { newValue in
+                                        if newValue.count > maxContentLength {
+                                            replyContent = String(newValue.prefix(maxContentLength))
+                                        }
+                                    }
+                                
+                                if replyContent.isEmpty {
+                                    Text("Write your reply...")
+                                        .font(DesignTokens.ResponsiveTypography.bodyMedium)
+                                        .foregroundColor(DesignTokens.Colors.textSecondary.opacity(0.6))
+                                        .padding(16)
+                                        .allowsHitTesting(false)
                                 }
                             }
+                        }
                         
-                        if replyContent.isEmpty {
-                            Text("Write your reply...")
-                                .font(DesignTokens.ResponsiveTypography.bodyMedium)
-                                .foregroundColor(DesignTokens.Colors.textSecondary.opacity(0.6))
-                                .padding(16)
-                                .allowsHitTesting(false)
+                        // Image section
+                        VStack(alignment: .leading, spacing: DesignTokens.ResponsiveSpacing.sm) {
+                            HStack {
+                                Text("Images")
+                                    .font(DesignTokens.ResponsiveTypography.bodyLarge)
+                                    .foregroundColor(DesignTokens.Colors.textPrimary)
+                                
+                                Spacer()
+                                
+                                Text("Optional (\(attachedImages.count)/\(maxImages))")
+                                    .font(DesignTokens.ResponsiveTypography.caption)
+                                    .foregroundColor(DesignTokens.Colors.textSecondary)
+                            }
+                            
+                            ScrollView(.horizontal, showsIndicators: false) {
+                                HStack(spacing: DesignTokens.ResponsiveSpacing.sm) {
+                                    // Add image button
+                                    if attachedImages.count < maxImages {
+                                        Button(action: {
+                                            showImagePicker = true
+                                        }) {
+                                            addImageButton
+                                        }
+                                    }
+                                    
+                                    // Attached images
+                                    ForEach(Array(attachedImages.enumerated()), id: \.offset) { index, image in
+                                        imagePreview(image, index: index)
+                                    }
+                                }
+                                .responsiveHorizontalPadding(4, 6, 8)
+                            }
                         }
                     }
+                    .padding()
+                    .responsiveBottomPadding(20, 24, 28)
                 }
-                .padding()
                 
                 Spacer()
             }
             .navigationBarHidden(true)
+        }
+        .sheet(isPresented: $showImagePicker) {
+            ImagePicker(selectedImage: Binding<UIImage?>(
+                get: { nil },
+                set: { image in
+                    if let image = image {
+                        attachedImages.append(image)
+                    }
+                }
+            ))
         }
         .alert("Error", isPresented: .constant(errorMessage != nil)) {
             Button("OK") {
@@ -1539,6 +1593,69 @@ struct ReplyFormView: View {
             }
         }
     }
+    
+    // MARK: - Image Components
+    
+    private var addImageButton: some View {
+        VStack(spacing: DesignTokens.ResponsiveSpacing.xs) {
+            Image(systemName: "plus")
+                .font(.system(size: DesignTokens.DeviceSize.current.fontSize(16, 18, 20), weight: .semibold))
+                .foregroundColor(DesignTokens.Colors.primaryCyan)
+            
+            Text("Add Photo")
+                .font(DesignTokens.ResponsiveTypography.caption)
+                .foregroundColor(DesignTokens.Colors.textSecondary)
+        }
+        .frame(
+            width: DesignTokens.DeviceSize.current.spacing(80, 90, 100),
+            height: DesignTokens.DeviceSize.current.spacing(80, 90, 100)
+        )
+        .background(
+            RoundedRectangle(cornerRadius: DesignTokens.ResponsiveSpacing.sm)
+                .fill(DesignTokens.Colors.backgroundSurface)
+                .overlay(
+                    RoundedRectangle(cornerRadius: DesignTokens.ResponsiveSpacing.sm)
+                        .stroke(DesignTokens.Colors.primaryCyan.opacity(0.3), style: StrokeStyle(lineWidth: 2, dash: [8, 4]))
+                )
+        )
+        .scaleButtonStyle()
+    }
+    
+    private func imagePreview(_ image: UIImage, index: Int) -> some View {
+        ZStack(alignment: .topTrailing) {
+            Image(uiImage: image)
+                .resizable()
+                .aspectRatio(contentMode: .fill)
+                .frame(
+                    width: DesignTokens.DeviceSize.current.spacing(80, 90, 100),
+                    height: DesignTokens.DeviceSize.current.spacing(80, 90, 100)
+                )
+                .clipped()
+                .background(DesignTokens.Colors.backgroundSecondary)
+                .cornerRadius(DesignTokens.ResponsiveSpacing.sm)
+            
+            // Remove button
+            Button(action: {
+                withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                    attachedImages.remove(at: index)
+                }
+                HapticManager.buttonTap()
+            }) {
+                Image(systemName: "xmark.circle.fill")
+                    .font(.system(size: DesignTokens.DeviceSize.current.fontSize(16, 18, 20)))
+                    .foregroundColor(.white)
+                    .background(
+                        Circle()
+                            .fill(DesignTokens.Colors.primaryRed)
+                            .frame(width: 20, height: 20)
+                    )
+            }
+            .offset(x: 8, y: -8)
+            .scaleButtonStyle()
+        }
+    }
+    
+    // MARK: - Computed Properties
     
     private var isFormInvalid: Bool {
         let trimmedContent = replyContent.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -1555,6 +1672,8 @@ struct ReplyFormView: View {
         }
     }
     
+    // MARK: - Helper Methods
+    
     @MainActor
     private func submitReply() async {
         guard !isFormInvalid else { return }
@@ -1562,10 +1681,14 @@ struct ReplyFormView: View {
         isSubmitting = true
         
         do {
+            // Convert UIImages to FileUploadRequest objects
+            let imageFiles = await convertImagesToUploadRequests()
+            
             let _ = try await forumService.createReply(
                 topicId: topicId,
                 content: replyContent.trimmingCharacters(in: .whitespacesAndNewlines),
-                parentReplyId: parentReply?.id
+                parentReplyId: parentReply?.id,
+                imageFiles: imageFiles
             )
             
             presentationMode.wrappedValue.dismiss()
@@ -1576,6 +1699,49 @@ struct ReplyFormView: View {
         }
         
         isSubmitting = false
+    }
+    
+    /// Convert UIImages to FileUploadRequest objects for API upload
+    @MainActor
+    private func convertImagesToUploadRequests() async -> [FileUploadRequest] {
+        guard !attachedImages.isEmpty else { 
+            logger.info("No images to convert for reply")
+            return []
+        }
+        
+        var fileRequests: [FileUploadRequest] = []
+        
+        // Get current user ID for upload requests
+        guard let userIdString = try? SettingsStore().retrieveUserId(),
+              let userId = Int(userIdString) else {
+            logger.error("Failed to get user ID for reply image upload")
+            return []
+        }
+        
+        for (index, image) in attachedImages.enumerated() {
+            // Convert UIImage to JPEG data
+            guard let imageData = image.jpegData(compressionQuality: 0.8) else {
+                logger.error("Failed to convert reply image \(index) to JPEG data")
+                continue
+            }
+            
+            let fileName = "reply_\(topicId)_\(index)_\(Date().timeIntervalSince1970).jpg"
+            
+            let fileRequest = FileUploadRequest(
+                file: imageData,
+                fileName: fileName,
+                mimeType: "image/jpeg",
+                userId: userId,
+                type: "reply",
+                postId: topicId
+            )
+            
+            fileRequests.append(fileRequest)
+            logger.info("Prepared reply image \(index + 1) for upload - fileName: \(fileName), size: \(imageData.count) bytes")
+        }
+        
+        logger.info("Converted \(fileRequests.count) reply images to upload requests")
+        return fileRequests
     }
 }
 
