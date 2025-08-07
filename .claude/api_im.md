@@ -17,11 +17,10 @@ Retrieves chat history for the authenticated user's conversation with administra
 **Example Request:**
 
 ```bash
-curl -X GET "http://localhost:10000/api/chat/messages" \
+curl -X GET "http://localhost:10000/api/chat/messages?user_id=2" \
   -H "X-Timestamp: 1672531200000" \
   -H "X-Signature: a1b2c3d4e5f6..." \
-  -H "Content-Type: application/json" \
-  -d '{"user_id": 123}'
+  -H "Content-Type: application/json" 
 ```
 
 **Response Structure:**
@@ -397,13 +396,15 @@ Retrieves dashboard statistics and overview for admin chat management.
 
 | Name | Type | Description | Required | Default |
 |---|---|---|---|---|
-| `admin_id` | Integer | Specific admin ID for personalized data | No | Current admin |
+| `user_id` | Integer | Specific admin ID for personalized data | YES | Current admin |
 
 **Example Request:**
 
 ```bash
 curl -X GET "http://localhost:10000/admin/chat/dashboard" \
-  -H "Authorization: Bearer admin_token_here"
+  -H "X-Timestamp: 1672531200000" \
+  -H "X-Signature: a1b2c3d4e5f6..." \
+  -H "X-Session-Token: optional-uuid-token"
 ```
 
 **Response Structure:**
@@ -475,7 +476,9 @@ Lists all conversations across all users for admin management with advanced filt
 
 ```bash
 curl -X GET "http://localhost:10000/admin/chat/conversations?unread_only=true&sort=last_activity" \
-  -H "Authorization: Bearer admin_token_here"
+  -H "X-Timestamp: 1672531200000" \
+  -H "X-Signature: a1b2c3d4e5f6..." \
+  -H "X-Session-Token: optional-uuid-token"
 ```
 
 **Response Structure:**
@@ -575,7 +578,9 @@ Retrieves detailed information about a specific conversation for admin review.
 
 ```bash
 curl -X GET "http://localhost:10000/admin/chat/conversations/123" \
-  -H "Authorization: Bearer admin_token_here"
+  -H "X-Timestamp: 1672531200000" \
+  -H "X-Signature: a1b2c3d4e5f6..." \
+  -H "X-Session-Token: optional-uuid-token"
 ```
 
 **Response Structure:**
@@ -644,8 +649,9 @@ Assigns a conversation to a specific admin for handling.
 
 ```bash
 curl -X PUT "http://localhost:10000/admin/chat/conversations/123/assign" \
-  -H "Authorization: Bearer admin_token_here" \
-  -H "Content-Type: application/json" \
+  -H "X-Timestamp: 1672531200000" \
+  -H "X-Signature: a1b2c3d4e5f6..." \
+  -H "X-Session-Token: optional-uuid-token"
   -d '{"admin_id": 789, "notes": "Customer billing issue - priority handling required"}'
 ```
 
@@ -766,7 +772,9 @@ Sends a message as an admin to a specific conversation.
 
 ```bash
 curl -X POST "http://localhost:10000/admin/chat/conversations/123/messages" \
-  -H "Authorization: Bearer admin_token_here" \
+  -H "X-Timestamp: 1672531200000" \
+  -H "X-Signature: a1b2c3d4e5f6..." \
+  -H "X-Session-Token: optional-uuid-token"\
   -H "Content-Type: application/json" \
   -d '{
     "message": "Hello! I have reviewed your account and processed the refund. It should appear in 3-5 business days.",

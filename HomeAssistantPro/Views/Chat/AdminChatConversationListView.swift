@@ -31,6 +31,10 @@ struct AdminChatConversationListView: View {
     @State private var showingAssignmentSheet = false
     @State private var selectedConversation: AdminConversation?
     @State private var errorMessage: String?
+    @State private var dashboardStats: AdminChatDashboard?
+    
+    // Services
+    @StateObject private var adminChatService = AdminChatService.shared
     
     // Environment
     @EnvironmentObject private var settingsStore: SettingsStore
@@ -68,6 +72,7 @@ struct AdminChatConversationListView: View {
         .background(DesignTokens.Colors.backgroundPrimary)
         .onAppear {
             loadConversations()
+            loadDashboardStats()
         }
         .refreshable {
             await refreshConversations()
@@ -80,6 +85,20 @@ struct AdminChatConversationListView: View {
         } message: {
             if let errorMessage = errorMessage {
                 Text(errorMessage)
+            }
+        }
+        .onChange(of: selectedStatusFilter) { _ in
+            loadConversations()
+        }
+        .onChange(of: selectedAssignmentFilter) { _ in
+            loadConversations()
+        }
+        .onChange(of: searchText) { newValue in
+            // Debounce search to avoid too many API calls
+            if !newValue.isEmpty && newValue.count >= 3 {
+                loadConversations()
+            } else if newValue.isEmpty {
+                loadConversations()
             }
         }
     }
@@ -102,18 +121,35 @@ struct AdminChatConversationListView: View {
                 Spacer()
                 
                 // Stats badges
-                HStack(spacing: DesignTokens.ResponsiveSpacing.xs) {
-                    StatsBadge(
-                        title: "Unread", 
-                        count: conversations.filter { $0.unreadCount > 0 }.count,
-                        color: DesignTokens.Colors.primaryAmber
-                    )
-                    
-                    StatsBadge(
-                        title: "Unassigned",
-                        count: conversations.filter { $0.adminId == nil }.count,
-                        color: DesignTokens.Colors.primaryPurple
-                    )
+                if let stats = dashboardStats?.summary {
+                    HStack(spacing: DesignTokens.ResponsiveSpacing.xs) {
+                        StatsBadge(
+                            title: "Unread", 
+                            count: stats.unreadConversations,
+                            color: DesignTokens.Colors.primaryAmber
+                        )
+                        
+                        StatsBadge(
+                            title: "Unassigned",
+                            count: stats.unassigned,
+                            color: DesignTokens.Colors.primaryPurple
+                        )
+                    }
+                } else {
+                    // Fallback to local data when API stats not loaded
+                    HStack(spacing: DesignTokens.ResponsiveSpacing.xs) {
+                        StatsBadge(
+                            title: "Unread", 
+                            count: conversations.filter { $0.unreadCount > 0 }.count,
+                            color: DesignTokens.Colors.primaryAmber
+                        )
+                        
+                        StatsBadge(
+                            title: "Unassigned",
+                            count: conversations.filter { $0.adminId == nil }.count,
+                            color: DesignTokens.Colors.primaryPurple
+                        )
+                    }
                 }
             }
             .padding(.horizontal, DesignTokens.ResponsiveSpacing.md)
@@ -271,26 +307,102 @@ struct AdminChatConversationListView: View {
     // MARK: - Actions
     
     private func loadConversations() {
-        isLoading = true
-        
-        // Mock data for now - replace with AdminChatAPIService
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1) {
-            conversations = mockConversations
-            isLoading = false
+        Task {
+            await MainActor.run { isLoading = true }
+            
+            do {
+                let response = try await adminChatService.fetchConversations(
+                    page: 1,
+                    limit: 50,
+                    status: selectedStatusFilter == "all" ? nil : selectedStatusFilter,
+                    unreadOnly: false,
+                    sort: "last_activity"
+                )
+                
+                await MainActor.run {
+                    conversations = response.data.conversations
+                    isLoading = false
+                }
+            } catch {
+                await MainActor.run {
+                    errorMessage = handleError(error)
+                    isLoading = false
+                    
+                    // Fallback to mock data on error for development
+                    conversations = mockConversations
+                }
+            }
         }
     }
     
     private func refreshConversations() async {
-        await loadConversations()
+        loadConversations()
+        loadDashboardStats()
+    }
+    
+    private func loadDashboardStats() {
+        Task {
+            do {
+                let dashboard = try await adminChatService.fetchDashboard()
+                await MainActor.run {
+                    dashboardStats = dashboard
+                }
+            } catch {
+                // Dashboard stats are non-critical, just log the error
+                print("Failed to load dashboard stats: \(error.localizedDescription)")
+            }
+        }
+    }
+    
+    private func handleError(_ error: Error) -> String {
+        if let adminError = error as? AdminChatError {
+            return adminError.localizedDescription
+        }
+        return error.localizedDescription
     }
     
     private func assignConversation(_ conversation: AdminConversation, to adminId: Int?) {
-        // TODO: Implement assignment via AdminChatAPIService
-        showingAssignmentSheet = true
+        guard let adminId = adminId else {
+            showingAssignmentSheet = true
+            return
+        }
+        
+        Task {
+            do {
+                _ = try await adminChatService.assignConversation(
+                    conversation.id,
+                    to: adminId,
+                    notes: "Conversation assigned via admin interface"
+                )
+                
+                // Refresh conversations to show updated assignment
+                loadConversations()
+                
+            } catch {
+                await MainActor.run {
+                    errorMessage = handleError(error)
+                }
+            }
+        }
     }
     
     private func updateConversationStatus(_ conversation: AdminConversation, status: String) {
-        // TODO: Implement status update via AdminChatAPIService
+        Task {
+            do {
+                _ = try await adminChatService.updateConversationStatus(
+                    conversation.id,
+                    status: status
+                )
+                
+                // Refresh conversations to show updated status
+                loadConversations()
+                
+            } catch {
+                await MainActor.run {
+                    errorMessage = handleError(error)
+                }
+            }
+        }
     }
 }
 
